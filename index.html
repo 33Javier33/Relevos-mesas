@@ -344,6 +344,13 @@
         #warning-list li {
             font-weight: bold;
             margin-bottom: 5px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        #warning-list li:hover {
+            background-color: #f1f1f1;
         }
 
         /* Estilos del pie de página (firma) */
@@ -356,6 +363,20 @@
         #app-signature {
             font-size: 0.8em;
             color: #888;
+        }
+        .game-list {
+            list-style: none;
+            padding: 0;
+        }
+        .game-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .game-list li:last-child {
+            border-bottom: none;
         }
     </style>
 </head>
@@ -374,7 +395,7 @@
                 </div>
                 <button type="submit">Agregar Persona</button>
             </form>
-            <button id="add-game-btn" class="add-game-btn">Agregar Juego</button>
+            <button id="add-game-btn" class="add-game-btn">Gestionar Juegos</button>
             <button id="alerts-btn" class="alerts-btn">Alertas</button>
             <button id="clear-data" class="clear-data-btn">Borrar todos los datos</button>
         </div>
@@ -419,15 +440,21 @@
     <div id="addGameModal" class="modal">
         <div class="modal-content">
             <span id="closeAddGameModalBtn" class="close-btn">&times;</span>
-            <h3>Agregar un Juego</h3>
+            <h3>Gestionar Juegos</h3>
             <div class="modal-body">
                 <form id="add-game-form">
                     <label for="new-game-name-input">Nombre del juego:</label>
                     <input type="text" id="new-game-name-input" placeholder="Ej: Ruleta" required>
+                    <label>
+                        <input type="checkbox" id="repeatable-checkbox"> Permitir repetición
+                    </label>
                     <div class="modal-buttons">
                         <button type="submit" class="add-slot-btn">Agregar</button>
                     </div>
                 </form>
+                <h4 style="margin-top: 20px;">Juegos Personalizados</h4>
+                <ul id="custom-game-list" class="game-list">
+                    </ul>
             </div>
         </div>
     </div>
@@ -455,23 +482,24 @@
         const DEFAULT_SLOT = { start: '08:00' };
         
         const STATIC_GAME_OPTIONS = [
-            { value: '', text: 'Seleccionar...' },
-            { value: 'DrP7', text: 'DrP7' },
-            { value: 'DrP12', text: 'DrP12' },
-            { value: 'HP8', text: 'HP8' },
-            { value: 'CbP13', text: 'CbP13' },
-            { value: 'Bj15', text: 'Bj15' },
-            { value: 'Bj17', text: 'Bj17' },
-            { value: 'Bj34', text: 'Bj34' },
-            { value: 'RA21', text: 'RA21' },
-            { value: 'RA24', text: 'RA24' },
-            { value: 'RA25', text: 'RA25' },
-            { value: 'RF22', text: 'RF22' },
-            { value: 'RF23', text: 'RF23' },
-            { value: 'Cr26', text: 'Craps26' },
-            { value: 'Bs30', text: 'Bigsig30' },
-            { value: 'PararFichas', text: 'Parar Fichas' },
-            { value: 'Colacion', text: 'Colación' }
+            { value: '', text: 'Seleccionar...', repeatable: false },
+            { value: 'DrP7', text: 'DrP7', repeatable: false },
+            { value: 'DrP12', text: 'DrP12', repeatable: false },
+            { value: 'HP8', text: 'HP8', repeatable: false },
+            { value: 'CbP13', text: 'CbP13', repeatable: false },
+            { value: 'Bj15', text: 'Bj15', repeatable: false },
+            { value: 'Bj17', text: 'Bj17', repeatable: false },
+            { value: 'Bj34', text: 'Bj34', repeatable: false },
+            { value: 'RA21', text: 'RA21', repeatable: false },
+            { value: 'RA24', text: 'RA24', repeatable: false },
+            { value: 'RA25', text: 'RA25', repeatable: false },
+            { value: 'RF22', text: 'RF22', repeatable: false },
+            { value: 'RF23', text: 'RF23', repeatable: false },
+            { value: 'Cr26', text: 'Craps26', repeatable: false },
+            { value: 'Bs30', text: 'Bigsig30', repeatable: false },
+            { value: 'PararFichas', text: 'Parar Fichas', repeatable: true },
+            { value: 'Colacion', text: 'Colación', repeatable: true },
+            { value: 'D.P.R', text: 'D.P.R', repeatable: true }
         ];
 
         let currentPersonIndex = -1;
@@ -484,6 +512,11 @@
         function getGameTextByValue(value) {
             const option = gameOptionsData.find(opt => opt.value === value);
             return option ? option.text : '';
+        }
+
+        function isGameRepeatable(value) {
+            const option = gameOptionsData.find(opt => opt.value === value);
+            return option ? option.repeatable : false;
         }
 
         function isDarkColor(hexColor) {
@@ -531,7 +564,9 @@
             
             if (savedGameOptions) {
                 try {
-                    gameOptionsData = JSON.parse(savedGameOptions);
+                    // Cargar opciones guardadas y fusionarlas con las estáticas
+                    const customOptions = JSON.parse(savedGameOptions).filter(option => !STATIC_GAME_OPTIONS.some(staticOpt => staticOpt.value === option.value));
+                    gameOptionsData = [...STATIC_GAME_OPTIONS, ...customOptions];
                 } catch (e) {
                     console.error("Error al cargar las opciones de juego, inicializando con valores por defecto.", e);
                     gameOptionsData = STATIC_GAME_OPTIONS;
@@ -652,12 +687,56 @@
                 addEventListenersToSelects(newRow);
                 addNameClickListeners(newRow);
             });
-            updatePersonCount();
+            updatePersonCount(); // Se llama aquí sin el contador de alertas
         }
 
-        function updatePersonCount() {
+        function renderCustomGameList() {
+            const customGameList = document.getElementById('custom-game-list');
+            customGameList.innerHTML = '';
+            
+            const customGames = gameOptionsData.filter(option => !STATIC_GAME_OPTIONS.some(staticOpt => staticOpt.value === option.value));
+            
+            if (customGames.length > 0) {
+                customGames.forEach(game => {
+                    const listItem = document.createElement('li');
+                    const repeatableText = game.repeatable ? ' (repetible)' : '';
+                    listItem.textContent = `${game.text}${repeatableText}`;
+                    
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.classList.add('remove-slot-btn');
+                    deleteBtn.textContent = 'Eliminar';
+                    deleteBtn.onclick = () => deleteCustomGame(game.value);
+                    
+                    listItem.appendChild(deleteBtn);
+                    customGameList.appendChild(listItem);
+                });
+            } else {
+                customGameList.innerHTML = '<li>No has añadido ningún juego personalizado.</li>';
+            }
+        }
+
+        function deleteCustomGame(gameValue) {
+            if (confirm(`¿Estás seguro de que quieres eliminar el juego "${getGameTextByValue(gameValue)}"?`)) {
+                gameOptionsData = gameOptionsData.filter(option => option.value !== gameValue);
+                
+                // Limpiar la selección de ese juego en la tabla
+                peopleData.forEach(person => {
+                    person.games = person.games.map(game => (game === gameValue ? '' : game));
+                });
+
+                saveData();
+                renderTable();
+                renderCustomGameList();
+            }
+        }
+
+        function updatePersonCount(leavingCount = 0) {
             const personCountElement = document.getElementById('person-count');
-            personCountElement.textContent = `Personas registradas: ${peopleData.length}`;
+            let text = `Personas registradas: ${peopleData.length}`;
+            if (leavingCount > 0) {
+                text += ` (${leavingCount} proximas en irse)`;
+            }
+            personCountElement.textContent = text;
         }
 
         function addNameClickListeners(row) {
@@ -683,13 +762,12 @@
                 select.addEventListener('change', function() {
                     const selectedValue = this.value;
                     const previousValue = peopleData[personIndex].games[slotIndex];
-
-                    const isExempted = (selectedValue === 'PararFichas' || selectedValue === 'Colacion' || selectedValue === '');
+                    
+                    const isRepeatable = isGameRepeatable(selectedValue);
                     let isOccupied = false;
                     
-                    if (!isExempted) {
+                    if (!isRepeatable && selectedValue !== '') {
                         for (let i = 0; i < peopleData.length; i++) {
-                            // No validar contra sí mismo
                             if (i !== personIndex && peopleData[i].games[slotIndex] === selectedValue) {
                                 isOccupied = true;
                                 break;
@@ -800,14 +878,17 @@
         document.getElementById('add-game-form').addEventListener('submit', function(event) {
             event.preventDefault();
             const newGameName = document.getElementById('new-game-name-input').value.trim();
+            const isRepeatable = document.getElementById('repeatable-checkbox').checked;
+
             if (newGameName) {
-                const newValue = newGameName.replace(/\s/g, '');
+                const newValue = newGameName.replace(/\s/g, ''); 
                 if (!gameOptionsData.find(option => option.value === newValue)) {
-                    gameOptionsData.push({ value: newValue, text: newGameName });
+                    gameOptionsData.push({ value: newValue, text: newGameName, repeatable: isRepeatable });
                     saveData();
                     renderTable();
+                    renderCustomGameList();
                     document.getElementById('new-game-name-input').value = '';
-                    document.getElementById('addGameModal').style.display = 'none';
+                    document.getElementById('repeatable-checkbox').checked = false;
                 } else {
                     alert('El nombre del juego ya existe.');
                 }
@@ -862,9 +943,10 @@
             if (event.target == addGameModal) {
                 addGameModal.style.display = 'none';
             }
-            if (event.target == warningModal) {
-                warningModal.style.display = 'none';
-            }
+            // Eliminar la lógica de cierre automático del modal de alerta para evitar conflictos
+            // if (event.target == warningModal) {
+            //     warningModal.style.display = 'none';
+            // }
         };
 
         deletePersonBtn.onclick = function() {
@@ -895,6 +977,7 @@
         const closeAddGameModalBtn = document.getElementById('closeAddGameModalBtn');
 
         addGameBtn.onclick = function() {
+            renderCustomGameList(); // Renderizar la lista al abrir el modal
             addGameModal.style.display = 'block';
         };
 
@@ -916,12 +999,21 @@
             warningModal.style.display = 'none';
         };
 
+        warningList.addEventListener('click', function(event) {
+            const clickedElement = event.target.closest('li');
+            if (clickedElement) {
+                const personIndex = clickedElement.getAttribute('data-person-index');
+                warningModal.style.display = 'none';
+                openPersonModal(personIndex);
+            }
+        });
+
         function checkExitTimes() {
             const now = new Date();
             const nowMinutes = now.getHours() * 60 + now.getMinutes();
             let peopleLeaving = [];
 
-            peopleData.forEach(person => {
+            peopleData.forEach((person, index) => {
                 if (person.exitTime) {
                     const [exitHour, exitMinute] = person.exitTime.split(':').map(Number);
                     const exitMinutes = exitHour * 60 + exitMinute;
@@ -929,17 +1021,21 @@
                     const timeUntilExit = exitMinutes - nowMinutes;
 
                     if (timeUntilExit > 0 && timeUntilExit <= 20) {
-                        peopleLeaving.push(person.name);
+                        peopleLeaving.push({ name: person.name, index: index });
                     }
                 }
             });
 
+            updatePersonCount(peopleLeaving.length);
+
             if (peopleLeaving.length > 0) {
                 alertsBtn.classList.add('active');
-                warningList.innerHTML = peopleLeaving.map(name => `<li>⚠️ ${name}</li>`).join('');
+                warningList.innerHTML = peopleLeaving.map(person => `<li data-person-index="${person.index}">⚠️ ${person.name}</li>`).join('');
+                warningModal.style.display = 'block';
             } else {
                 alertsBtn.classList.remove('active');
                 warningList.innerHTML = '<li>No hay alertas de salida en este momento.</li>';
+                warningModal.style.display = 'none';
             }
         }
 
