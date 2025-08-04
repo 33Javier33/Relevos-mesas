@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Personas y Horarios</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #f4f4f4;
+            margin: 20px;
+        }
+        h1, h2 {
+            color: #333;
+            border-bottom: 2px solid #ccc;
+            padding-bottom: 5px;
+        }
+        /* Estilo del reloj en la esquina superior derecha */
+        #current-time {
+            font-size: 2em;
+            font-weight: bold;
+            color: #007bff;
+            text-align: right;
+            margin-bottom: 20px;
+        }
+        /* Estilo del contador de personas */
+        #person-count {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #555;
+            text-align: left;
+            margin-bottom: 10px;
+        }
+        .form-container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        /* Estilo para el encabezado colapsable */
+        .collapsible-header {
+            cursor: pointer;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #ccc;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .collapsible-header::before {
+            content: '›';
+            font-size: 1.5em;
+            font-weight: bold;
+            transform: rotate(0deg);
+            transition: transform 0.2s ease;
+        }
+        .collapsible-header.expanded::before {
+            transform: rotate(90deg);
+        }
+        /* Contenido que se colapsa */
+        .collapsible-content {
+            display: none;
+            padding-top: 15px;
+        }
+        .collapsible-content.visible {
+            display: block;
+        }
+        .form-container form {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+            align-items: end;
+        }
+        .form-container label {
+            font-weight: bold;
+        }
+        .form-container input {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            width: 100%;
+        }
+        .form-container button {
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .form-container button.add-slot-btn,
+        .form-container button.remove-slot-btn {
+            background-color: #28a745;
+            padding: 5px 10px;
+        }
+        .form-container button.add-slot-btn:hover {
+            background-color: #218838;
+        }
+        .form-container button.remove-slot-btn {
+            background-color: #dc3545;
+        }
+        .form-container button.remove-slot-btn:hover {
+            background-color: #c82333;
+        }
+        .form-container button:hover {
+            background-color: #0056b3;
+        }
+        .table-container {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+        }
+        #schedule-header th:first-child {
+            position: sticky;
+            left: 0;
+            background-color: #333;
+            z-index: 11;
+        }
+        #horario-body tr td:first-child {
+            position: sticky;
+            left: 0;
+            background-color: #fff;
+            z-index: 10;
+        }
+        #horario-body tr:nth-child(even) td:first-child {
+            background-color: #f9f9f9;
+        }
+        #horario-body tr:hover td:first-child {
+             background-color: #f1f1f1;
+        }
+
+        th {
+            background-color: #333;
+            color: white;
+            position: relative;
+        }
+        th .time-input {
+            width: 100%;
+            padding: 5px;
+            text-align: center;
+            border: none;
+            background-color: transparent;
+            color: white;
+        }
+        th .time-input:focus {
+            outline: 2px solid #fff;
+        }
+        th .slot-controls {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        
+        .card-time {
+            position: relative;
+            background-color: #333;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            cursor: move;
+        }
+        .card-time:hover {
+            transform: scale(1.05);
+        }
+
+        .card-selector {
+            position: relative;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card-selector:hover {
+            transform: scale(1.05);
+        }
+
+        select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background: transparent;
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            border: none;
+            box-sizing: border-box;
+            font-size: 16px;
+            cursor: pointer;
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            opacity: 0;
+        }
+        
+        .selected-text {
+            font-weight: bold;
+            color: #007bff;
+        }
+        .clear-data-btn {
+            background-color: #dc3545;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        .add-game-btn, .alerts-btn {
+            background-color: #28a745;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.3s ease;
+        }
+        /* Estilos del botón de alerta activo (parpadeo rojo) */
+        .alerts-btn.active {
+            background-color: #dc3545;
+            color: white;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* Estilos del Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            padding-top: 60px;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 8px;
+        }
+        .close-btn {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close-btn:hover, .close-btn:focus {
+            color: black;
+            text-decoration: none;
+        }
+        .modal-body label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .modal-body input[type="time"],
+        .modal-body input[type="color"] {
+            width: calc(100% - 16px);
+            padding: 8px;
+            margin-top: 5px;
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        .modal-buttons button {
+            width: 48%;
+        }
+        .delete-person-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        /* Estilos para las alertas */
+        .person-name {
+            cursor: pointer;
+            font-weight: bold;
+            padding: 5px;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+            display: block;
+            color: black;
+        }
+        .person-name.text-white {
+            color: white;
+        }
+        /* Estilos para la lista de alertas */
+        #warning-list {
+            list-style: none;
+            padding-left: 0;
+        }
+        #warning-list li {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        /* Estilos del pie de página (firma) */
+        footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #ccc;
+            text-align: center;
+        }
+        #app-signature {
+            font-size: 0.8em;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="current-time"></div>
+    <h1>Gestión de Personas y Horarios</h1>
+
+    <div class="form-container">
+        <h2 id="registration-header" class="collapsible-header">Registrar a una Persona</h2>
+        <div id="registration-content" class="collapsible-content">
+            <form id="person-form">
+                <div>
+                    <label for="nombre">Nombre:</label>
+                    <input type="text" id="nombre" name="nombre" required>
+                </div>
+                <button type="submit">Agregar Persona</button>
+            </form>
+            <button id="add-game-btn" class="add-game-btn">Agregar Juego</button>
+            <button id="alerts-btn" class="alerts-btn">Alertas</button>
+            <button id="clear-data" class="clear-data-btn">Borrar todos los datos</button>
+        </div>
+    </div>
+
+    <hr>
+
+    <div id="person-count"></div>
+    <h2>Tabla de Horarios de Juegos</h2>
+
+    <div class="table-container">
+        <table>
+            <thead id="schedule-header">
+                <tr>
+                    <th>Nombres</th>
+                </tr>
+            </thead>
+            <tbody id="horario-body">
+                </tbody>
+        </table>
+    </div>
+
+    <div id="personModal" class="modal">
+        <div class="modal-content">
+            <span id="closePersonModalBtn" class="close-btn">&times;</span>
+            <h3 id="modalTitle">Configurar Persona</h3>
+            <div class="modal-body">
+                <label for="exitTime">Hora de Salida:</label>
+                <input type="time" id="exitTime">
+
+                <label for="personColor">Color:</label>
+                <input type="color" id="personColor">
+
+                <div class="modal-buttons">
+                    <button id="savePersonBtn" class="add-slot-btn">Aceptar</button>
+                    <button id="deletePersonBtn" class="delete-person-btn">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="addGameModal" class="modal">
+        <div class="modal-content">
+            <span id="closeAddGameModalBtn" class="close-btn">&times;</span>
+            <h3>Agregar un Juego</h3>
+            <div class="modal-body">
+                <form id="add-game-form">
+                    <label for="new-game-name-input">Nombre del juego:</label>
+                    <input type="text" id="new-game-name-input" placeholder="Ej: Ruleta" required>
+                    <div class="modal-buttons">
+                        <button type="submit" class="add-slot-btn">Agregar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="warningModal" class="modal">
+        <div class="modal-content">
+            <span id="closeWarningModalBtn" class="close-btn">&times;</span>
+            <h3>Alertas de Salida</h3>
+            <div class="modal-body">
+                <p>Las siguientes personas tienen un horario de salida próximo (menos de 20 minutos):</p>
+                <ul id="warning-list"></ul>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p id="app-signature">AppWeb Carlos Perez®</p>
+    </footer>
+
+    <script>
+        let scheduleData = [];
+        let peopleData = [];
+        let gameOptionsData = [];
+
+        const DEFAULT_SLOT = { start: '08:00' };
+        
+        const STATIC_GAME_OPTIONS = [
+            { value: '', text: 'Seleccionar...' },
+            { value: 'DrP7', text: 'DrP7' },
+            { value: 'DrP12', text: 'DrP12' },
+            { value: 'HP8', text: 'HP8' },
+            { value: 'CbP13', text: 'CbP13' },
+            { value: 'Bj15', text: 'Bj15' },
+            { value: 'Bj17', text: 'Bj17' },
+            { value: 'Bj34', text: 'Bj34' },
+            { value: 'RA21', text: 'RA21' },
+            { value: 'RA24', text: 'RA24' },
+            { value: 'RA25', text: 'RA25' },
+            { value: 'RF22', text: 'RF22' },
+            { value: 'RF23', text: 'RF23' },
+            { value: 'Cr26', text: 'Craps26' },
+            { value: 'Bs30', text: 'Bigsig30' },
+            { value: 'PararFichas', text: 'Parar Fichas' },
+            { value: 'Colacion', text: 'Colación' }
+        ];
+
+        let currentPersonIndex = -1;
+        let intervalId;
+
+        function getGameOptionsHtml() {
+            return gameOptionsData.map(option => `<option value="${option.value}">${option.text}</option>`).join('');
+        }
+        
+        function getGameTextByValue(value) {
+            const option = gameOptionsData.find(opt => opt.value === value);
+            return option ? option.text : '';
+        }
+
+        function isDarkColor(hexColor) {
+            const c = hexColor.substring(1);
+            const rgb = parseInt(c, 16);
+            const r = (rgb >> 16) & 0xff;
+            const g = (rgb >> 8) & 0xff;
+            const b = (rgb >> 0) & 0xff;
+            const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            return luma < 128;
+        }
+
+        function saveData() {
+            localStorage.setItem('appSchedule', JSON.stringify(scheduleData));
+            localStorage.setItem('appPeople', JSON.stringify(peopleData));
+            localStorage.setItem('appGameOptions', JSON.stringify(gameOptionsData));
+        }
+
+        function loadAllData() {
+            const savedSchedule = localStorage.getItem('appSchedule');
+            const savedPeople = localStorage.getItem('appPeople');
+            const savedGameOptions = localStorage.getItem('appGameOptions');
+
+            if (savedSchedule) {
+                try {
+                    scheduleData = JSON.parse(savedSchedule);
+                } catch (e) {
+                    console.error("Error al cargar los horarios, inicializando con valores por defecto.", e);
+                    scheduleData = [DEFAULT_SLOT];
+                }
+            } else {
+                scheduleData = [DEFAULT_SLOT];
+            }
+
+            if (savedPeople) {
+                try {
+                    peopleData = JSON.parse(savedPeople);
+                } catch (e) {
+                    console.error("Error al cargar las personas, inicializando con un array vacío.", e);
+                    peopleData = [];
+                }
+            } else {
+                peopleData = [];
+            }
+            
+            if (savedGameOptions) {
+                try {
+                    gameOptionsData = JSON.parse(savedGameOptions);
+                } catch (e) {
+                    console.error("Error al cargar las opciones de juego, inicializando con valores por defecto.", e);
+                    gameOptionsData = STATIC_GAME_OPTIONS;
+                }
+            } else {
+                gameOptionsData = STATIC_GAME_OPTIONS;
+            }
+            
+            if (scheduleData.length === 0) {
+                scheduleData = [DEFAULT_SLOT];
+            }
+
+            saveData();
+            renderTable();
+
+            clearInterval(intervalId);
+            intervalId = setInterval(checkExitTimes, 10000);
+            setInterval(updateClock, 1000);
+        }
+
+        function renderTable() {
+            renderSchedule();
+            renderPeople();
+            checkExitTimes();
+        }
+
+        function renderSchedule() {
+            const headerRow = document.querySelector('#schedule-header tr');
+            headerRow.innerHTML = '<th>Nombres</th>';
+            
+            scheduleData.forEach((slot, index) => {
+                const headerCell = document.createElement('th');
+                headerCell.classList.add('draggable-slot');
+                headerCell.draggable = true;
+                headerCell.setAttribute('data-slot-index', index);
+
+                headerCell.innerHTML = `
+                    <div class="card-time">
+                        <input type="time" class="time-input" value="${slot.start || ''}" data-slot-index="${index}">
+                    </div>
+                `;
+                headerRow.appendChild(headerCell);
+            });
+            
+            const controlCell = document.createElement('th');
+            controlCell.innerHTML = `
+                <button class="add-slot-btn">+</button>
+                <button class="remove-slot-btn">-</button>
+            `;
+            headerRow.appendChild(controlCell);
+
+            const timeInputs = document.querySelectorAll('#schedule-header .time-input');
+            timeInputs.forEach(input => {
+                input.addEventListener('change', function() {
+                    const index = parseInt(this.getAttribute('data-slot-index'));
+                    scheduleData[index].start = this.value;
+                    saveData();
+                    renderPeople();
+                });
+            });
+
+            const addBtn = document.querySelector('.add-slot-btn');
+            if (addBtn) addBtn.addEventListener('click', addSlot);
+            const removeBtn = document.querySelector('.remove-slot-btn');
+            if (removeBtn) removeBtn.addEventListener('click', removeSlot);
+
+            addDragAndDropEventListeners();
+        }
+
+        function renderPeople() {
+            const tbody = document.getElementById('horario-body');
+            tbody.innerHTML = '';
+            peopleData.forEach((person, personIndex) => {
+                const newRow = document.createElement('tr');
+                const nameCell = document.createElement('td');
+                const nameSpan = document.createElement('span');
+                nameSpan.classList.add('person-name');
+                nameSpan.setAttribute('data-person-index', personIndex);
+                nameSpan.textContent = person.name;
+
+                if (person.color) {
+                    nameCell.style.backgroundColor = person.color;
+                    if (isDarkColor(person.color)) {
+                        nameSpan.classList.add('text-white');
+                    } else {
+                        nameSpan.classList.remove('text-white');
+                    }
+                } else {
+                    nameCell.style.backgroundColor = '';
+                    nameSpan.classList.remove('text-white');
+                }
+
+                nameCell.appendChild(nameSpan);
+                newRow.appendChild(nameCell);
+                
+                const gameOptionsHtml = getGameOptionsHtml();
+                
+                scheduleData.forEach((slot, slotIndex) => {
+                    const selectedGame = person.games[slotIndex] || '';
+                    const selectedGameText = getGameTextByValue(selectedGame);
+                    
+                    const gameCell = document.createElement('td');
+                    gameCell.innerHTML = `
+                        <div class="card-selector">
+                            <span class="selected-text">${selectedGameText === 'Seleccionar...' ? '' : selectedGameText}</span>
+                            <select data-person-index="${personIndex}" data-slot-index="${slotIndex}">
+                                ${gameOptionsHtml}
+                            </select>
+                        </div>
+                    `;
+                    newRow.appendChild(gameCell);
+                });
+                
+                const emptyCell = document.createElement('td');
+                newRow.appendChild(emptyCell);
+
+                tbody.appendChild(newRow);
+                addEventListenersToSelects(newRow);
+                addNameClickListeners(newRow);
+            });
+            updatePersonCount();
+        }
+
+        function updatePersonCount() {
+            const personCountElement = document.getElementById('person-count');
+            personCountElement.textContent = `Personas registradas: ${peopleData.length}`;
+        }
+
+        function addNameClickListeners(row) {
+            const nameSpan = row.querySelector('.person-name');
+            if (nameSpan) {
+                nameSpan.addEventListener('click', function() {
+                    const personIndex = parseInt(this.getAttribute('data-person-index'));
+                    openPersonModal(personIndex);
+                });
+            }
+        }
+        
+        function addEventListenersToSelects(row) {
+            const selects = row.querySelectorAll('select');
+            selects.forEach(select => {
+                const personIndex = parseInt(select.getAttribute('data-person-index'));
+                const slotIndex = parseInt(select.getAttribute('data-slot-index'));
+                
+                if (peopleData[personIndex] && peopleData[personIndex].games) {
+                    select.value = peopleData[personIndex].games[slotIndex] || '';
+                }
+
+                select.addEventListener('change', function() {
+                    const selectedValue = this.value;
+                    const previousValue = peopleData[personIndex].games[slotIndex];
+
+                    const isExempted = (selectedValue === 'PararFichas' || selectedValue === 'Colacion' || selectedValue === '');
+                    let isOccupied = false;
+                    
+                    if (!isExempted) {
+                        for (let i = 0; i < peopleData.length; i++) {
+                            // No validar contra sí mismo
+                            if (i !== personIndex && peopleData[i].games[slotIndex] === selectedValue) {
+                                isOccupied = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (isOccupied) {
+                        alert('¡Advertencia! El puesto ya está ocupado por otra persona en este horario.');
+                        this.value = previousValue; // Revertir la selección
+                    } else {
+                        peopleData[personIndex].games[slotIndex] = selectedValue;
+                    }
+
+                    const selectedText = getGameTextByValue(this.value);
+                    const selectedTextSpan = this.previousElementSibling;
+                    selectedTextSpan.textContent = selectedText === 'Seleccionar...' ? '' : selectedText;
+                    
+                    saveData();
+                });
+            });
+        }
+
+        function addSlot() {
+            scheduleData.push({ start: '' });
+            peopleData.forEach(person => person.games.push(''));
+            saveData();
+            renderTable();
+        }
+
+        function removeSlot() {
+            if (scheduleData.length > 1) {
+                scheduleData.pop();
+                peopleData.forEach(person => person.games.pop());
+                saveData();
+                renderTable();
+            } else {
+                alert('No se puede eliminar la última columna.');
+            }
+        }
+        
+        function addDragAndDropEventListeners() {
+            const slots = document.querySelectorAll('#schedule-header .draggable-slot');
+            let draggedSlot = null;
+
+            slots.forEach(slot => {
+                slot.addEventListener('dragstart', function(e) {
+                    draggedSlot = this;
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', this.getAttribute('data-slot-index'));
+                    this.classList.add('dragging');
+                });
+
+                slot.addEventListener('dragend', function() {
+                    this.classList.remove('dragging');
+                    draggedSlot = null;
+                });
+
+                slot.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                });
+
+                slot.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    if (draggedSlot && draggedSlot !== this) {
+                        const fromIndex = parseInt(draggedSlot.getAttribute('data-slot-index'));
+                        const toIndex = parseInt(this.getAttribute('data-slot-index'));
+                        
+                        const slotToMove = scheduleData.splice(fromIndex, 1)[0];
+                        scheduleData.splice(toIndex, 0, slotToMove);
+
+                        peopleData.forEach(person => {
+                            const gameToMove = person.games.splice(fromIndex, 1)[0];
+                            person.games.splice(toIndex, 0, gameToMove);
+                        });
+
+                        saveData();
+                        renderTable();
+                    }
+                });
+            });
+        }
+        
+        document.getElementById('person-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const nombre = document.getElementById('nombre').value;
+            
+            if (scheduleData.length === 0) {
+                alert('La tabla debe tener al menos un horario para agregar personas.');
+                return;
+            }
+            
+            const newPerson = {
+                name: nombre,
+                games: Array(scheduleData.length).fill(''),
+                exitTime: '',
+                color: ''
+            };
+            peopleData.push(newPerson);
+            
+            saveData();
+            renderTable();
+            
+            document.getElementById('nombre').value = '';
+        });
+
+        document.getElementById('add-game-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const newGameName = document.getElementById('new-game-name-input').value.trim();
+            if (newGameName) {
+                const newValue = newGameName.replace(/\s/g, '');
+                if (!gameOptionsData.find(option => option.value === newValue)) {
+                    gameOptionsData.push({ value: newValue, text: newGameName });
+                    saveData();
+                    renderTable();
+                    document.getElementById('new-game-name-input').value = '';
+                    document.getElementById('addGameModal').style.display = 'none';
+                } else {
+                    alert('El nombre del juego ya existe.');
+                }
+            }
+        });
+
+        document.getElementById('clear-data').addEventListener('click', function() {
+            if (confirm('¿Estás seguro de que quieres borrar todos los datos de la tabla? Esta acción no se puede deshacer.')) {
+                localStorage.removeItem('appSchedule');
+                localStorage.removeItem('appPeople');
+                localStorage.removeItem('appGameOptions');
+                window.location.reload(); 
+            }
+        });
+
+        // --- Lógica del Modal de Persona ---
+        const personModal = document.getElementById('personModal');
+        const closePersonModalBtn = document.getElementById('closePersonModalBtn');
+        const savePersonBtn = document.getElementById('savePersonBtn');
+        const exitTimeInput = document.getElementById('exitTime');
+        const personColorInput = document.getElementById('personColor');
+        const deletePersonBtn = document.getElementById('deletePersonBtn');
+
+        function openPersonModal(personIndex) {
+            currentPersonIndex = personIndex;
+            const person = peopleData[currentPersonIndex];
+
+            document.getElementById('modalTitle').textContent = `Configurar a ${person.name}`;
+            exitTimeInput.value = person.exitTime || '';
+            personColorInput.value = person.color || '#ffffff';
+            personModal.style.display = 'block';
+        }
+
+        savePersonBtn.onclick = function() {
+            if (currentPersonIndex !== -1) {
+                peopleData[currentPersonIndex].exitTime = exitTimeInput.value;
+                peopleData[currentPersonIndex].color = personColorInput.value;
+                saveData();
+                renderTable();
+            }
+            personModal.style.display = 'none';
+        };
+
+        closePersonModalBtn.onclick = function() {
+            personModal.style.display = 'none';
+        };
+
+        window.onclick = function(event) {
+            if (event.target == personModal) {
+                personModal.style.display = 'none';
+            }
+            if (event.target == addGameModal) {
+                addGameModal.style.display = 'none';
+            }
+            if (event.target == warningModal) {
+                warningModal.style.display = 'none';
+            }
+        };
+
+        deletePersonBtn.onclick = function() {
+            if (confirm(`¿Estás seguro de que quieres eliminar a ${peopleData[currentPersonIndex].name}?`)) {
+                peopleData.splice(currentPersonIndex, 1);
+                saveData();
+                personModal.style.display = 'none';
+                renderTable();
+            }
+        };
+        
+        personColorInput.addEventListener('input', function() {
+            if (currentPersonIndex !== -1) {
+                const person = peopleData[currentPersonIndex];
+                person.color = this.value;
+                const modalTitle = document.getElementById('modalTitle');
+                if (isDarkColor(person.color)) {
+                    modalTitle.style.color = 'white';
+                } else {
+                    modalTitle.style.color = 'black';
+                }
+            }
+        });
+        
+        // --- Lógica del Modal de Agregar Juego ---
+        const addGameModal = document.getElementById('addGameModal');
+        const addGameBtn = document.getElementById('add-game-btn');
+        const closeAddGameModalBtn = document.getElementById('closeAddGameModalBtn');
+
+        addGameBtn.onclick = function() {
+            addGameModal.style.display = 'block';
+        };
+
+        closeAddGameModalBtn.onclick = function() {
+            addGameModal.style.display = 'none';
+        };
+        
+        // --- Lógica del Modal de Alertas ---
+        const warningModal = document.getElementById('warningModal');
+        const alertsBtn = document.getElementById('alerts-btn');
+        const closeWarningModalBtn = document.getElementById('closeWarningModalBtn');
+        const warningList = document.getElementById('warning-list');
+
+        alertsBtn.onclick = function() {
+            warningModal.style.display = 'block';
+        };
+
+        closeWarningModalBtn.onclick = function() {
+            warningModal.style.display = 'none';
+        };
+
+        function checkExitTimes() {
+            const now = new Date();
+            const nowMinutes = now.getHours() * 60 + now.getMinutes();
+            let peopleLeaving = [];
+
+            peopleData.forEach(person => {
+                if (person.exitTime) {
+                    const [exitHour, exitMinute] = person.exitTime.split(':').map(Number);
+                    const exitMinutes = exitHour * 60 + exitMinute;
+                    
+                    const timeUntilExit = exitMinutes - nowMinutes;
+
+                    if (timeUntilExit > 0 && timeUntilExit <= 20) {
+                        peopleLeaving.push(person.name);
+                    }
+                }
+            });
+
+            if (peopleLeaving.length > 0) {
+                alertsBtn.classList.add('active');
+                warningList.innerHTML = peopleLeaving.map(name => `<li>⚠️ ${name}</li>`).join('');
+            } else {
+                alertsBtn.classList.remove('active');
+                warningList.innerHTML = '<li>No hay alertas de salida en este momento.</li>';
+            }
+        }
+
+        // --- Lógica del Reloj ---
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('current-time').textContent = `${hours}:${minutes}:${seconds}`;
+        }
+
+        // --- Lógica de la sección colapsable ---
+        const registrationHeader = document.getElementById('registration-header');
+        const registrationContent = document.getElementById('registration-content');
+
+        registrationHeader.addEventListener('click', () => {
+            registrationContent.classList.toggle('visible');
+            registrationHeader.classList.toggle('expanded');
+        });
+        
+        document.addEventListener('DOMContentLoaded', loadAllData);
+    </script>
+</body>
+</html>
