@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Personas y Horarios</title>
+    <title>Gestión de Horarios</title>
     <style>
         body {
             font-family: sans-serif;
@@ -124,24 +124,34 @@
             padding: 12px;
             text-align: center;
         }
-        #schedule-header th:first-child {
+        /* Estilos para las columnas fijas */
+        #schedule-header th:first-child,
+        #schedule-header th:nth-child(2) {
             position: sticky;
             left: 0;
             background-color: #333;
             z-index: 11;
         }
-        #horario-body tr td:first-child {
+        #horario-body td:first-child,
+        #horario-body td:nth-child(2) {
             position: sticky;
             left: 0;
             background-color: #fff;
             z-index: 10;
         }
-        #horario-body tr:nth-child(even) td:first-child {
+        #horario-body tr:nth-child(even) td:first-child,
+        #horario-body tr:nth-child(even) td:nth-child(2) {
             background-color: #f9f9f9;
         }
-        #horario-body tr:hover td:first-child {
+        #horario-body tr:hover td:first-child,
+        #horario-body tr:hover td:nth-child(2) {
              background-color: #f1f1f1;
         }
+        /* Ajustar el desplazamiento de las celdas fijas */
+        #schedule-header th:first-child { left: 0; min-width: 100px; }
+        #schedule-header th:nth-child(2) { left: 100px; }
+        #horario-body td:first-child { left: 0; min-width: 100px; }
+        #horario-body td:nth-child(2) { left: 100px; }
 
         th {
             background-color: #333;
@@ -193,43 +203,45 @@
 
         .card-selector {
             position: relative;
-            background-color: #fff;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            padding: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s;
             display: flex;
-            align-items: center;
+            flex-direction: column; /* Apilar los selectores verticalmente */
+            gap: 5px;
+            align-items: stretch;
             justify-content: center;
         }
-        .card-selector:hover {
-            transform: scale(1.05);
-        }
 
-        select {
+        /* Estilos del selector de mesa como una tarjeta */
+        .mesa-select {
             -webkit-appearance: none;
             -moz-appearance: none;
             appearance: none;
-            background: transparent;
-            width: 100%;
-            padding: 8px;
-            border-radius: 4px;
-            border: none;
-            box-sizing: border-box;
+            background-color: white;
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            text-align: center;
             font-size: 16px;
+            font-weight: bold;
             cursor: pointer;
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            opacity: 0;
+            box-sizing: border-box;
+            width: 100%;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path fill="%23333" d="M8 11L3 6h10z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            padding-right: 30px;
+        }
+        .mesa-select:focus {
+            outline: 2px solid #007bff;
+        }
+        /* Estilo para el texto de la opción seleccionada */
+        .mesa-select option {
+            font-weight: normal;
+            color: black;
+        }
+        .mesa-select:not([value=""]):not([value="Seleccionar..."]) {
+            color: #007bff; /* Color azul para el texto seleccionado */
         }
         
-        .selected-text {
-            font-weight: bold;
-            color: #007bff;
-        }
         .clear-data-btn {
             background-color: #dc3545;
             color: white;
@@ -265,7 +277,7 @@
         .modal {
             display: none;
             position: fixed;
-            z-index: 1;
+            z-index: 1000; /* Aumentado para estar siempre encima */
             left: 0;
             top: 0;
             width: 100%;
@@ -305,6 +317,15 @@
             padding: 8px;
             margin-top: 5px;
         }
+        .modal-body .replace-section {
+            margin-top: 20px;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+        .modal-body .replace-section select,
+        .modal-body .replace-section button {
+            margin-top: 5px;
+        }
         .modal-buttons {
             display: flex;
             justify-content: space-between;
@@ -313,7 +334,7 @@
         .modal-buttons button {
             width: 48%;
         }
-        .delete-person-btn {
+        .delete-person-btn, #replacePersonBtn {
             background-color: #dc3545;
             color: white;
             border: none;
@@ -321,17 +342,32 @@
             border-radius: 4px;
             cursor: pointer;
             width: 100%;
+            margin-top: 10px;
+        }
+        #replacePersonBtn {
+            background-color: #ffc107;
+            color: black;
+        }
+        #replacePersonBtn:hover {
+            background-color: #e0a800;
+        }
+        .delete-person-btn {
+            margin-top: 20px;
+        }
+        .modal-body .modal-buttons button.add-slot-btn {
+             width: 100%;
         }
 
         /* Estilos para las alertas */
         .person-name {
-            cursor: pointer;
+            cursor: grab; /* Cambiar cursor para indicar que es arrastrable */
             font-weight: bold;
             padding: 5px;
             border-radius: 4px;
             transition: background-color 0.3s;
             display: block;
             color: black;
+            white-space: nowrap; /* Evita que el nombre se corte */
         }
         .person-name.text-white {
             color: white;
@@ -378,15 +414,32 @@
         .game-list li:last-child {
             border-bottom: none;
         }
+        /* Estilo para la fila arrastrada */
+        .dragging {
+            opacity: 0.5;
+        }
+        /* Estilo para la columna del tiempo en mesa */
+        #schedule-header th:nth-child(2) {
+             background-color: #003D5C;
+             color: black;
+        }
+        .time-in-table {
+            background-color: #003D5C;
+            color: black;
+            font-weight: bold;
+        }
+        .mesa-select-container {
+            position: relative;
+        }
     </style>
 </head>
 <body>
 
     <div id="current-time"></div>
-    <h1>Gestión de Personas y Horarios</h1>
+    <h1>Gestión de Horarios</h1>
 
     <div class="form-container">
-        <h2 id="registration-header" class="collapsible-header">Registrar a una Persona</h2>
+        <h2 id="registration-header" class="collapsible-header">Turnos</h2>
         <div id="registration-content" class="collapsible-content">
             <form id="person-form">
                 <div>
@@ -404,13 +457,14 @@
     <hr>
 
     <div id="person-count"></div>
-    <h2>Tabla de Horarios de Juegos</h2>
+    <h2>Tabla de Turnos</h2>
 
     <div class="table-container">
         <table>
             <thead id="schedule-header">
                 <tr>
                     <th>Nombres</th>
+                    <th>Tiempo en mesa</th>
                 </tr>
             </thead>
             <tbody id="horario-body">
@@ -428,11 +482,19 @@
 
                 <label for="personColor">Color:</label>
                 <input type="color" id="personColor">
-
+                
                 <div class="modal-buttons">
                     <button id="savePersonBtn" class="add-slot-btn">Aceptar</button>
-                    <button id="deletePersonBtn" class="delete-person-btn">Eliminar</button>
                 </div>
+                
+                <div class="replace-section">
+                    <label for="replacesPersonSelect">Reemplazar a otra persona:</label>
+                    <select id="replacesPersonSelect">
+                        <option value="">Seleccionar persona...</option>
+                    </select>
+                    <button id="replacePersonBtn" class="add-slot-btn">Reemplazar</button>
+                </div>
+                <button id="deletePersonBtn" class="delete-person-btn">Eliminar</button>
             </div>
         </div>
     </div>
@@ -482,7 +544,6 @@
         const DEFAULT_SLOT = { start: '08:00' };
         
         const STATIC_GAME_OPTIONS = [
-            { value: '', text: 'Seleccionar...', repeatable: false },
             { value: 'DrP7', text: 'DrP7', repeatable: false },
             { value: 'DrP12', text: 'DrP12', repeatable: false },
             { value: 'HP8', text: 'HP8', repeatable: false },
@@ -502,20 +563,35 @@
             { value: 'D.P.R', text: 'D.P.R', repeatable: true }
         ];
 
+        const MESA_OPTIONS = [
+            { value: 'Mesa1', text: 'Mesa 1' },
+            { value: 'Mesa2', text: 'Mesa 2' },
+            { value: 'Mesa3', text: 'Mesa 3' },
+            { value: 'Mesa4', text: 'Mesa 4' },
+            { value: 'Mesa5', text: 'Mesa 5' },
+        ];
+
         let currentPersonIndex = -1;
-        let intervalId;
+        let alertIntervalId;
+        let timerIntervalId;
 
         function getGameOptionsHtml() {
             return gameOptionsData.map(option => `<option value="${option.value}">${option.text}</option>`).join('');
         }
         
+        function getMesaOptionsHtml() {
+            return MESA_OPTIONS.map(option => `<option value="${option.value}">${option.text}</option>`).join('');
+        }
+
         function getGameTextByValue(value) {
-            const option = gameOptionsData.find(opt => opt.value === value);
+            const allOptions = [...STATIC_GAME_OPTIONS, ...gameOptionsData.filter(opt => !STATIC_GAME_OPTIONS.some(staticOpt => staticOpt.value === opt.value)), ...MESA_OPTIONS];
+            const option = allOptions.find(opt => opt.value === value);
             return option ? option.text : '';
         }
 
         function isGameRepeatable(value) {
-            const option = gameOptionsData.find(opt => opt.value === value);
+            const allOptions = [...STATIC_GAME_OPTIONS, ...gameOptionsData.filter(opt => !STATIC_GAME_OPTIONS.some(staticOpt => staticOpt.value === opt.value)), ...MESA_OPTIONS];
+            const option = allOptions.find(opt => opt.value === value);
             return option ? option.repeatable : false;
         }
 
@@ -554,6 +630,19 @@
             if (savedPeople) {
                 try {
                     peopleData = JSON.parse(savedPeople);
+                    peopleData.forEach(person => {
+                        if (!Array.isArray(person.games)) {
+                            person.games = [];
+                        }
+                        person.games.forEach((gamesArray, index) => {
+                            if (!Array.isArray(gamesArray)) {
+                                person.games[index] = [gamesArray];
+                            }
+                        });
+                        while (person.games.length < scheduleData.length) {
+                             person.games.push([]);
+                        }
+                    });
                 } catch (e) {
                     console.error("Error al cargar las personas, inicializando con un array vacío.", e);
                     peopleData = [];
@@ -564,7 +653,6 @@
             
             if (savedGameOptions) {
                 try {
-                    // Cargar opciones guardadas y fusionarlas con las estáticas
                     const customOptions = JSON.parse(savedGameOptions).filter(option => !STATIC_GAME_OPTIONS.some(staticOpt => staticOpt.value === option.value));
                     gameOptionsData = [...STATIC_GAME_OPTIONS, ...customOptions];
                 } catch (e) {
@@ -582,8 +670,10 @@
             saveData();
             renderTable();
 
-            clearInterval(intervalId);
-            intervalId = setInterval(checkExitTimes, 10000);
+            clearInterval(alertIntervalId);
+            clearInterval(timerIntervalId);
+            alertIntervalId = setInterval(checkExitTimes, 10000);
+            timerIntervalId = setInterval(updateTableTimers, 1000);
             setInterval(updateClock, 1000);
         }
 
@@ -595,8 +685,11 @@
 
         function renderSchedule() {
             const headerRow = document.querySelector('#schedule-header tr');
-            headerRow.innerHTML = '<th>Nombres</th>';
-            
+            headerRow.innerHTML = `
+                <th>Nombres</th>
+                <th>Tiempo en mesa</th>
+            `;
+
             scheduleData.forEach((slot, index) => {
                 const headerCell = document.createElement('th');
                 headerCell.classList.add('draggable-slot');
@@ -633,7 +726,7 @@
             const removeBtn = document.querySelector('.remove-slot-btn');
             if (removeBtn) removeBtn.addEventListener('click', removeSlot);
 
-            addDragAndDropEventListeners();
+            addDragAndDropEventListenersToSlots();
         }
 
         function renderPeople() {
@@ -641,6 +734,10 @@
             tbody.innerHTML = '';
             peopleData.forEach((person, personIndex) => {
                 const newRow = document.createElement('tr');
+                newRow.draggable = true;
+                newRow.setAttribute('data-person-index', personIndex);
+
+                // Celda del nombre
                 const nameCell = document.createElement('td');
                 const nameSpan = document.createElement('span');
                 nameSpan.classList.add('person-name');
@@ -662,21 +759,26 @@
                 nameCell.appendChild(nameSpan);
                 newRow.appendChild(nameCell);
                 
-                const gameOptionsHtml = getGameOptionsHtml();
+                // Celda del tiempo en mesa
+                const timeCell = document.createElement('td');
+                timeCell.classList.add('time-in-table');
+                timeCell.setAttribute('data-person-index', personIndex);
+                newRow.appendChild(timeCell);
                 
                 scheduleData.forEach((slot, slotIndex) => {
-                    const selectedGame = person.games[slotIndex] || '';
-                    const selectedGameText = getGameTextByValue(selectedGame);
-                    
                     const gameCell = document.createElement('td');
-                    gameCell.innerHTML = `
-                        <div class="card-selector">
-                            <span class="selected-text">${selectedGameText === 'Seleccionar...' ? '' : selectedGameText}</span>
-                            <select data-person-index="${personIndex}" data-slot-index="${slotIndex}">
-                                ${gameOptionsHtml}
-                            </select>
-                        </div>
-                    `;
+                    const cardSelector = document.createElement('div');
+                    cardSelector.classList.add('card-selector');
+
+                    const games = person.games[slotIndex] || [];
+                    
+                    games.forEach((game, gameIndex) => {
+                        cardSelector.appendChild(createMesaSelector(personIndex, slotIndex, gameIndex, game));
+                    });
+                    
+                    cardSelector.appendChild(createMesaSelector(personIndex, slotIndex, games.length, ''));
+                    
+                    gameCell.appendChild(cardSelector);
                     newRow.appendChild(gameCell);
                 });
                 
@@ -684,10 +786,64 @@
                 newRow.appendChild(emptyCell);
 
                 tbody.appendChild(newRow);
-                addEventListenersToSelects(newRow);
                 addNameClickListeners(newRow);
             });
-            updatePersonCount(); // Se llama aquí sin el contador de alertas
+            addDragAndDropEventListenersToPeople();
+            updatePersonCount();
+        }
+        
+        function createMesaSelector(personIndex, slotIndex, gameIndex, selectedValue = '') {
+            const select = document.createElement('select');
+            select.classList.add('mesa-select');
+            select.setAttribute('data-person-index', personIndex);
+            select.setAttribute('data-slot-index', slotIndex);
+            select.setAttribute('data-game-index', gameIndex);
+            
+            const allOptions = [
+                { value: '', text: 'Seleccionar...' },
+                ...gameOptionsData,
+                ...MESA_OPTIONS
+            ];
+
+            const uniqueOptions = Array.from(new Set(allOptions.map(opt => JSON.stringify(opt)))).map(optStr => JSON.parse(optStr));
+            
+            select.innerHTML = uniqueOptions.map(option => {
+                const textToShow = option.text;
+                return `<option value="${option.value}">${textToShow}</option>`;
+            }).join('');
+            
+            select.value = selectedValue;
+            
+            select.addEventListener('change', function() {
+                const personIndex = parseInt(this.getAttribute('data-person-index'));
+                const slotIndex = parseInt(this.getAttribute('data-slot-index'));
+                const gameIndex = parseInt(this.getAttribute('data-game-index'));
+                const selectedValue = this.value;
+                
+                let personGames = peopleData[personIndex].games;
+                if (!personGames[slotIndex]) {
+                    personGames[slotIndex] = [];
+                }
+                
+                if (selectedValue === '') {
+                     personGames[slotIndex].splice(gameIndex, 1);
+                } else {
+                    personGames[slotIndex][gameIndex] = selectedValue;
+                }
+
+                saveData();
+                renderTable();
+            });
+            
+            return select;
+        }
+
+        function handleMesaSelectionChange(selectElement) {
+            // Este es el manejador de eventos que se usa en el código,
+            // pero la lógica principal ahora está dentro de createMesaSelector.
+            // Se mantiene aquí por si se necesitara para otros fines.
+            saveData();
+            renderTable();
         }
 
         function renderCustomGameList() {
@@ -719,9 +875,13 @@
             if (confirm(`¿Estás seguro de que quieres eliminar el juego "${getGameTextByValue(gameValue)}"?`)) {
                 gameOptionsData = gameOptionsData.filter(option => option.value !== gameValue);
                 
-                // Limpiar la selección de ese juego en la tabla
                 peopleData.forEach(person => {
-                    person.games = person.games.map(game => (game === gameValue ? '' : game));
+                    person.games.forEach(gamesArray => {
+                        const index = gamesArray.indexOf(gameValue);
+                        if (index > -1) {
+                            gamesArray.splice(index, 1);
+                        }
+                    });
                 });
 
                 saveData();
@@ -748,52 +908,10 @@
                 });
             }
         }
-        
-        function addEventListenersToSelects(row) {
-            const selects = row.querySelectorAll('select');
-            selects.forEach(select => {
-                const personIndex = parseInt(select.getAttribute('data-person-index'));
-                const slotIndex = parseInt(select.getAttribute('data-slot-index'));
-                
-                if (peopleData[personIndex] && peopleData[personIndex].games) {
-                    select.value = peopleData[personIndex].games[slotIndex] || '';
-                }
-
-                select.addEventListener('change', function() {
-                    const selectedValue = this.value;
-                    const previousValue = peopleData[personIndex].games[slotIndex];
-                    
-                    const isRepeatable = isGameRepeatable(selectedValue);
-                    let isOccupied = false;
-                    
-                    if (!isRepeatable && selectedValue !== '') {
-                        for (let i = 0; i < peopleData.length; i++) {
-                            if (i !== personIndex && peopleData[i].games[slotIndex] === selectedValue) {
-                                isOccupied = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (isOccupied) {
-                        alert('¡Advertencia! El puesto ya está ocupado por otra persona en este horario.');
-                        this.value = previousValue; // Revertir la selección
-                    } else {
-                        peopleData[personIndex].games[slotIndex] = selectedValue;
-                    }
-
-                    const selectedText = getGameTextByValue(this.value);
-                    const selectedTextSpan = this.previousElementSibling;
-                    selectedTextSpan.textContent = selectedText === 'Seleccionar...' ? '' : selectedText;
-                    
-                    saveData();
-                });
-            });
-        }
 
         function addSlot() {
             scheduleData.push({ start: '' });
-            peopleData.forEach(person => person.games.push(''));
+            peopleData.forEach(person => person.games.push([]));
             saveData();
             renderTable();
         }
@@ -809,7 +927,7 @@
             }
         }
         
-        function addDragAndDropEventListeners() {
+        function addDragAndDropEventListenersToSlots() {
             const slots = document.querySelectorAll('#schedule-header .draggable-slot');
             let draggedSlot = null;
 
@@ -851,6 +969,44 @@
                 });
             });
         }
+
+        function addDragAndDropEventListenersToPeople() {
+            const peopleRows = document.querySelectorAll('#horario-body tr');
+            let draggedPersonRow = null;
+            
+            peopleRows.forEach(row => {
+                row.addEventListener('dragstart', function(e) {
+                    draggedPersonRow = this;
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', this.getAttribute('data-person-index'));
+                    this.classList.add('dragging');
+                });
+
+                row.addEventListener('dragend', function() {
+                    this.classList.remove('dragging');
+                    draggedPersonRow = null;
+                });
+
+                row.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                });
+
+                row.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    if (draggedPersonRow && draggedPersonRow !== this) {
+                        const fromIndex = parseInt(draggedPersonRow.getAttribute('data-person-index'));
+                        const toIndex = parseInt(this.getAttribute('data-person-index'));
+
+                        const personToMove = peopleData.splice(fromIndex, 1)[0];
+                        peopleData.splice(toIndex, 0, personToMove);
+                        
+                        saveData();
+                        renderTable();
+                    }
+                });
+            });
+        }
         
         document.getElementById('person-form').addEventListener('submit', function(event) {
             event.preventDefault();
@@ -863,7 +1019,7 @@
             
             const newPerson = {
                 name: nombre,
-                games: Array(scheduleData.length).fill(''),
+                games: Array.from({ length: scheduleData.length }, () => []),
                 exitTime: '',
                 color: ''
             };
@@ -911,6 +1067,8 @@
         const exitTimeInput = document.getElementById('exitTime');
         const personColorInput = document.getElementById('personColor');
         const deletePersonBtn = document.getElementById('deletePersonBtn');
+        const replacesPersonSelect = document.getElementById('replacesPersonSelect');
+        const replacePersonBtn = document.getElementById('replacePersonBtn');
 
         function openPersonModal(personIndex) {
             currentPersonIndex = personIndex;
@@ -919,6 +1077,18 @@
             document.getElementById('modalTitle').textContent = `Configurar a ${person.name}`;
             exitTimeInput.value = person.exitTime || '';
             personColorInput.value = person.color || '#ffffff';
+            
+            // Llenar el selector de reemplazo
+            replacesPersonSelect.innerHTML = '<option value="">Seleccionar persona...</option>';
+            peopleData.forEach((p, index) => {
+                if (index !== currentPersonIndex) {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = p.name;
+                    replacesPersonSelect.appendChild(option);
+                }
+            });
+            
             personModal.style.display = 'block';
         }
 
@@ -943,10 +1113,6 @@
             if (event.target == addGameModal) {
                 addGameModal.style.display = 'none';
             }
-            // Eliminar la lógica de cierre automático del modal de alerta para evitar conflictos
-            // if (event.target == warningModal) {
-            //     warningModal.style.display = 'none';
-            // }
         };
 
         deletePersonBtn.onclick = function() {
@@ -955,6 +1121,30 @@
                 saveData();
                 personModal.style.display = 'none';
                 renderTable();
+            }
+        };
+
+        replacePersonBtn.onclick = function() {
+            const replacedPersonIndex = replacesPersonSelect.value;
+            if (replacedPersonIndex !== '' && currentPersonIndex !== -1) {
+                const replacedPerson = peopleData[replacedPersonIndex];
+                
+                peopleData[currentPersonIndex].games = JSON.parse(JSON.stringify(replacedPerson.games));
+                peopleData[currentPersonIndex].exitTime = replacedPerson.exitTime;
+
+                if (confirm(`¿Estás seguro de que quieres reemplazar a "${replacedPerson.name}"? Los horarios de ${replacedPerson.name} se asignarán a ${peopleData[currentPersonIndex].name} y ${replacedPerson.name} será eliminado de la lista.`)) {
+                    peopleData.splice(replacedPersonIndex, 1);
+                    
+                    if (parseInt(replacedPersonIndex) < currentPersonIndex) {
+                        currentPersonIndex--;
+                    }
+                    
+                    saveData();
+                    personModal.style.display = 'none';
+                    renderTable();
+                }
+            } else {
+                alert('Por favor, selecciona una persona para reemplazar.');
             }
         };
         
@@ -977,7 +1167,7 @@
         const closeAddGameModalBtn = document.getElementById('closeAddGameModalBtn');
 
         addGameBtn.onclick = function() {
-            renderCustomGameList(); // Renderizar la lista al abrir el modal
+            renderCustomGameList(); 
             addGameModal.style.display = 'block';
         };
 
@@ -1037,6 +1227,90 @@
                 warningList.innerHTML = '<li>No hay alertas de salida en este momento.</li>';
                 warningModal.style.display = 'none';
             }
+        }
+
+        function updateTableTimers() {
+            const timeCells = document.querySelectorAll('#horario-body .time-in-table');
+            const now = new Date();
+
+            timeCells.forEach(cell => {
+                const personIndex = parseInt(cell.getAttribute('data-person-index'));
+                const person = peopleData[personIndex];
+
+                let lastGameSlotIndex = -1;
+                let lastGameValue = null;
+
+                // 1. Encontrar el último turno (más reciente) en el que la persona tiene un juego asignado.
+                for (let i = scheduleData.length - 1; i >= 0; i--) {
+                    if (person.games[i] && person.games[i].length > 0 && person.games[i][0] !== '') {
+                        lastGameSlotIndex = i;
+                        lastGameValue = person.games[i][0];
+                        break;
+                    }
+                }
+                
+                // Si no tiene ningún juego asignado, el temporizador es 0.
+                if (lastGameSlotIndex === -1) {
+                    cell.textContent = '00h 00m 00s';
+                    return;
+                }
+
+                const lastGameSlot = scheduleData[lastGameSlotIndex];
+                const [startHour, startMinute] = lastGameSlot.start.split(':').map(Number);
+                const startTimeForTimer = new Date();
+                startTimeForTimer.setHours(startHour, startMinute, 0, 0);
+
+                let timerShouldRun = false;
+                let nextGameStart = null;
+
+                // 2. Buscar si el mismo juego está asignado a otra persona en un turno posterior.
+                for (let i = lastGameSlotIndex + 1; i < scheduleData.length; i++) {
+                    for (let otherPersonIndex = 0; otherPersonIndex < peopleData.length; otherPersonIndex++) {
+                        if (otherPersonIndex === personIndex) continue; // Ignorar a la misma persona
+                        
+                        const otherPerson = peopleData[otherPersonIndex];
+                        // Si otra persona tiene el mismo juego asignado en este turno, tomamos su hora de inicio.
+                        if (otherPerson.games[i] && otherPerson.games[i].includes(lastGameValue)) {
+                            nextGameStart = scheduleData[i].start;
+                            break; // Encontramos el siguiente turno, no es necesario seguir buscando.
+                        }
+                    }
+                    if (nextGameStart) break;
+                }
+
+                // 3. Determinar si el temporizador debe seguir corriendo.
+                if (nextGameStart) {
+                    const [nextHour, nextMinute] = nextGameStart.split(':').map(Number);
+                    const nextGameDate = new Date();
+                    nextGameDate.setHours(nextHour, nextMinute, 0, 0);
+                    
+                    // El temporizador se detiene solo si la hora actual es igual o posterior
+                    // a la hora de inicio del próximo turno.
+                    if (now < nextGameDate) {
+                        timerShouldRun = true;
+                    } else {
+                        timerShouldRun = false;
+                    }
+                } else {
+                    // Si no hay otro turno asignado, el temporizador debe seguir corriendo.
+                    timerShouldRun = true;
+                }
+
+                // 4. Actualizar el contenido de la celda.
+                if (timerShouldRun && startTimeForTimer <= now) {
+                    const elapsedMilliseconds = now - startTimeForTimer;
+                    
+                    const elapsedSeconds = Math.floor(elapsedMilliseconds / 1000);
+                    const hours = Math.floor(elapsedSeconds / 3600);
+                    const minutes = Math.floor((elapsedSeconds % 3600) / 60);
+                    const seconds = elapsedSeconds % 60;
+                    
+                    const formattedTime = `${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
+                    cell.textContent = formattedTime;
+                } else {
+                    cell.textContent = '00h 00m 00s';
+                }
+            });
         }
 
         // --- Lógica del Reloj ---
