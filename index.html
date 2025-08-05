@@ -819,6 +819,29 @@
                 const slotIndex = parseInt(this.getAttribute('data-slot-index'));
                 const gameIndex = parseInt(this.getAttribute('data-game-index'));
                 const selectedValue = this.value;
+
+                // --- Lógica de validación de conflicto de mesa ---
+                if (selectedValue !== '') {
+                    let conflictFound = false;
+                    peopleData.forEach((otherPerson, otherPersonIndex) => {
+                        if (otherPersonIndex === personIndex) return; // Ignorar a la misma persona
+                        
+                        if (otherPerson.games[slotIndex] && otherPerson.games[slotIndex].includes(selectedValue)) {
+                            conflictFound = true;
+                        }
+                    });
+
+                    if (conflictFound) {
+                        alert(`¡Advertencia! La mesa ${getGameTextByValue(selectedValue)} ya está asignada a otra persona en este turno.`);
+                        
+                        // Revertir la selección a su valor original
+                        this.value = peopleData[personIndex].games[slotIndex][gameIndex] || '';
+                        
+                        // Evitar que se guarde el cambio
+                        return;
+                    }
+                }
+                // --- Fin de la lógica de validación ---
                 
                 let personGames = peopleData[personIndex].games;
                 if (!personGames[slotIndex]) {
