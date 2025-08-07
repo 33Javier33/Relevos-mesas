@@ -26,7 +26,7 @@
             background-color: var(--background-color);
             color: var(--text-color);
             margin: 0;
-            padding: 20px;
+            padding: 0;
             box-sizing: border-box;
             line-height: 1.6;
         }
@@ -56,7 +56,7 @@
 
         .form-container, .modal-content, .table-container table {
             background-color: var(--surface-color);
-            padding: 24px;
+            padding: 0;
             border-radius: var(--border-radius);
             box-shadow: var(--box-shadow);
             margin-bottom: 20px;
@@ -65,7 +65,7 @@
 
         .form-container h2, h2, h3 {
             border-bottom: 1px solid var(--border-color);
-            padding-bottom: 16px;
+            padding-bottom: 0;
             margin-bottom: 24px;
         }
         
@@ -78,7 +78,7 @@
         /* Estilo para el encabezado colapsable */
         .collapsible-header {
             cursor: pointer;
-            padding-bottom: 16px;
+            padding-bottom: 0;
             border-bottom: 1px solid var(--border-color);
             user-select: none;
             display: flex;
@@ -104,7 +104,7 @@
         /* Contenido que se colapsa */
         .collapsible-content {
             display: none;
-            padding-top: 15px;
+            padding-top: 0;
         }
         .collapsible-content.visible {
             display: block;
@@ -122,7 +122,7 @@
             display: block;
         }
         .form-container input {
-            padding: 10px 12px;
+            padding: 0;
             border-radius: 8px;
             border: 1px solid var(--border-color);
             box-sizing: border-box;
@@ -136,7 +136,7 @@
         }
 
         .form-container button {
-            padding: 12px 20px;
+            padding: 0;
             color: white;
             border: none;
             border-radius: 8px;
@@ -197,7 +197,7 @@
         }
         
         thead th, tbody td {
-            padding: 15px 12px;
+            padding: 0;
             text-align: center;
             border-bottom: 1px solid var(--border-color);
             border-right: 1px solid var(--border-color);
@@ -262,7 +262,7 @@
         .card-time {
             background-color: var(--primary-color);
             color: white;
-            padding: 8px;
+            padding: 0;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             transition: transform 0.2s;
@@ -293,9 +293,10 @@
         /* Estilos del selector de mesas */
         .card-selector {
             display: flex;
-            flex-direction: column;
-            gap: 8px;
-            align-items: stretch;
+            flex-direction: row; 
+            flex-wrap: wrap;       
+            gap: 0;
+            align-items: center;
             justify-content: center;
         }
         .mesa-select {
@@ -303,20 +304,24 @@
             -moz-appearance: none;
             appearance: none;
             background-color: var(--surface-color);
-            padding: 8px 12px;
+            padding: 0;
             border: 1px solid var(--border-color);
             border-radius: 8px;
             text-align: center;
             font-size: 0.9em;
             font-weight: 500;
             cursor: pointer;
-            width: 100%;
+            width: 50%;
             transition: all 0.2s ease;
             color: var(--light-text-color);
+            
+            /* CÓDIGO ELIMINADO PARA QUITAR LA FLECHA */
+            /*
             background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%236b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>');
             background-repeat: no-repeat;
             background-position: right 8px center;
-            padding-right: 30px;
+            */
+            padding-right: 0;
         }
         .mesa-select:hover {
             border-color: var(--primary-color);
@@ -338,14 +343,14 @@
         .clear-data-btn {
             background-color: var(--danger-color);
             color: white;
-            padding: 12px 20px;
+            padding: 0;
             border: none;
             border-radius: 8px;
             cursor: pointer;
             margin-top: 20px;
         }
         .add-game-btn, .alerts-btn {
-            padding: 12px 20px;
+            padding: 0;
             border: none;
             border-radius: 8px;
             cursor: pointer;
@@ -383,7 +388,7 @@
         .modal-content {
             background-color: var(--surface-color);
             margin: 5% auto;
-            padding: 30px;
+            padding: 0;
             border: none;
             width: 90%;
             max-width: 500px;
@@ -412,7 +417,7 @@
         .modal-body input[type="color"],
         .modal-body select {
             width: 100%;
-            padding: 10px 12px;
+            padding: 0;
             margin-top: 8px;
             border-radius: 8px;
             border: 1px solid var(--border-color);
@@ -422,7 +427,7 @@
         .modal-body .replace-section {
             margin-top: 25px;
             border-top: 1px solid var(--border-color);
-            padding-top: 20px;
+            padding-top: 0;
         }
         .modal-buttons {
             display: flex;
@@ -450,7 +455,7 @@
         .person-name {
             cursor: grab;
             font-weight: 500;
-            padding: 8px;
+            padding: 0;
             border-radius: 8px;
             transition: background-color 0.3s;
             display: block;
@@ -470,7 +475,7 @@
             font-weight: 500;
             margin-bottom: 8px;
             cursor: pointer;
-            padding: 10px;
+            padding: 0;
             border-radius: 8px;
             background-color: #fffbeb; /* Fondo amarillo claro */
             border-left: 4px solid var(--danger-color);
@@ -489,7 +494,7 @@
         /* Estilos del pie de página (firma) */
         footer {
             margin-top: 50px;
-            padding-top: 20px;
+            padding-top: 0;
             border-top: 1px solid var(--border-color);
             text-align: center;
         }
@@ -508,7 +513,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 12px;
+            padding: 0;
             border-bottom: 1px solid var(--border-color);
         }
         .game-list li:last-child {
@@ -519,7 +524,7 @@
             color: white;
             border: none;
             border-radius: 6px;
-            padding: 6px 12px;
+            padding: 0;
             font-size: 0.9em;
             cursor: pointer;
         }
@@ -550,7 +555,7 @@
 <body>
 
     <div id="current-time"></div>
-    <h1>Gestión de Horarios</h1>
+    
 
     <div class="form-container">
         <h2 id="registration-header" class="collapsible-header">Turnos</h2>
@@ -921,7 +926,7 @@
             select.setAttribute('data-game-index', gameIndex);
             
             const allOptions = [
-                { value: '', text: 'Seleccionar...' },
+                { value: '', text: '+' }, 
                 ...gameOptionsData,
                 ...MESA_OPTIONS
             ];
@@ -970,7 +975,7 @@
                 }
                 
                 if (selectedValue === '') {
-                     personGames[slotIndex].splice(gameIndex, 1);
+                     personGames[slotIdex].splice(gameIndex, 1);
                 } else {
                     personGames[slotIndex][gameIndex] = selectedValue;
                 }
@@ -983,9 +988,6 @@
         }
 
         function handleMesaSelectionChange(selectElement) {
-            // Este es el manejador de eventos que se usa en el código,
-            // pero la lógica principal ahora está dentro de createMesaSelector.
-            // Se mantiene aquí por si se necesitara para otros fines.
             saveData();
             renderTable();
         }
@@ -1365,7 +1367,9 @@
             if (peopleLeaving.length > 0) {
                 alertsBtn.classList.add('active');
                 warningList.innerHTML = peopleLeaving.map(person => `<li data-person-index="${person.index}">⚠️ ${person.name}</li>`).join('');
-                warningModal.style.display = 'block';
+                if (warningModal.style.display !== 'block' ) {
+                   // No muestres el modal aquí, solo actualiza el botón de alerta
+                }
             } else {
                 alertsBtn.classList.remove('active');
                 warningList.innerHTML = '<li>No hay alertas de salida en este momento.</li>';
@@ -1445,7 +1449,7 @@
                     const elapsedMilliseconds = now - startTimeForTimer;
                     
                     const elapsedSeconds = Math.floor(elapsedMilliseconds / 1000);
-                    const hours = Math.floor(elapsedSeconds / 3600);
+                    const hours = Math.floor((elapsedSeconds % (3600 * 24)) / 3600); // Horas en un día
                     const minutes = Math.floor((elapsedSeconds % 3600) / 60);
                     const seconds = elapsedSeconds % 60;
                     
