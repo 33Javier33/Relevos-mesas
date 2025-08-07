@@ -4,58 +4,101 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Horarios</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary-color: #3b82f6; /* Azul más profesional */
+            --secondary-color: #10b981; /* Verde esmeralda */
+            --danger-color: #ef4444; /* Rojo para alertas */
+            --background-color: #f8fafc; /* Fondo muy claro */
+            --surface-color: #ffffff; /* Color de las "tarjetas" */
+            --text-color: #1f2937; /* Gris muy oscuro para el texto */
+            --light-text-color: #6b7280; /* Gris claro para texto secundario */
+            --border-color: #e5e7eb;
+            --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            --border-radius: 12px;
+        }
+
         body {
-            font-family: sans-serif;
-            background-color: #f4f4f4;
-            margin: 20px;
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            line-height: 1.6;
         }
-        h1, h2 {
-            color: #333;
-            border-bottom: 2px solid #ccc;
-            padding-bottom: 5px;
+
+        h1, h2, h3 {
+            color: var(--text-color);
+            font-weight: 600;
         }
+
         /* Estilo del reloj en la esquina superior derecha */
         #current-time {
-            font-size: 2em;
-            font-weight: bold;
-            color: #007bff;
+            font-size: 2.2em;
+            font-weight: 500;
+            color: var(--primary-color);
             text-align: right;
             margin-bottom: 20px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
         }
+
         /* Estilo del contador de personas */
         #person-count {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #555;
-            text-align: left;
-            margin-bottom: 10px;
+            font-size: 1.1em;
+            font-weight: 500;
+            color: var(--light-text-color);
+            margin-bottom: 15px;
         }
-        .form-container {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+
+        .form-container, .modal-content, .table-container table {
+            background-color: var(--surface-color);
+            padding: 24px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
             margin-bottom: 20px;
+            transition: all 0.3s ease;
         }
+
+        .form-container h2, h2, h3 {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .form-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
         /* Estilo para el encabezado colapsable */
         .collapsible-header {
             cursor: pointer;
-            padding-bottom: 5px;
-            border-bottom: 2px solid #ccc;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
             user-select: none;
             display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: 10px;
+            margin-bottom: 0;
         }
-        .collapsible-header::before {
-            content: '›';
-            font-size: 1.5em;
-            font-weight: bold;
+        .collapsible-header:hover {
+            color: var(--primary-color);
+        }
+        .collapsible-header::after {
+            content: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%236b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>');
+            display: block;
+            width: 20px;
+            height: 20px;
             transform: rotate(0deg);
             transition: transform 0.2s ease;
         }
-        .collapsible-header.expanded::before {
+        .collapsible-header.expanded::after {
             transform: rotate(90deg);
         }
         /* Contenido que se colapsa */
@@ -66,210 +109,260 @@
         .collapsible-content.visible {
             display: block;
         }
+
         .form-container form {
             display: grid;
             grid-template-columns: 1fr auto;
-            gap: 10px;
+            gap: 15px;
             align-items: end;
         }
         .form-container label {
-            font-weight: bold;
+            font-weight: 500;
+            margin-bottom: 5px;
+            display: block;
         }
         .form-container input {
-            padding: 8px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
             box-sizing: border-box;
             width: 100%;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
+        .form-container input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
         .form-container button {
-            padding: 10px;
-            background-color: #007bff;
+            padding: 12px 20px;
             color: white;
             border: none;
-            border-radius: 4px;
-            font-size: 16px;
+            border-radius: 8px;
+            font-size: 1em;
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            font-weight: 500;
         }
         .form-container button.add-slot-btn,
-        .form-container button.remove-slot-btn {
-            background-color: #28a745;
-            padding: 5px 10px;
+        .form-container button.add-game-btn,
+        .form-container button[type="submit"] {
+            background-color: var(--primary-color);
         }
-        .form-container button.add-slot-btn:hover {
-            background-color: #218838;
+        .form-container button.add-slot-btn:hover,
+        .form-container button.add-game-btn:hover,
+        .form-container button[type="submit"]:hover {
+            background-color: #2563eb;
+            transform: translateY(-1px);
         }
-        .form-container button.remove-slot-btn {
-            background-color: #dc3545;
+        .form-container button.remove-slot-btn,
+        .clear-data-btn,
+        .delete-person-btn {
+            background-color: var(--danger-color);
         }
-        .form-container button.remove-slot-btn:hover {
-            background-color: #c82333;
+        .form-container button.remove-slot-btn:hover,
+        .clear-data-btn:hover,
+        .delete-person-btn:hover {
+            background-color: #dc2626;
+            transform: translateY(-1px);
         }
-        .form-container button:hover {
-            background-color: #0056b3;
+        .alerts-btn {
+            background-color: #f59e0b; /* Amarillo vibrante */
+            color: white;
         }
+        .alerts-btn:hover {
+            background-color: #d97706;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .button-group button {
+            flex-grow: 1;
+        }
+        
+        /* Estilos de la tabla */
         .table-container {
             overflow-x: auto;
         }
         table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0;
             margin-top: 20px;
-            background-color: #fff;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 12px;
+        
+        thead th, tbody td {
+            padding: 15px 12px;
             text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
         }
+
+        thead th:first-child,
+        tbody td:first-child {
+            border-top-left-radius: 12px;
+            border-bottom-left-radius: 12px;
+        }
+        thead th:last-child,
+        tbody td:last-child {
+            border-top-right-radius: 12px;
+            border-bottom-right-radius: 12px;
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 600;
+            border-right: 1px solid #2563eb;
+        }
+        th:first-child {
+            background-color: #1f2937;
+        }
+
         /* Estilos para las columnas fijas */
         #schedule-header th:first-child,
         #schedule-header th:nth-child(2) {
             position: sticky;
             left: 0;
-            background-color: #333;
             z-index: 11;
         }
         #horario-body td:first-child,
         #horario-body td:nth-child(2) {
             position: sticky;
             left: 0;
-            background-color: #fff;
+            background-color: var(--surface-color);
             z-index: 10;
         }
-        #horario-body tr:nth-child(even) td:first-child,
-        #horario-body tr:nth-child(even) td:nth-child(2) {
-            background-color: #f9f9f9;
-        }
-        #horario-body tr:hover td:first-child,
-        #horario-body tr:hover td:nth-child(2) {
-             background-color: #f1f1f1;
-        }
-        /* Ajustar el desplazamiento de las celdas fijas */
-        #schedule-header th:first-child { left: 0; min-width: 100px; }
-        #schedule-header th:nth-child(2) { left: 100px; }
-        #horario-body td:first-child { left: 0; min-width: 100px; }
-        #horario-body td:nth-child(2) { left: 100px; }
 
-        th {
-            background-color: #333;
-            color: white;
-            position: relative;
+        /* Ajustar el desplazamiento de las celdas fijas */
+        #schedule-header th:first-child { left: 0; min-width: 150px; }
+        #schedule-header th:nth-child(2) { left: 150px; }
+        #horario-body td:first-child { left: 0; min-width: 150px; }
+        #horario-body td:nth-child(2) { left: 150px; }
+
+        tr:nth-child(even) td {
+            background-color: #f9fafb;
         }
-        th .time-input {
+        tr:hover td {
+            background-color: #eff6ff;
+        }
+        tr:hover td:first-child,
+        tr:nth-child(even):hover td:first-child,
+        tr:hover td:nth-child(2),
+        tr:nth-child(even):hover td:nth-child(2) {
+             background-color: #eff6ff;
+        }
+
+        /* Estilos de las celdas de tiempo */
+        .card-time {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 8px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+            cursor: grab;
+            user-select: none;
+            display: block;
+        }
+        .card-time:active {
+            cursor: grabbing;
+        }
+        .card-time:hover {
+            transform: translateY(-2px);
+        }
+        .time-input {
             width: 100%;
-            padding: 5px;
+            padding: 0;
             text-align: center;
             border: none;
             background-color: transparent;
             color: white;
+            font-weight: 500;
+            font-size: 1em;
         }
-        th .time-input:focus {
-            outline: 2px solid #fff;
-        }
-        th .slot-controls {
-            display: flex;
-            justify-content: center;
-            gap: 5px;
-            margin-top: 5px;
-        }
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        tr:hover {
-            background-color: #f1f1f1;
-        }
-        
-        .card-time {
-            position: relative;
-            background-color: #333;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            padding: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            cursor: move;
-        }
-        .card-time:hover {
-            transform: scale(1.05);
+        .time-input:focus {
+            outline: 2px solid white;
         }
 
+        /* Estilos del selector de mesas */
         .card-selector {
-            position: relative;
             display: flex;
-            flex-direction: column; /* Apilar los selectores verticalmente */
-            gap: 5px;
+            flex-direction: column;
+            gap: 8px;
             align-items: stretch;
             justify-content: center;
         }
-
-        /* Estilos del selector de mesa como una tarjeta */
         .mesa-select {
             -webkit-appearance: none;
             -moz-appearance: none;
             appearance: none;
-            background-color: white;
+            background-color: var(--surface-color);
             padding: 8px 12px;
-            border: 1px solid #ccc;
+            border: 1px solid var(--border-color);
             border-radius: 8px;
             text-align: center;
-            font-size: 16px;
-            font-weight: bold;
+            font-size: 0.9em;
+            font-weight: 500;
             cursor: pointer;
-            box-sizing: border-box;
             width: 100%;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path fill="%23333" d="M8 11L3 6h10z"/></svg>');
+            transition: all 0.2s ease;
+            color: var(--light-text-color);
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%236b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>');
             background-repeat: no-repeat;
             background-position: right 8px center;
             padding-right: 30px;
         }
+        .mesa-select:hover {
+            border-color: var(--primary-color);
+        }
         .mesa-select:focus {
-            outline: 2px solid #007bff;
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
         }
-        /* Estilo para el texto de la opción seleccionada */
+        .mesa-select:not([value=""]) {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
         .mesa-select option {
-            font-weight: normal;
-            color: black;
-        }
-        .mesa-select:not([value=""]):not([value="Seleccionar..."]) {
-            color: #007bff; /* Color azul para el texto seleccionado */
+            font-weight: 400;
+            color: var(--text-color);
         }
         
         .clear-data-btn {
-            background-color: #dc3545;
+            background-color: var(--danger-color);
             color: white;
-            padding: 10px;
+            padding: 12px 20px;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
             margin-top: 20px;
         }
         .add-game-btn, .alerts-btn {
-            background-color: #28a745;
-            color: white;
-            padding: 10px;
+            padding: 12px 20px;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
             margin-top: 10px;
             transition: background-color 0.3s ease;
+            font-weight: 500;
         }
-        /* Estilos del botón de alerta activo (parpadeo rojo) */
+        
+        /* Estilos del botón de alerta activo (parpadeo) */
         .alerts-btn.active {
-            background-color: #dc3545;
+            background-color: var(--danger-color);
             color: white;
             animation: pulse 1.5s infinite;
         }
         @keyframes pulse {
             0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+            50% { transform: scale(1.03); }
             100% { transform: scale(1); }
         }
 
@@ -277,97 +370,92 @@
         .modal {
             display: none;
             position: fixed;
-            z-index: 1000; /* Aumentado para estar siempre encima */
+            z-index: 1000;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
             overflow: auto;
-            background-color: rgba(0,0,0,0.4);
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
             padding-top: 60px;
         }
         .modal-content {
-            background-color: #fefefe;
+            background-color: var(--surface-color);
             margin: 5% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
+            padding: 30px;
+            border: none;
+            width: 90%;
             max-width: 500px;
-            border-radius: 8px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
         }
         .close-btn {
-            color: #aaa;
+            color: var(--light-text-color);
             float: right;
-            font-size: 28px;
-            font-weight: bold;
+            font-size: 2.5em;
+            font-weight: normal;
+            line-height: 1;
             cursor: pointer;
+            transition: color 0.2s ease;
         }
         .close-btn:hover, .close-btn:focus {
-            color: black;
+            color: var(--danger-color);
             text-decoration: none;
         }
         .modal-body label {
             display: block;
-            margin-top: 10px;
-            font-weight: bold;
+            margin-top: 20px;
+            font-weight: 500;
         }
         .modal-body input[type="time"],
-        .modal-body input[type="color"] {
-            width: calc(100% - 16px);
-            padding: 8px;
-            margin-top: 5px;
+        .modal-body input[type="color"],
+        .modal-body select {
+            width: 100%;
+            padding: 10px 12px;
+            margin-top: 8px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-sizing: border-box;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
         .modal-body .replace-section {
-            margin-top: 20px;
-            border-top: 1px solid #eee;
-            padding-top: 15px;
-        }
-        .modal-body .replace-section select,
-        .modal-body .replace-section button {
-            margin-top: 5px;
+            margin-top: 25px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
         }
         .modal-buttons {
             display: flex;
             justify-content: space-between;
             margin-top: 20px;
+            gap: 10px;
         }
         .modal-buttons button {
-            width: 48%;
-        }
-        .delete-person-btn, #replacePersonBtn {
-            background-color: #dc3545;
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 4px;
-            cursor: pointer;
             width: 100%;
-            margin-top: 10px;
         }
+        
         #replacePersonBtn {
-            background-color: #ffc107;
-            color: black;
+            background-color: #f59e0b;
+            color: white;
+            font-weight: 600;
         }
         #replacePersonBtn:hover {
-            background-color: #e0a800;
+            background-color: #d97706;
         }
         .delete-person-btn {
             margin-top: 20px;
         }
-        .modal-body .modal-buttons button.add-slot-btn {
-             width: 100%;
-        }
 
         /* Estilos para las alertas */
         .person-name {
-            cursor: grab; /* Cambiar cursor para indicar que es arrastrable */
-            font-weight: bold;
-            padding: 5px;
-            border-radius: 4px;
+            cursor: grab;
+            font-weight: 500;
+            padding: 8px;
+            border-radius: 8px;
             transition: background-color 0.3s;
             display: block;
-            color: black;
-            white-space: nowrap; /* Evita que el nombre se corte */
+            color: var(--text-color);
+            white-space: nowrap;
         }
         .person-name.text-white {
             color: white;
@@ -376,61 +464,87 @@
         #warning-list {
             list-style: none;
             padding-left: 0;
+            margin: 0;
         }
         #warning-list li {
-            font-weight: bold;
-            margin-bottom: 5px;
+            font-weight: 500;
+            margin-bottom: 8px;
             cursor: pointer;
-            padding: 5px;
-            border-radius: 4px;
+            padding: 10px;
+            border-radius: 8px;
+            background-color: #fffbeb; /* Fondo amarillo claro */
+            border-left: 4px solid var(--danger-color);
             transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+        }
+        #warning-list li::before {
+            content: '⚠️';
+            margin-right: 10px;
         }
         #warning-list li:hover {
-            background-color: #f1f1f1;
+            background-color: #fef3c7;
         }
 
         /* Estilos del pie de página (firma) */
         footer {
             margin-top: 50px;
             padding-top: 20px;
-            border-top: 1px solid #ccc;
+            border-top: 1px solid var(--border-color);
             text-align: center;
         }
         #app-signature {
             font-size: 0.8em;
-            color: #888;
+            color: var(--light-text-color);
         }
+        
+        /* Estilos para la lista de juegos personalizados */
         .game-list {
             list-style: none;
             padding: 0;
+            margin: 0;
         }
         .game-list li {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px;
-            border-bottom: 1px solid #eee;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-color);
         }
         .game-list li:last-child {
             border-bottom: none;
         }
+        .game-list button {
+            background-color: var(--danger-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 0.9em;
+            cursor: pointer;
+        }
+        
         /* Estilo para la fila arrastrada */
         .dragging {
-            opacity: 0.5;
+            opacity: 0.6;
         }
+        
         /* Estilo para la columna del tiempo en mesa */
         #schedule-header th:nth-child(2) {
-             background-color: #003D5C;
-             color: black;
+            background-color: #374151; /* Un gris oscuro que combina bien */
+            color: white;
+            border-right: 1px solid #1f2937;
         }
         .time-in-table {
-            background-color: #003D5C;
-            color: black;
-            font-weight: bold;
+            background-color: #f3f4f6; /* Gris más claro */
+            color: var(--text-color);
+            font-weight: 600;
+            transition: all 0.2s ease;
         }
-        .mesa-select-container {
-            position: relative;
+        #horario-body tr:hover .time-in-table {
+            background-color: #dbeafe; /* Azul claro para el hover */
         }
+        
     </style>
 </head>
 <body>
@@ -440,7 +554,7 @@
 
     <div class="form-container">
         <h2 id="registration-header" class="collapsible-header">Turnos</h2>
-        <div id="registration-content" class="collapsible-content">
+        <div id="registration-content" class="collapsible-content visible">
             <form id="person-form">
                 <div>
                     <label for="nombre">Nombre:</label>
@@ -448,13 +562,15 @@
                 </div>
                 <button type="submit">Agregar Persona</button>
             </form>
-            <button id="add-game-btn" class="add-game-btn">Gestionar Juegos</button>
-            <button id="alerts-btn" class="alerts-btn">Alertas</button>
-            <button id="clear-data" class="clear-data-btn">Borrar todos los datos</button>
+            <div class="button-group">
+                <button id="add-game-btn" class="add-game-btn">Gestionar Juegos</button>
+                <button id="alerts-btn" class="alerts-btn">Alertas</button>
+                <button id="clear-data" class="clear-data-btn">Borrar todos los datos</button>
+            </div>
         </div>
     </div>
 
-    <hr>
+    ---
 
     <div id="person-count"></div>
     <h2>Tabla de Turnos</h2>
@@ -480,11 +596,11 @@
                 <label for="exitTime">Hora de Salida:</label>
                 <input type="time" id="exitTime">
 
-                <label for="personColor">Color:</label>
+                <label for="personColor">Color de fondo:</label>
                 <input type="color" id="personColor">
                 
                 <div class="modal-buttons">
-                    <button id="savePersonBtn" class="add-slot-btn">Aceptar</button>
+                    <button id="savePersonBtn" class="add-slot-btn">Guardar</button>
                 </div>
                 
                 <div class="replace-section">
@@ -492,7 +608,7 @@
                     <select id="replacesPersonSelect">
                         <option value="">Seleccionar persona...</option>
                     </select>
-                    <button id="replacePersonBtn" class="add-slot-btn">Reemplazar</button>
+                    <button id="replacePersonBtn">Reemplazar</button>
                 </div>
                 <button id="deletePersonBtn" class="delete-person-btn">Eliminar</button>
             </div>
@@ -511,7 +627,7 @@
                         <input type="checkbox" id="repeatable-checkbox"> Permitir repetición
                     </label>
                     <div class="modal-buttons">
-                        <button type="submit" class="add-slot-btn">Agregar</button>
+                        <button type="submit" class="add-slot-btn">Agregar Juego</button>
                     </div>
                 </form>
                 <h4 style="margin-top: 20px;">Juegos Personalizados</h4>
@@ -686,8 +802,8 @@
         function renderSchedule() {
             const headerRow = document.querySelector('#schedule-header tr');
             headerRow.innerHTML = `
-                <th>Nombres</th>
-                <th>Tiempo en mesa</th>
+                <th style="background-color: var(--text-color); color: white; border-top-left-radius: var(--border-radius); border-right: 1px solid #3c4043;">Nombres</th>
+                <th style="background-color: var(--text-color); color: white; border-right: 1px solid #3c4043;">Tiempo en mesa</th>
             `;
 
             scheduleData.forEach((slot, index) => {
@@ -705,9 +821,14 @@
             });
             
             const controlCell = document.createElement('th');
+            controlCell.style.backgroundColor = 'var(--primary-color)';
+            controlCell.style.borderTopRightRadius = 'var(--border-radius)';
+            controlCell.style.borderRight = 'none';
             controlCell.innerHTML = `
-                <button class="add-slot-btn">+</button>
-                <button class="remove-slot-btn">-</button>
+                <div class="button-group">
+                    <button class="add-slot-btn" style="background-color: var(--secondary-color);">+</button>
+                    <button class="remove-slot-btn" style="background-color: var(--danger-color);">-</button>
+                </div>
             `;
             headerRow.appendChild(controlCell);
 
