@@ -48,10 +48,11 @@
 
         /* Estilo del contador de personas */
         #person-count {
-            font-size: 1.1em;
+            font-size: 1em; /* CAMBIO: Tamaño de fuente reducido */
             font-weight: 500;
             color: var(--light-text-color);
-            margin-bottom: 15px;
+            margin-bottom: 10px; /* CAMBIO: Margen inferior reducido */
+            margin-top: 20px;
         }
 
         .form-container, .modal-content, .table-container table {
@@ -86,6 +87,7 @@
             justify-content: space-between;
             gap: 10px;
             margin-bottom: 0;
+            font-size: 1.2em; /* CAMBIO: Tamaño de fuente reducido */
         }
         .collapsible-header:hover {
             color: var(--primary-color);
@@ -314,13 +316,6 @@
             width: 50%;
             transition: all 0.2s ease;
             color: var(--light-text-color);
-            
-            /* CÓDIGO ELIMINADO PARA QUITAR LA FLECHA */
-            /*
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%236b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>');
-            background-repeat: no-repeat;
-            background-position: right 8px center;
-            */
             padding-right: 0;
         }
         .mesa-select:hover {
@@ -455,7 +450,8 @@
         .person-name {
             cursor: grab;
             font-weight: 500;
-            padding: 0;
+            padding: 2px 5px; 
+            line-height: 1;
             border-radius: 8px;
             transition: background-color 0.3s;
             display: block;
@@ -549,7 +545,19 @@
         #horario-body tr:hover .time-in-table {
             background-color: #dbeafe; /* Azul claro para el hover */
         }
+
+        /* Estilo para el cronómetro activo (NUEVO) */
+        .cronometro-activo {
+            color: var(--secondary-color); /* Un color que contraste, como verde */
+            font-weight: bold;
+        }
         
+        /* Estilo para el título de la tabla */
+        .table-title {
+            font-size: 1.2em; /* CAMBIO: Tamaño de fuente reducido */
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -575,10 +583,9 @@
         </div>
     </div>
 
-    ---
 
     <div id="person-count"></div>
-    <h2>Tabla de Turnos</h2>
+    <h2 class="table-title">Tabla de Turnos</h2>
 
     <div class="table-container">
         <table>
@@ -946,28 +953,57 @@
                 const gameIndex = parseInt(this.getAttribute('data-game-index'));
                 const selectedValue = this.value;
 
-                // --- Lógica de validación de conflicto de mesa ---
+                // --- INICIO DE LA LÓGICA DE MOVIMIENTO AUTOMÁTICO (NUEVA) ---
                 if (selectedValue !== '') {
                     let conflictFound = false;
+                    let displacedPersonIndex = -1;
+                    
+                    // Buscar si hay otra persona en la mesa que se está asignando
                     peopleData.forEach((otherPerson, otherPersonIndex) => {
-                        if (otherPersonIndex === personIndex) return; // Ignorar a la misma persona
+                        if (otherPersonIndex === personIndex) return;
                         
                         if (otherPerson.games[slotIndex] && otherPerson.games[slotIndex].includes(selectedValue)) {
                             conflictFound = true;
+                            displacedPersonIndex = otherPersonIndex;
                         }
                     });
 
                     if (conflictFound) {
-                        alert(`¡Advertencia! La mesa ${getGameTextByValue(selectedValue)} ya está asignada a otra persona en este turno.`);
+                        const displacingPersonGames = peopleData[personIndex].games[slotIndex];
+                        const displacedPersonGames = peopleData[displacedPersonIndex].games[slotIndex];
                         
-                        // Revertir la selección a su valor original
-                        this.value = peopleData[personIndex].games[slotIndex][gameIndex] || '';
+                        // Encontrar el siguiente juego de la persona que se está asignando
+                        let newGameForDisplacedPerson = null;
+                        if (gameIndex + 1 < displacingPersonGames.length) {
+                            newGameForDisplacedPerson = displacingPersonGames[gameIndex + 1];
+                        }
                         
-                        // Evitar que se guarde el cambio
-                        return;
+                        // Si hay un siguiente juego, movemos a la persona desplazada
+                        if (newGameForDisplacedPerson && newGameForDisplacedPerson !== '') {
+                            const displacedPersonName = peopleData[displacedPersonIndex].name;
+                            const displacingPersonName = peopleData[personIndex].name;
+                            const gameName = getGameTextByValue(selectedValue);
+                            const newGameName = getGameTextByValue(newGameForDisplacedPerson);
+                            
+                            alert(`${displacingPersonName} toma ${gameName}. ${displacedPersonName} se mueve automáticamente a ${newGameName}.`);
+
+                            // Eliminar el juego Bj17 de Laura
+                            const gameToRemoveIndex = displacedPersonGames.indexOf(selectedValue);
+                            if (gameToRemoveIndex > -1) {
+                                displacedPersonGames.splice(gameToRemoveIndex, 1);
+                            }
+
+                            // Añadir el juego Bj15 a Laura
+                            displacedPersonGames.push(newGameForDisplacedPerson);
+                        } else {
+                            // Si no hay siguiente juego para Carlos, simplemente advertimos
+                            alert(`¡Advertencia! La mesa ${getGameTextByValue(selectedValue)} ya está asignada a otra persona. No hay un juego siguiente para moverla.`);
+                            this.value = peopleData[personIndex].games[slotIndex][gameIndex] || '';
+                            return;
+                        }
                     }
                 }
-                // --- Fin de la lógica de validación ---
+                // --- FIN DE LA LÓGICA DE MOVIMIENTO AUTOMÁTICO ---
                 
                 let personGames = peopleData[personIndex].games;
                 if (!personGames[slotIndex]) {
@@ -975,7 +1011,7 @@
                 }
                 
                 if (selectedValue === '') {
-                     personGames[slotIdex].splice(gameIndex, 1);
+                     personGames[slotIndex].splice(gameIndex, 1);
                 } else {
                     personGames[slotIndex][gameIndex] = selectedValue;
                 }
@@ -1377,6 +1413,7 @@
             }
         }
 
+        // --- Lógica del Temporizador de Mesa (MODIFICADA) ---
         function updateTableTimers() {
             const timeCells = document.querySelectorAll('#horario-body .time-in-table');
             const now = new Date();
@@ -1385,66 +1422,70 @@
                 const personIndex = parseInt(cell.getAttribute('data-person-index'));
                 const person = peopleData[personIndex];
 
-                let lastGameSlotIndex = -1;
-                let lastGameValue = null;
+                let firstActiveGameIndex = -1;
+                let lastActiveGameIndex = -1;
+                let lastActiveGameValue = null;
 
-                // 1. Encontrar el último turno (más reciente) en el que la persona tiene un juego asignado.
-                for (let i = scheduleData.length - 1; i >= 0; i--) {
-                    if (person.games[i] && person.games[i].length > 0 && person.games[i][0] !== '') {
-                        lastGameSlotIndex = i;
-                        lastGameValue = person.games[i][0];
-                        break;
+                // 1. Encontrar el primer y último juego asignado para la persona
+                for (let i = 0; i < scheduleData.length; i++) {
+                    if (person.games[i] && person.games[i].length > 0) {
+                        for (let j = 0; j < person.games[i].length; j++) {
+                            if (person.games[i][j] !== '') {
+                                if (firstActiveGameIndex === -1) {
+                                    firstActiveGameIndex = i;
+                                }
+                                lastActiveGameIndex = i;
+                                lastActiveGameValue = person.games[i][j];
+                                // Si es un juego repetible como "Colacion", el temporizador no se reinicia
+                                if (isGameRepeatable(person.games[i][j])) {
+                                    lastActiveGameValue = null;
+                                }
+                            }
+                        }
                     }
                 }
                 
                 // Si no tiene ningún juego asignado, el temporizador es 0.
-                if (lastGameSlotIndex === -1) {
+                if (firstActiveGameIndex === -1) {
                     cell.textContent = '00h 00m 00s';
+                    cell.classList.remove('cronometro-activo'); // Eliminar la clase si no hay cronómetro activo
                     return;
                 }
 
-                const lastGameSlot = scheduleData[lastGameSlotIndex];
-                const [startHour, startMinute] = lastGameSlot.start.split(':').map(Number);
+                const firstGameSlot = scheduleData[firstActiveGameIndex];
+                const [startHour, startMinute] = firstGameSlot.start.split(':').map(Number);
                 const startTimeForTimer = new Date();
                 startTimeForTimer.setHours(startHour, startMinute, 0, 0);
 
-                let timerShouldRun = false;
-                let nextGameStart = null;
+                let timerShouldRun = true;
+                
+                // 2. Comprobar si hay un relevo para el último juego no repetible
+                if (lastActiveGameValue) {
+                    for (let i = lastActiveGameIndex + 1; i < scheduleData.length; i++) {
+                        let otherPersonHasGame = false;
+                        peopleData.forEach((otherPerson, otherPersonIndex) => {
+                            if (otherPerson.games[i] && otherPerson.games[i].includes(lastActiveGameValue)) {
+                                otherPersonHasGame = true;
+                            }
+                        });
 
-                // 2. Buscar si el mismo juego está asignado a otra persona en un turno posterior.
-                for (let i = lastGameSlotIndex + 1; i < scheduleData.length; i++) {
-                    for (let otherPersonIndex = 0; otherPersonIndex < peopleData.length; otherPersonIndex++) {
-                        if (otherPersonIndex === personIndex) continue; // Ignorar a la misma persona
-                        
-                        const otherPerson = peopleData[otherPersonIndex];
-                        // Si otra persona tiene el mismo juego asignado en este turno, tomamos su hora de inicio.
-                        if (otherPerson.games[i] && otherPerson.games[i].includes(lastGameValue)) {
-                            nextGameStart = scheduleData[i].start;
-                            break; // Encontramos el siguiente turno, no es necesario seguir buscando.
+                        if (otherPersonHasGame) {
+                            const nextGameSlot = scheduleData[i];
+                            const [nextHour, nextMinute] = nextGameSlot.start.split(':').map(Number);
+                            const nextGameDate = new Date();
+                            nextGameDate.setHours(nextHour, nextMinute, 0, 0);
+                            
+                            // El temporizador se detiene solo si la hora actual es posterior
+                            // a la hora de inicio del próximo turno de ese juego.
+                            if (now >= nextGameDate) {
+                                timerShouldRun = false;
+                            }
+                            break; // Ya encontramos un relevo, no es necesario seguir buscando.
                         }
                     }
-                    if (nextGameStart) break;
                 }
 
-                // 3. Determinar si el temporizador debe seguir corriendo.
-                if (nextGameStart) {
-                    const [nextHour, nextMinute] = nextGameStart.split(':').map(Number);
-                    const nextGameDate = new Date();
-                    nextGameDate.setHours(nextHour, nextMinute, 0, 0);
-                    
-                    // El temporizador se detiene solo si la hora actual es igual o posterior
-                    // a la hora de inicio del próximo turno.
-                    if (now < nextGameDate) {
-                        timerShouldRun = true;
-                    } else {
-                        timerShouldRun = false;
-                    }
-                } else {
-                    // Si no hay otro turno asignado, el temporizador debe seguir corriendo.
-                    timerShouldRun = true;
-                }
-
-                // 4. Actualizar el contenido de la celda.
+                // 3. Actualizar el contenido de la celda y aplicar la clase CSS.
                 if (timerShouldRun && startTimeForTimer <= now) {
                     const elapsedMilliseconds = now - startTimeForTimer;
                     
@@ -1455,8 +1496,10 @@
                     
                     const formattedTime = `${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
                     cell.textContent = formattedTime;
+                    cell.classList.add('cronometro-activo'); // Agregar la clase cuando el cronómetro está activo
                 } else {
                     cell.textContent = '00h 00m 00s';
+                    cell.classList.remove('cronometro-activo'); // Eliminar la clase si el cronómetro está en 0
                 }
             });
         }
