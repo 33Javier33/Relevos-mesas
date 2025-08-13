@@ -1278,7 +1278,16 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
     <script>
-        // --- DATOS DEL SISTEMA ---
+        // ====================================================================
+        // CONEXIÓN CON GOOGLE APPS SCRIPT
+        // ====================================================================
+
+        // URL de tu aplicación web de Google Apps Script. Reemplaza este valor con tu URL real.
+        const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbxfbgsEQXc4N5ijUX-ZZ5xcchDNtSXg1k9P8mW8pKPtqn8EHabvHvqGuWVc3zRS7ale/exec";
+        
+        // ====================================================================
+        // VARIABLES GLOBALES DE TU SISTEMA
+        // ====================================================================
         let croupiersData = [];
         let horarios = [];
         let mesasDeJuego = [];
@@ -1287,7 +1296,6 @@
         let croupierColors = {};
         let croupierSalidas = {};
         let horarioColors = {};
-        
         let croupiersEnEspera = [];
 
         // --- GESTIÓN DEL CRONÓMETRO ---
@@ -1392,50 +1400,87 @@
         const collapsibleHeader = document.getElementById('collapsible-header');
         const controlesContainer = document.getElementById('controles-container');
 
-        // --- FUNCIÓN DE GESTIÓN DE DATOS ---
-        function guardarDatos() {
-            localStorage.setItem('croupiersData', JSON.stringify(croupiersData));
-            localStorage.setItem('horarios', JSON.stringify(horarios));
-            localStorage.setItem('mesasDeJuego', JSON.stringify(mesasDeJuego));
-            localStorage.setItem('juegosMaestro', JSON.stringify(juegosMaestro));
-            localStorage.setItem('datosRelevos', JSON.stringify(datosRelevos));
-            localStorage.setItem('croupierColors', JSON.stringify(croupierColors));
-            localStorage.setItem('croupierSalidas', JSON.stringify(croupierSalidas));
-            localStorage.setItem('horarioColors', JSON.stringify(horarioColors));
-            localStorage.setItem('cronometroState', JSON.stringify(cronometroStartTime));
-            localStorage.setItem('croupiersEnEspera', JSON.stringify(croupiersEnEspera));
-        }
 
-        function cargarDatos() {
-            const savedCroupiersData = localStorage.getItem('croupiersData');
-            const savedMesas = localStorage.getItem('mesasDeJuego');
-            const savedJuegos = localStorage.getItem('juegosMaestro');
-            const savedHorarios = localStorage.getItem('horarios');
-            const savedDatos = localStorage.getItem('datosRelevos');
-            const savedColors = localStorage.getItem('croupierColors');
-            const savedSalidas = localStorage.getItem('croupierSalidas');
-            const savedHorarioColors = localStorage.getItem('horarioColors');
-            const savedCroupiersEnEspera = localStorage.getItem('croupiersEnEspera');
+        // ====================================================================
+        // FUNCIONES DE COMUNICACIÓN CON LA API
+        // ====================================================================
 
-            if (savedCroupiersData) croupiersData = JSON.parse(savedCroupiersData);
-            if (savedMesas) mesasDeJuego = JSON.parse(savedMesas);
-            if (savedJuegos) juegosMaestro = JSON.parse(savedJuegos);
-            if (savedHorarios) horarios = JSON.parse(savedHorarios);
-            if (savedDatos) datosRelevos = JSON.parse(savedDatos);
-            if (savedColors) croupierColors = JSON.parse(savedColors);
-            if (savedSalidas) croupierSalidas = JSON.parse(savedSalidas);
-            if (savedHorarioColors) horarioColors = JSON.parse(savedHorarioColors);
-            if (savedCroupiersEnEspera) croupiersEnEspera = JSON.parse(savedCroupiersEnEspera);
-        }
+        async function cargarDatosDesdeGoogleSheets() {
+            console.log("Cargando datos desde Google Sheets...");
+            const payload = { action: "obtenerDatos" };
+            
+            try {
+                const response = await fetch(SPREADSHEET_API_URL, {
+                    method: "POST",
+                    mode: "cors",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
 
-        function cargarCronometroState() {
-            const savedCronoState = localStorage.getItem('cronometroState');
-            if (savedCronoState) {
-                cronometroStartTime = JSON.parse(savedCronoState);
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log("Datos recibidos:", data);
+                
+                // Mapea los datos recibidos a las variables de tu sistema
+                croupiersData = data.croupiersData || [];
+                mesasDeJuego = data.mesasDeJuego || [];
+                juegosMaestro = data.juegosMaestro || [];
+                horarios = data.horarios || [];
+                datosRelevos = data.datosRelevos || {};
+                croupierColors = data.croupierColors || {};
+                croupierSalidas = data.croupierSalidas || {};
+                croupiersEnEspera = data.croupiersEnEspera || [];
+
+                // Llama a las funciones de renderizado después de cargar los datos
+                renderizarHorario(false);
+                renderizarCroupiersPreTable();
+                console.log("Datos cargados y UI renderizada.");
+
+            } catch (error) {
+                console.error("Error al cargar datos de Google Sheets:", error);
+                alert("Ocurrió un error al cargar los datos. Revisa la consola para más detalles.");
             }
         }
 
-        function guardarEstado() {
+        async function enviarDatosAGoogleSheets() {
+            console.log("Enviando datos a Google Sheets...");
+            const datosCompletos = {
+                croupiersData,
+                horarios,
+                mesasDeJuego,
+                juegosMaestro,
+                datosRelevos,
+                croupierColors,
+                croupierSalidas,
+                horarioColors, // Esto no está en tu backend, pero lo dejamos por si acaso
+                croupiersEnEspera
+            };
+
+            const payload = {
+                action: "guardarDatos",
+                data: datosCompletos
+            };
+
+            try {
+                // Usamos 'no-cors' para evitar errores de CORS, ya que no necesitamos la respuesta
+                await fetch(SPREADSHEET_API_URL, {
+                    method: "POST",
+                    mode: "no-cors", 
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                console.log("Datos enviados a Google Sheets.");
+            } catch (error) {
+                console.error("Error al enviar datos:", error);
+                // No mostrar un alert ya que es un error en un evento 'no-cors'
+            }
+        }
+
+        // --- GESTIÓN DE ESTADOS LOCALES (DESHACER/REHACER) ---
+        function guardarEstadoLocal() {
             if (historialIndex < historial.length - 1) {
                 historial = historial.slice(0, historialIndex + 1);
             }
@@ -1462,7 +1507,7 @@
             actualizarBotonesDeshacerRehacer();
         }
 
-        function cargarEstado(estado) {
+        function cargarEstadoLocal(estado) {
             croupiersData = JSON.parse(JSON.stringify(estado.croupiersData));
             horarios = [...estado.horarios];
             mesasDeJuego = [...estado.mesasDeJuego];
@@ -1475,19 +1520,20 @@
             renderizarHorario(false);
             renderizarJuegosDropdown();
             renderizarCroupiersPreTable();
+            enviarDatosAGoogleSheets();
         }
 
         function deshacer() {
             if (historialIndex > 0) {
                 historialIndex--;
-                cargarEstado(historial[historialIndex]);
+                cargarEstadoLocal(historial[historialIndex]);
             }
         }
 
         function rehacer() {
             if (historialIndex < historial.length - 1) {
                 historialIndex++;
-                cargarEstado(historial[historialIndex]);
+                cargarEstadoLocal(historial[historialIndex]);
             }
         }
 
@@ -1496,15 +1542,17 @@
             btnRedo.disabled = historialIndex >= historial.length - 1;
         }
 
+        // --- FUNCIONES DE RENDERIZADO Y LÓGICA DE LA APLICACIÓN ---
         function renderizarHorario(shouldSaveState = true, scrollToTime = null) {
             renderizarCabecera();
             renderizarCuerpo();
             renderizarMesasList();
             renderizarJuegosDropdown();
             renderizarCroupiersPreTable();
-            guardarDatos();
+            
             if (shouldSaveState) {
-                guardarEstado();
+                guardarEstadoLocal();
+                enviarDatosAGoogleSheets();
             }
             if (scrollToTime) {
                 scrollToColumn(scrollToTime);
@@ -1521,9 +1569,6 @@
                 }
             }
             cronometroIntervals = {};
-            if(resetState) {
-                 localStorage.removeItem('cronometroState');
-            }
         }
 
         function startSavedTimers() {
@@ -1850,7 +1895,7 @@
 
             if (relevoData.actividad === 'releva') {
                 relevoDiv.style.backgroundColor = relevoData.color;
-                relevoDiv.textContent = relevoData.mesas.join(' - ');
+                relevoDiv.textContent = relevoData.mesasAsignadas.join(' - ');
             } else if (relevoData.actividad === 'ayudante-pagador') {
                 relevoDiv.classList.add('ayudante-pagador');
                 relevoDiv.textContent = 'AYUD. PAGADOR';
@@ -1970,8 +2015,6 @@
                     document.getElementById('crono-modal-content').querySelector('.timer-container').classList.add('running');
                 }
             }, 1000);
-
-            guardarDatos();
         }
 
         function updateCronoDisplay(croupier, timeString) {
@@ -1999,7 +2042,6 @@
                 delete cronometroStartTime[croupier];
                 updateCronoDisplay(croupier, '00:00:00');
             }
-            guardarDatos();
         }
 
         function resetCronometro(croupier) {
@@ -2023,8 +2065,8 @@
             const contentDiv = th.querySelector('.horario-header-content');
             if (!contentDiv) return;
 
-            const editSpan = contentDiv.querySelector('.edit-time');
-            if (editSpan.querySelector('input')) return;
+            const editSpan = contentDiv.querySelector('input');
+            if (editSpan) return;
 
             const originalContent = contentDiv.innerHTML;
             contentDiv.innerHTML = '';
@@ -2117,8 +2159,8 @@
                         for (const horario in datosRelevos[croupier]) {
                             const relevo = datosRelevos[croupier][horario];
                             if (relevo.actividad === 'releva') {
-                                relevo.mesas = relevo.mesas.filter(m => m !== mesaABorrar);
-                                if (relevo.mesas.length === 0) {
+                                relevo.mesasAsignadas = relevo.mesasAsignadas.filter(m => m !== mesaABorrar);
+                                if (relevo.mesasAsignadas.length === 0) {
                                     delete datosRelevos[croupier][horario];
                                 }
                             }
@@ -2141,13 +2183,6 @@
                 historial = [];
                 historialIndex = -1;
                 croupiersEnEspera = [];
-                localStorage.removeItem('croupiersData');
-                localStorage.removeItem('horarios');
-                localStorage.removeItem('datosRelevos');
-                localStorage.removeItem('croupierColors');
-                localStorage.removeItem('croupierSalidas');
-                localStorage.removeItem('horarioColors');
-                localStorage.removeItem('croupiersEnEspera');
                 stopAllTimers(true);
                 renderizarHorario();
                 actualizarBotonesDeshacerRehacer();
@@ -2169,7 +2204,7 @@
                 croupierSeleccionadoPre = null;
                 renderizarCroupiersPreTable();
                 croupierDetailsContainer.style.display = 'none';
-                guardarDatos();
+                enviarDatosAGoogleSheets();
             }
         }
 
@@ -2220,7 +2255,7 @@
 
             croupiersEnEspera.push(nuevoCroupier);
             renderizarCroupiersPreTable();
-            guardarDatos();
+            enviarDatosAGoogleSheets();
             nuevoCroupierInput.value = '';
             dropdownJuegos.querySelectorAll('input:checked').forEach(cb => cb.checked = false);
         }
@@ -2230,7 +2265,7 @@
             if (nombreJuego && !juegosMaestro.includes(nombreJuego)) {
                 juegosMaestro.push(nombreJuego);
                 renderizarJuegosDropdownAdd();
-                guardarDatos();
+                enviarDatosAGoogleSheets();
                 nuevoJuegoInput.value = '';
             }
         }
@@ -2301,7 +2336,7 @@
             document.querySelector(`input[name="actividad"][value="${actividadExistente}"]`).checked = true;
             toggleRelevoControls(actividadExistente);
 
-            const mesasRelevo = relevoExistente && relevoExistente.actividad === 'releva' ? relevoExistente.mesas : [];
+            const mesasRelevo = relevoExistente && relevoExistente.actividad === 'releva' ? relevoExistente.mesasAsignadas : [];
 
             mesasDeJuego.forEach(mesa => {
                 if (!mesasRelevo.includes(mesa)) {
@@ -2379,7 +2414,7 @@
 
                 // Añadir información de la mesa si está en un relevo
                 if (relevoData && relevoData.actividad === 'releva') {
-                    const mesas = relevoData.mesas.join(', ');
+                    const mesas = relevoData.mesasAsignadas.join(', ');
                     displayAlias += ` (Mesa: ${mesas})`;
                 } else if (relevoData && (relevoData.actividad === 'descanso' || relevoData.actividad === 'ayudante-pagador')) {
                     displayAlias += ` (${relevoData.actividad.toUpperCase()})`;
@@ -2419,7 +2454,7 @@
                         // No buscar en el propio croupier que estamos asignando
                         if (c.nombreCompleto !== croupier) {
                             const relevo = datosRelevos[c.nombreCompleto] && datosRelevos[c.nombreCompleto][horario];
-                            if (relevo && relevo.actividad === 'releva' && relevo.mesas.includes(mesaToCheck)) {
+                            if (relevo && relevo.actividad === 'releva' && relevo.mesasAsignadas.includes(mesaToCheck)) {
                                 croupierEncontrado = c.nombreCompleto;
                             }
                         }
@@ -2549,7 +2584,7 @@
                     croupiersData.forEach(c => {
                         const relevoAnterior = datosRelevos[c.nombreCompleto] && datosRelevos[c.nombreCompleto][horario];
                         if (relevoAnterior && relevoAnterior.actividad === 'releva') {
-                            const mesasComunes = relevoAnterior.mesas.filter(mesa => mesasReleva.includes(mesa));
+                            const mesasComunes = relevoAnterior.mesasAsignadas.filter(mesa => mesasReleva.includes(mesa));
                             if (mesasComunes.length > 0) {
                                 croupiersRelevados.add(c.nombreCompleto);
                             }
@@ -2560,8 +2595,9 @@
                         if (!datosRelevos[c]) datosRelevos[c] = {};
                         datosRelevos[c][horario] = {
                             actividad: 'descanso',
-                            mesas: [],
-                            color: '#f39c12'
+                            mesasAsignadas: [],
+                            color: '#f39c12',
+                            tiempoCronometro: "00:00:00"
                         };
                         stopCronometro(c, true);
                     });
@@ -2570,27 +2606,31 @@
                 if (mesasReleva.length > 0) {
                      datosRelevos[croupier][horario] = {
                         actividad: 'releva',
-                        mesas: mesasReleva,
-                        color: colorSeleccionado
+                        mesasAsignadas: mesasReleva,
+                        color: colorSeleccionado,
+                        tiempoCronometro: "00:00:00"
                     };
                 } else {
                     datosRelevos[croupier][horario] = {
                         actividad: 'sin-actividad',
-                        mesas: [],
-                        color: '#95a5a6'
+                        mesasAsignadas: [],
+                        color: '#95a5a6',
+                        tiempoCronometro: "00:00:00"
                     };
                 }
             } else if (actividadSeleccionada === 'ayudante-pagador') {
                  datosRelevos[croupier][horario] = {
                     actividad: 'ayudante-pagador',
-                    mesas: [],
-                    color: '#8e44ad'
+                    mesasAsignadas: [],
+                    color: '#8e44ad',
+                    tiempoCronometro: "00:00:00"
                 };
             } else if (actividadSeleccionada === 'descanso') {
                 datosRelevos[croupier][horario] = {
                     actividad: 'descanso',
-                    mesas: [],
-                    color: '#f39c12'
+                    mesasAsignadas: [],
+                    color: '#f39c12',
+                    tiempoCronometro: "00:00:00"
                 };
             }
 
@@ -2598,16 +2638,18 @@
                 if (!datosRelevos[c]) datosRelevos[c] = {};
                 datosRelevos[c][horario] = {
                     actividad: 'descanso',
-                    mesas: [],
-                    color: '#f39c12'
+                    mesasAsignadas: [],
+                    color: '#f39c12',
+                    tiempoCronometro: "00:00:00"
                 };
             });
 
             if (!datosRelevos[croupier][horario]) {
                 datosRelevos[croupier][horario] = {
                     actividad: 'sin-actividad',
-                    mesas: [],
-                    color: '#95a5a6'
+                    mesasAsignadas: [],
+                    color: '#95a5a6',
+                    tiempoCronometro: "00:00:00"
                 };
             }
 
@@ -2632,7 +2674,6 @@
 
         function refreshCronometros() {
             stopAllTimers(false);
-            cargarCronometroState();
             startSavedTimers();
         }
         
@@ -2827,18 +2868,20 @@
                 }
             });
         }
+        
+        // ====================================================================
+        // INICIO DE LA APLICACIÓN
+        // ====================================================================
 
-        function inicializar() {
-            cargarDatos();
-            cargarCronometroState();
-            renderizarHorario(false);
-            actualizarBotonesDeshacerRehacer();
+        async function inicializar() {
+            await cargarDatosDesdeGoogleSheets();
+            guardarEstadoLocal(); // Guardar el estado inicial después de cargar
+            startAutomaticTimers();
             setInterval(() => {
                 actualizarReloj();
                 startAutomaticTimers();
             }, 1000);
             actualizarReloj();
-            startSavedTimers();
             inicializarSortableJS();
             renderizarJuegosDropdownAdd();
         }
