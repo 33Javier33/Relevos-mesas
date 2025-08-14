@@ -279,6 +279,14 @@
         .control-panel button.undo-redo:hover {
             background-color: #95a5a6;
         }
+        
+        .control-panel button.success {
+            background-color: #2ecc71;
+        }
+        
+        .control-panel button.success:hover {
+            background-color: #27ae60;
+        }
 
         .control-panel input[type="color"] {
             -webkit-appearance: none;
@@ -1042,11 +1050,26 @@
                 <span class="collapse-icon">▼</span>
             </div>
             <div class="panel-content panel-hidden">
+                <h4>Historial</h4>
                 <div class="form-group">
                     <button id="btn-undo" class="undo-redo">Deshacer</button>
                     <button id="btn-redo" class="undo-redo">Rehacer</button>
                 </div>
-                <button id="btn-clear-all" class="danger">Borrar Todos los Croupiers y Horarios</button>
+                
+                <hr style="margin: 15px 0;">
+
+                <h4>Opciones de Borrado</h4>
+                <button id="btn-clear-horario-only" class="danger" style="margin-bottom: 10px;">Borrar SOLO tabla de Horarios</button>
+                <button id="btn-clear-all" class="danger">Borrar TODO el Sistema</button>
+                
+                <hr style="margin: 15px 0;">
+                
+                <h4>Backup y Restaurar</h4>
+                <div class="form-group">
+                    <button id="btn-backup" class="success">Hacer Backup</button>
+                    <label for="file-input-restore" class="button">Restaurar</label>
+                    <input type="file" id="file-input-restore" accept=".json" style="display: none;">
+                </div>
             </div>
         </div>
 
@@ -1378,6 +1401,10 @@
         const btnBorrarSalida = document.getElementById('btn-borrar-salida');
 
         const btnClearAll = document.getElementById('btn-clear-all');
+        const btnClearHorarioOnly = document.getElementById('btn-clear-horario-only');
+        const btnBackup = document.getElementById('btn-backup');
+        const fileInputRestore = document.getElementById('file-input-restore');
+
         const btnUndo = document.getElementById('btn-undo');
         const btnRedo = document.getElementById('btn-redo');
 
@@ -1391,7 +1418,7 @@
 
         const collapsibleHeader = document.getElementById('collapsible-header');
         const controlesContainer = document.getElementById('controles-container');
-
+        
         // --- FUNCIÓN DE GESTIÓN DE DATOS ---
         function guardarDatos() {
             localStorage.setItem('croupiersData', JSON.stringify(croupiersData));
@@ -1433,6 +1460,70 @@
             if (savedCronoState) {
                 cronometroStartTime = JSON.parse(savedCronoState);
             }
+        }
+        
+        function generarBackup() {
+            const backupData = {
+                croupiersData,
+                horarios,
+                mesasDeJuego,
+                juegosMaestro,
+                datosRelevos,
+                croupierColors,
+                croupierSalidas,
+                horarioColors,
+                cronometroStartTime,
+                croupiersEnEspera
+            };
+            const jsonString = JSON.stringify(backupData, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const now = new Date();
+            const filename = `backup-horario-${now.toISOString().slice(0, 10)}.json`;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            alert('Backup guardado correctamente.');
+        }
+        
+        function restaurarBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const backupData = JSON.parse(e.target.result);
+                    
+                    if (confirm('¿Estás seguro de que quieres restaurar la información? Se sobrescribirán todos los datos actuales del sistema.')) {
+                        croupiersData = backupData.croupiersData || [];
+                        horarios = backupData.horarios || [];
+                        mesasDeJuego = backupData.mesasDeJuego || [];
+                        juegosMaestro = backupData.juegosMaestro || [];
+                        datosRelevos = backupData.datosRelevos || {};
+                        croupierColors = backupData.croupierColors || {};
+                        croupierSalidas = backupData.croupierSalidas || {};
+                        horarioColors = backupData.horarioColors || {};
+                        cronometroStartTime = backupData.cronometroStartTime || {};
+                        croupiersEnEspera = backupData.croupiersEnEspera || [];
+                        
+                        stopAllTimers(false); // Detiene los cronómetros pero no borra el estado
+                        localStorage.clear();
+                        guardarDatos(); // Guarda los nuevos datos restaurados
+                        renderizarHorario();
+                        startSavedTimers(); // Inicia los cronómetros desde el backup
+                        alert('Datos restaurados correctamente.');
+                    }
+                } catch (error) {
+                    alert('Error al leer el archivo. Asegúrate de que sea un archivo de backup válido.');
+                    console.error('Error al restaurar el backup:', error);
+                }
+            };
+            reader.readAsText(file);
         }
 
         function guardarEstado() {
@@ -2131,9 +2222,11 @@
         }
 
         function borrarTodosLosDatos() {
-            if (confirm('¿Estás seguro de que quieres borrar a TODOS los croupiers y sus horarios? Las mesas de juego se conservarán.')) {
+            if (confirm('¿Estás seguro de que quieres borrar a TODOS los croupiers, sus horarios, mesas y juegos? Esta acción es irreversible.')) {
                 croupiersData = [];
                 horarios = [];
+                mesasDeJuego = [];
+                juegosMaestro = [];
                 datosRelevos = {};
                 croupierColors = {};
                 croupierSalidas = {};
@@ -2141,17 +2234,25 @@
                 historial = [];
                 historialIndex = -1;
                 croupiersEnEspera = [];
-                localStorage.removeItem('croupiersData');
-                localStorage.removeItem('horarios');
-                localStorage.removeItem('datosRelevos');
-                localStorage.removeItem('croupierColors');
-                localStorage.removeItem('croupierSalidas');
-                localStorage.removeItem('horarioColors');
-                localStorage.removeItem('croupiersEnEspera');
+                localStorage.clear();
                 stopAllTimers(true);
                 renderizarHorario();
                 actualizarBotonesDeshacerRehacer();
-                alert('Todos los datos de croupiers y horarios han sido borrados. Las mesas de juego se han conservado.');
+                alert('Todos los datos del sistema han sido borrados.');
+            }
+        }
+        
+        function borrarSoloHorarios() {
+            if (confirm('¿Estás seguro de que quieres borrar SOLAMENTE la tabla de horarios? La lista de croupiers y mesas se mantendrá.')) {
+                horarios = [];
+                datosRelevos = {};
+                horarioColors = {};
+                historial = [];
+                historialIndex = -1;
+                stopAllTimers(true);
+                renderizarHorario();
+                actualizarBotonesDeshacerRehacer();
+                alert('La tabla de horarios ha sido borrada.');
             }
         }
         
@@ -2704,6 +2805,10 @@
         btnBorrarRelevo.addEventListener('click', borrarRelevo);
 
         btnClearAll.addEventListener('click', borrarTodosLosDatos);
+        btnClearHorarioOnly.addEventListener('click', borrarSoloHorarios);
+        btnBackup.addEventListener('click', generarBackup);
+        fileInputRestore.addEventListener('change', restaurarBackup);
+        
         btnUndo.addEventListener('click', deshacer);
         btnRedo.addEventListener('click', rehacer);
         
