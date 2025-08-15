@@ -43,7 +43,7 @@
             margin: 0;
             padding: 0;
         }
-        
+
         .collapsible-header .collapse-icon {
             font-size: 2.5em;
             color: #3498db;
@@ -80,7 +80,7 @@
             padding: 0;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            width: 280px;
+            flex: 1 1 300px;
             overflow: hidden;
         }
 
@@ -94,17 +94,17 @@
             border-bottom: 1px solid #ecf0f1;
             transition: background-color 0.3s ease;
         }
-        
+
         .control-panel .panel-header:hover {
             background-color: #f0f0f0;
         }
-        
+
         .control-panel .panel-header h3 {
             margin: 0;
             color: #34495e;
             font-size: 1.2em;
         }
-        
+
         .control-panel .panel-header .collapse-icon {
             font-size: 1.5em;
             color: #3498db;
@@ -123,7 +123,7 @@
             overflow-y: auto;
             opacity: 1;
         }
-        
+
         .control-panel .panel-content.panel-hidden {
             max-height: 0;
             opacity: 0;
@@ -199,7 +199,7 @@
             border: 1px solid #bdc3c7;
             box-sizing: border-box;
         }
-        
+
         .control-panel .juegos-selector {
             width: 100%;
             padding: 10px;
@@ -212,11 +212,11 @@
             cursor: pointer;
             margin-bottom: 10px;
         }
-        
+
         .control-panel .juegos-selector.active .dropdown-juegos {
             display: block;
         }
-        
+
         .dropdown-juegos {
             position: absolute;
             top: 100%;
@@ -231,7 +231,7 @@
             max-height: 200px;
             overflow-y: auto;
         }
-        
+
         .dropdown-juegos label {
             display: flex;
             align-items: center;
@@ -240,11 +240,11 @@
             transition: background-color 0.2s;
             margin-bottom: 0;
         }
-        
+
         .dropdown-juegos label:hover {
             background-color: #f0f0f0;
         }
-        
+
         .dropdown-juegos input[type="checkbox"] {
             margin-right: 10px;
             width: auto;
@@ -279,11 +279,11 @@
         .control-panel button.undo-redo:hover {
             background-color: #95a5a6;
         }
-        
+
         .control-panel button.success {
             background-color: #2ecc71;
         }
-        
+
         .control-panel button.success:hover {
             background-color: #27ae60;
         }
@@ -309,12 +309,12 @@
             overflow-y: auto;
             background-color: #f9f9f9;
         }
-        
+
         .preview-table {
             width: 100%;
             border-collapse: collapse;
         }
-        
+
         .preview-table th, .preview-table td {
             padding: 8px;
             text-align: left;
@@ -325,16 +325,16 @@
         .preview-table tbody tr:hover {
             background-color: #f0f0f0;
         }
-        
+
         .preview-table th {
             background-color: #ecf0f1;
             font-weight: bold;
         }
-        
+
         .preview-table tr.selected {
             background-color: #d1ecf1;
         }
-        
+
         .preview-table input[type="checkbox"] {
             margin-right: 10px;
         }
@@ -445,7 +445,7 @@
             min-width: 85px;
             width: 85px;
         }
-        
+
         .tabla thead th.agregar-horario-th {
             background-color: #3498db;
             padding: 0;
@@ -615,7 +615,7 @@
         .croupier-row td:first-child {
             cursor: default;
         }
-        
+
         .relevo-cell {
             padding: 2px 4px;
             border-radius: 4px;
@@ -625,7 +625,7 @@
             line-height: 1.2;
             display: block; /* La tarjeta ocupa todo el ancho de la celda */
         }
-        
+
         .relevo-cell.ayudante-pagador {
             background-color: #8e44ad;
         }
@@ -885,14 +885,14 @@
         #croupier-details-container h4 {
             margin-bottom: 5px;
         }
-        
+
         #croupier-details-container .editable-field {
             display: flex;
             align-items: center;
             gap: 5px;
             margin-bottom: 10px;
         }
-        
+
         #croupier-details-container .editable-field p {
             margin: 0;
             font-weight: bold;
@@ -901,7 +901,7 @@
         #croupier-name-edit-container {
             flex-grow: 1;
         }
-        
+
         #croupier-details-name-edit {
             width: 100%;
             padding: 5px;
@@ -923,26 +923,36 @@
             display: none;
             margin-bottom: 10px;
         }
-        
+
         #edit-croupier-juegos-selector.active {
             display: block;
         }
-        
+
         #edit-croupier-buttons {
             display: flex; /* CAMBIO: Ahora se muestra por defecto */
             gap: 10px;
             margin-top: 10px;
         }
-        
+
         #btn-editar-croupier, #btn-guardar-edicion, #btn-cancelar-edicion, #btn-eliminar-croupier-pre {
             width: auto;
             flex: 1;
         }
-        
+
         /* CAMBIO: Se ocultan los botones de guardar/cancelar por defecto */
         #btn-guardar-edicion, #btn-cancelar-edicion {
             display: none;
         }
+        
+        /*
+         * ESTILO CORREGIDO: Se aplica la opacidad a la celda del croupier
+         * y al cronómetro cuando se le añade la clase 'translucent'.
+         */
+        .translucent {
+            opacity: 0.5;
+            transition: opacity 0.3s ease;
+        }
+
 
         /* MEDIA QUERY PARA MÓVILES - AJUSTE DE LA TABLA Y EL MODAL */
         @media (max-width: 600px) {
@@ -1023,7 +1033,7 @@
                 font-size: 1.2em;
             }
         }
-        
+
         /* Estilos del pie de página */
         footer {
             margin-top: 20px;
@@ -1055,15 +1065,16 @@
                     <button id="btn-undo" class="undo-redo">Deshacer</button>
                     <button id="btn-redo" class="undo-redo">Rehacer</button>
                 </div>
-                
+
                 <hr style="margin: 15px 0;">
 
                 <h4>Opciones de Borrado</h4>
                 <button id="btn-clear-horario-only" class="danger" style="margin-bottom: 10px;">Borrar SOLO tabla de Horarios</button>
+                <button id="btn-clear-croupiers-only" class="danger" style="margin-bottom: 10px;">Borrar SOLO Croupiers de la tabla</button>
                 <button id="btn-clear-all" class="danger">Borrar TODO el Sistema</button>
-                
+
                 <hr style="margin: 15px 0;">
-                
+
                 <h4>Backup y Restaurar</h4>
                 <div class="form-group">
                     <button id="btn-backup" class="success">Hacer Backup</button>
@@ -1092,10 +1103,14 @@
                     <div class="dropdown-juegos" id="dropdown-juegos"></div>
                 </div>
                 <button id="btn-agregar-croupier-db">Agregar a la Base de Datos</button>
-                
+
                 <hr style="margin: 15px 0;">
-                
+
                 <h4>Croupiers registrados</h4>
+                <div class="form-group">
+                    <input type="text" id="croupier-search-input" placeholder="Buscar croupier..." autocomplete="off">
+                </div>
+
                 <div class="preview-table-container">
                     <table class="preview-table" id="croupier-pre-table">
                         <thead>
@@ -1130,7 +1145,7 @@
                             <div class="dropdown-juegos" id="dropdown-juegos-edit"></div>
                         </div>
                     </div>
-                    
+
                     <div id="edit-croupier-buttons" class="form-group">
                         <button id="btn-editar-croupier">Editar</button>
                         <button id="btn-guardar-edicion">Guardar</button>
@@ -1310,7 +1325,7 @@
         let croupierColors = {};
         let croupierSalidas = {};
         let horarioColors = {};
-        
+
         let croupiersEnEspera = [];
 
         // --- GESTIÓN DEL CRONÓMETRO ---
@@ -1326,7 +1341,7 @@
         let celdaActiva = { croupier: null, horario: null };
         let croupierCronoActivo = null;
         let croupierSalidaActivo = null;
-        
+
         let croupierSeleccionadoPre = null;
         let isEditingPreCroupier = false;
 
@@ -1402,6 +1417,7 @@
 
         const btnClearAll = document.getElementById('btn-clear-all');
         const btnClearHorarioOnly = document.getElementById('btn-clear-horario-only');
+        const btnClearCroupiersOnly = document.getElementById('btn-clear-croupiers-only'); // NUEVO BOTÓN
         const btnBackup = document.getElementById('btn-backup');
         const fileInputRestore = document.getElementById('file-input-restore');
 
@@ -1418,7 +1434,11 @@
 
         const collapsibleHeader = document.getElementById('collapsible-header');
         const controlesContainer = document.getElementById('controles-container');
-        
+
+        // NUEVO: Buscador de croupiers
+        const croupierSearchInput = document.getElementById('croupier-search-input');
+
+
         // --- FUNCIÓN DE GESTIÓN DE DATOS ---
         function guardarDatos() {
             localStorage.setItem('croupiersData', JSON.stringify(croupiersData));
@@ -1461,7 +1481,7 @@
                 cronometroStartTime = JSON.parse(savedCronoState);
             }
         }
-        
+
         function generarBackup() {
             const backupData = {
                 croupiersData,
@@ -1489,7 +1509,7 @@
             URL.revokeObjectURL(url);
             alert('Backup guardado correctamente.');
         }
-        
+
         function restaurarBackup(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -1498,7 +1518,7 @@
             reader.onload = function(e) {
                 try {
                     const backupData = JSON.parse(e.target.result);
-                    
+
                     if (confirm('¿Estás seguro de que quieres restaurar la información? Se sobrescribirán todos los datos actuales del sistema.')) {
                         croupiersData = backupData.croupiersData || [];
                         horarios = backupData.horarios || [];
@@ -1510,7 +1530,7 @@
                         horarioColors = backupData.horarioColors || {};
                         cronometroStartTime = backupData.cronometroStartTime || {};
                         croupiersEnEspera = backupData.croupiersEnEspera || [];
-                        
+
                         stopAllTimers(false); // Detiene los cronómetros pero no borra el estado
                         localStorage.clear();
                         guardarDatos(); // Guarda los nuevos datos restaurados
@@ -1711,7 +1731,7 @@
                 nameSpan.className = 'croupier-name';
                 nameSpan.textContent = croupierObj.alias;
                 nameRow.appendChild(nameSpan);
-                
+
                 const deleteBtn = document.createElement('button');
                 deleteBtn.className = 'delete-croupier';
                 deleteBtn.textContent = 'x';
@@ -1769,6 +1789,17 @@
 
                     td.addEventListener('click', () => abrirRelevoModal(croupierNombre, hora));
 
+                    // --- NUEVO CÓDIGO PARA GESTIONAR LA TRANSPARENCIA ---
+                    td.addEventListener('mouseenter', () => {
+                        tr.querySelector('.croupier-cell-content').classList.add('translucent');
+                        tr.querySelector('.cronometro-display').classList.add('translucent');
+                    });
+                    td.addEventListener('mouseleave', () => {
+                        tr.querySelector('.croupier-cell-content').classList.remove('translucent');
+                        tr.querySelector('.cronometro-display').classList.remove('translucent');
+                    });
+                    // --- FIN DEL NUEVO CÓDIGO ---
+
                     const relevoData = datosRelevos[croupierNombre] ? datosRelevos[croupierNombre][hora] : null;
                     if (relevoData) {
                         const relevoDiv = crearTarjetaRelevo(relevoData);
@@ -1782,7 +1813,7 @@
                 tbody.appendChild(tr);
             });
         }
-        
+
         function scrollToColumn(time) {
             const tableContainer = document.querySelector('.horario-tabla');
             const columnHeader = document.querySelector(`th[data-horario="${time}"]`);
@@ -1795,9 +1826,14 @@
             }
         }
 
-        function renderizarCroupiersPreTable() {
+        function renderizarCroupiersPreTable(searchTerm = '') {
             croupierPreTableBody.innerHTML = '';
-            croupiersEnEspera.forEach(croupier => {
+            
+            const filteredCroupiers = croupiersEnEspera.filter(croupier =>
+                croupier.nombreCompleto.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            filteredCroupiers.forEach(croupier => {
                 const tr = document.createElement('tr');
                 tr.dataset.nombreCompleto = croupier.nombreCompleto;
                 tr.addEventListener('click', () => {
@@ -1823,19 +1859,24 @@
             btnAgregarCroupierTabla.disabled = croupiersEnEspera.length === 0;
             selectAllPreCroupiers.disabled = croupiersEnEspera.length === 0;
 
-            if (croupiersEnEspera.length > 0) {
+            // Seleccionar el primer elemento si existe y no hay búsqueda
+            if (searchTerm === '' && croupiersEnEspera.length > 0) {
                 seleccionarCroupierPre(croupiersEnEspera[0].nombreCompleto);
-            } else {
+            } else if (filteredCroupiers.length > 0) {
+                 seleccionarCroupierPre(filteredCroupiers[0].nombreCompleto);
+            }
+            else {
+                croupierSeleccionadoPre = null;
                 croupierDetailsContainer.style.display = 'none';
             }
         }
-        
+
         function seleccionarCroupierPre(nombreCompleto) {
             const filas = document.querySelectorAll('#croupier-pre-table tbody tr');
             const clickedRow = document.querySelector(`[data-nombre-completo="${nombreCompleto}"]`);
-            
+
             filas.forEach(fila => fila.classList.remove('selected'));
-            
+
             if (clickedRow) {
                 clickedRow.classList.add('selected');
                 const croupier = croupiersEnEspera.find(c => c.nombreCompleto === nombreCompleto);
@@ -1856,7 +1897,7 @@
                         noJuegosText.textContent = 'No se han asignado juegos.';
                         croupierDetailsJuegos.appendChild(noJuegosText);
                     }
-                    
+
                     croupierDetailsContainer.style.display = 'block';
                     toggleEditModePreCroupier(false);
                 }
@@ -1865,10 +1906,10 @@
                 croupierDetailsContainer.style.display = 'none';
             }
         }
-        
+
         function toggleEditModePreCroupier(isEditMode) {
             isEditingPreCroupier = isEditMode;
-            
+
             if (isEditMode) {
                 croupierDetailsNameDisplay.style.display = 'none';
                 croupierDetailsNameEdit.style.display = 'block';
@@ -1878,9 +1919,9 @@
                 btnEliminarCroupierPre.style.display = 'none';
                 btnGuardarEdicion.style.display = 'block';
                 btnCancelarEdicion.style.display = 'block';
-                
+
                 renderizarJuegosDropdownEdit(croupiersEnEspera.find(c => c.nombreCompleto === croupierSeleccionadoPre)?.juegosQuePaga || []);
-                
+
             } else {
                 croupierDetailsNameDisplay.style.display = 'block';
                 croupierDetailsNameEdit.style.display = 'none';
@@ -1907,7 +1948,7 @@
                 mesasListDiv.appendChild(mesaTag);
             });
         }
-        
+
         function renderizarJuegosDropdown(dropdownId = 'dropdown-juegos', selectedJuegos = []) {
             const dropdown = document.getElementById(dropdownId);
             if (!dropdown) return;
@@ -2021,7 +2062,7 @@
                         }
                     }
                 }
-                
+
                 if (currentActivity && currentActivity.actividad === 'releva' && !isCronoRunning) {
                     const [hours, minutes] = currentHourMinute.split(':').map(Number);
                     const cronoStart = new Date();
@@ -2146,7 +2187,7 @@
 
                     const oldIndex = horarios.indexOf(oldTime);
                     horarios.splice(oldIndex, 1, newTime);
-                    
+
                     renderizarHorario(true, newTime);
                 } else {
                     renderizarHorario();
@@ -2241,7 +2282,7 @@
                 alert('Todos los datos del sistema han sido borrados.');
             }
         }
-        
+
         function borrarSoloHorarios() {
             if (confirm('¿Estás seguro de que quieres borrar SOLAMENTE la tabla de horarios? La lista de croupiers y mesas se mantendrá.')) {
                 horarios = [];
@@ -2255,7 +2296,19 @@
                 alert('La tabla de horarios ha sido borrada.');
             }
         }
-        
+
+        function borrarSoloCroupiers() {
+            if (confirm('¿Estás seguro de que quieres borrar SOLAMENTE a los croupiers de la tabla de horarios? La lista de horarios y mesas se mantendrá.')) {
+                croupiersData = [];
+                datosRelevos = {};
+                croupierColors = {};
+                croupierSalidas = {};
+                stopAllTimers(true);
+                renderizarHorario();
+                alert('Los croupiers han sido eliminados de la tabla de horarios.');
+            }
+        }
+
         function borrarCroupierPre() {
             if (!croupierSeleccionadoPre) return;
 
@@ -2325,7 +2378,7 @@
             nuevoCroupierInput.value = '';
             dropdownJuegos.querySelectorAll('input:checked').forEach(cb => cb.checked = false);
         }
-        
+
         function agregarJuegoMaestro() {
             const nombreJuego = nuevoJuegoInput.value.trim();
             if (nombreJuego && !juegosMaestro.includes(nombreJuego)) {
@@ -2335,7 +2388,7 @@
                 nuevoJuegoInput.value = '';
             }
         }
-        
+
         function agregarCroupiersSeleccionados() {
             const croupierCheckboxes = document.querySelectorAll('#croupier-pre-table .pre-croupier-checkbox:checked');
 
@@ -2355,7 +2408,7 @@
                         juegosQuePaga: croupierDataFromDb.juegosQuePaga
                     };
                     croupiersData.push(nuevoCroupier);
-                    
+
                     if (!datosRelevos[nombreCompleto]) {
                         datosRelevos[nombreCompleto] = {};
                     }
@@ -2397,7 +2450,7 @@
 
             mesasDisponiblesDiv.innerHTML = '';
             mesasSeleccionadasDiv.innerHTML = '';
-            
+
             let actividadExistente = relevoExistente ? relevoExistente.actividad : 'releva';
             document.querySelector(`input[name="actividad"][value="${actividadExistente}"]`).checked = true;
             toggleRelevoControls(actividadExistente);
@@ -2421,7 +2474,7 @@
                 mesaItem.textContent = mesa;
                 mesasSeleccionadasDiv.appendChild(mesaItem);
             });
-            
+
             sugerirCroupierDescanso();
 
             // Evento para arrastrar y soltar las mesas
@@ -2467,7 +2520,7 @@
         // FUNCIÓN MEJORADA: Ahora llena el selector de descanso y muestra las mesas asignadas
         function llenarSelectoresModal() {
             selectCroupierDescanso.innerHTML = '';
-            
+
             const optDescansoPlaceholder = document.createElement('option');
             optDescansoPlaceholder.value = "";
             optDescansoPlaceholder.textContent = "(Ninguno)";
@@ -2485,7 +2538,7 @@
                 } else if (relevoData && (relevoData.actividad === 'descanso' || relevoData.actividad === 'ayudante-pagador')) {
                     displayAlias += ` (${relevoData.actividad.toUpperCase()})`;
                 }
-                
+
                 const optionDescanso = document.createElement('option');
                 optionDescanso.value = croupierObj.nombreCompleto;
                 optionDescanso.textContent = displayAlias;
@@ -2510,11 +2563,11 @@
                 } else if (mesasEnRelevo.length >= 2) {
                     mesaToCheck = mesasEnRelevo[1];
                 }
-                
+
                 const { croupier, horario } = celdaActiva;
-                
+
                 let croupierEncontrado = null;
-                
+
                 if (mesaToCheck) {
                     croupiersData.forEach(c => {
                         // No buscar en el propio croupier que estamos asignando
@@ -2535,7 +2588,7 @@
                 }
             }
         }
-        
+
         function abrirSalidaModal(croupier) {
             croupierSalidaActivo = croupier;
             const croupierObj = croupiersData.find(c => c.nombreCompleto === croupier);
@@ -2736,7 +2789,7 @@
             cargarCronometroState();
             startSavedTimers();
         }
-        
+
         function guardarEdicionPreCroupier() {
             const oldName = croupierSeleccionadoPre;
             const newName = croupierDetailsNameEdit.value.trim();
@@ -2806,12 +2859,13 @@
 
         btnClearAll.addEventListener('click', borrarTodosLosDatos);
         btnClearHorarioOnly.addEventListener('click', borrarSoloHorarios);
+        btnClearCroupiersOnly.addEventListener('click', borrarSoloCroupiers); // NUEVO EVENTO
         btnBackup.addEventListener('click', generarBackup);
         fileInputRestore.addEventListener('change', restaurarBackup);
-        
+
         btnUndo.addEventListener('click', deshacer);
         btnRedo.addEventListener('click', rehacer);
-        
+
         btnEditarCroupier.addEventListener('click', () => toggleEditModePreCroupier(true));
         btnGuardarEdicion.addEventListener('click', guardarEdicionPreCroupier);
         btnCancelarEdicion.addEventListener('click', () => {
@@ -2879,11 +2933,11 @@
                  document.getElementById('juegos-selector-edit').classList.remove('active');
             }
         });
-        
+
         juegosSelectorCroupier.addEventListener('click', () => {
             juegosSelectorCroupier.classList.toggle('active');
         });
-        
+
         const juegosSelectorEdit = document.getElementById('juegos-selector-edit');
         if (juegosSelectorEdit) {
             juegosSelectorEdit.addEventListener('click', (e) => {
@@ -2891,7 +2945,7 @@
                 e.stopPropagation();
             });
         }
-        
+
         dropdownJuegos.addEventListener('click', (event) => {
             event.stopPropagation();
         });
@@ -2903,7 +2957,7 @@
             controlesContainer.classList.toggle('content-hidden');
             collapsibleHeader.classList.toggle('collapsed');
         });
-        
+
         document.querySelectorAll('.control-panel .panel-header').forEach(header => {
             header.addEventListener('click', () => {
                 const content = header.nextElementSibling;
@@ -2911,10 +2965,33 @@
                 content.classList.toggle('panel-hidden');
             });
         });
-        
+
         radioReleva.addEventListener('change', () => toggleRelevoControls('releva'));
         radioAyudante.addEventListener('change', () => toggleRelevoControls('ayudante-pagador'));
         radioDescanso.addEventListener('change', () => toggleRelevoControls('descanso'));
+
+        // NUEVOS EVENT LISTENERS PARA EL BUSCADOR
+        croupierSearchInput.addEventListener('input', (event) => {
+            const searchTerm = event.target.value.trim();
+            renderizarCroupiersPreTable(searchTerm);
+        });
+
+        croupierSearchInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const filteredCroupiers = croupiersEnEspera.filter(croupier =>
+                    croupier.nombreCompleto.toLowerCase().includes(croupierSearchInput.value.toLowerCase())
+                );
+                if (filteredCroupiers.length > 0) {
+                    const firstMatchName = filteredCroupiers[0].nombreCompleto;
+                    seleccionarCroupierPre(firstMatchName);
+                }
+                croupierSearchInput.value = '';
+                croupierSearchInput.focus();
+                renderizarCroupiersPreTable();
+            }
+        });
+
 
         function inicializarSortableJS() {
             new Sortable(tbody, {
