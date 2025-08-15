@@ -5,19 +5,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Horario de Relevos</title>
     <style>
-        /* Estilos generales y tipografía */
+        /* --- Paleta de Colores y Variables para Temas --- */
+        :root {
+            --bg-color: #f4f7f9;
+            --surface-color: #ffffff;
+            --sticky-col-bg: #f4f7f9;
+            --text-color: #34495e;
+            --text-secondary-color: #7f8c8d;
+            --border-color: #ecf0f1;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --hover-bg-color: #f0f0f0;
+            --selected-bg-color: #d1ecf1;
+
+            --primary-color: #3498db;
+            --primary-hover-color: #2980b9;
+            --danger-color: #e74c3c;
+            --danger-hover-color: #c0392b;
+            --success-color: #2ecc71;
+            --success-hover-color: #27ae60;
+            --neutral-color: #bdc3c7;
+            --neutral-hover-color: #95a5a6;
+        }
+
+        body.dark-mode {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --sticky-col-bg: #2a2a2a;
+            --text-color: #e0e0e0;
+            --text-secondary-color: #bdc3c7;
+            --border-color: #333333;
+            --shadow-color: rgba(0, 0, 0, 0.5);
+            --hover-bg-color: #2c2c2c;
+            --selected-bg-color: #003c5a;
+
+            --primary-color: #3498db;
+            --primary-hover-color: #5dade2;
+            --danger-color: #e74c3c;
+            --danger-hover-color: #f1948a;
+            --success-color: #2ecc71;
+            --success-hover-color: #58d68d;
+            --neutral-color: #566573;
+            --neutral-hover-color: #808b96;
+        }
+        /* ----------------------------------------------- */
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f9;
+            background-color: var(--bg-color);
             margin: 0;
             padding: 20px;
-            color: #34495e;
+            color: var(--text-color);
             display: flex;
             flex-direction: column;
             min-height: 100vh;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
-        /* Contenedor del encabezado principal */
         .collapsible-header {
             display: flex;
             justify-content: center;
@@ -26,18 +69,18 @@
             cursor: pointer;
             padding: 15px;
             margin-bottom: 20px;
-            background-color: #ffffff;
+            background-color: var(--surface-color);
             border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px var(--shadow-color);
             transition: background-color 0.3s ease;
         }
 
         .collapsible-header:hover {
-            background-color: #f0f0f0;
+            background-color: var(--hover-bg-color);
         }
 
         .collapsible-header h1 {
-            color: #2c3e50;
+            color: var(--text-color);
             text-align: center;
             font-size: 1.25em;
             margin: 0;
@@ -46,7 +89,7 @@
 
         .collapsible-header .collapse-icon {
             font-size: 2.5em;
-            color: #3498db;
+            color: var(--primary-color);
             transition: transform 0.3s ease;
         }
 
@@ -54,7 +97,6 @@
             transform: rotate(-90deg);
         }
 
-        /* Contenedores y paneles de control */
         .controles-container {
             display: flex;
             justify-content: center;
@@ -74,12 +116,11 @@
             overflow-y: hidden;
         }
 
-        /* Estilos para los paneles colapsables individuales */
         .control-panel {
-            background-color: #ffffff;
+            background-color: var(--surface-color);
             padding: 0;
             border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px var(--shadow-color);
             flex: 1 1 300px;
             overflow: hidden;
         }
@@ -91,23 +132,23 @@
             gap: 10px;
             padding: 15px;
             cursor: pointer;
-            border-bottom: 1px solid #ecf0f1;
+            border-bottom: 1px solid var(--border-color);
             transition: background-color 0.3s ease;
         }
 
         .control-panel .panel-header:hover {
-            background-color: #f0f0f0;
+            background-color: var(--hover-bg-color);
         }
 
         .control-panel .panel-header h3 {
             margin: 0;
-            color: #34495e;
+            color: var(--text-color);
             font-size: 1.2em;
         }
 
         .control-panel .panel-header .collapse-icon {
             font-size: 1.5em;
-            color: #3498db;
+            color: var(--primary-color);
             transition: transform 0.3s ease;
         }
 
@@ -139,7 +180,6 @@
             margin-bottom: 10px;
         }
 
-        /* Nuevo estilo para la lista de mesas y juegos */
         .mesa-list, .juego-list {
             display: flex;
             flex-wrap: wrap;
@@ -151,7 +191,7 @@
         }
 
         .mesa-list .mesa-tag, .juego-list .juego-tag {
-            background-color: #bdc3c7;
+            background-color: var(--neutral-color);
             color: white;
             padding: 5px 8px;
             border-radius: 5px;
@@ -162,7 +202,7 @@
         }
 
         .mesa-list .mesa-tag, .juego-list-inline .juego-tag {
-            background-color: #bdc3c7;
+            background-color: var(--neutral-color);
             color: white;
             padding: 5px 8px;
             border-radius: 5px;
@@ -185,10 +225,9 @@
         }
 
         .mesa-list .mesa-tag .delete-mesa:hover, .juego-list .juego-tag .delete-juego:hover {
-            color: #e74c3c;
+            color: var(--danger-color);
         }
 
-        /* Estilos de inputs y botones */
         .control-panel input[type="text"],
         .control-panel input[type="time"],
         .control-panel button,
@@ -196,17 +235,19 @@
             width: 100%;
             padding: 10px;
             border-radius: 5px;
-            border: 1px solid #bdc3c7;
+            border: 1px solid var(--neutral-color);
             box-sizing: border-box;
+            background-color: var(--surface-color);
+            color: var(--text-color);
         }
 
         .control-panel .juegos-selector {
             width: 100%;
             padding: 10px;
             border-radius: 5px;
-            border: 1px solid #bdc3c7;
+            border: 1px solid var(--neutral-color);
             box-sizing: border-box;
-            background-color: white;
+            background-color: var(--surface-color);
             text-align: left;
             position: relative;
             cursor: pointer;
@@ -222,10 +263,10 @@
             top: 100%;
             left: 0;
             width: 100%;
-            background-color: white;
-            border: 1px solid #bdc3c7;
+            background-color: var(--surface-color);
+            border: 1px solid var(--neutral-color);
             border-top: none;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px var(--shadow-color);
             z-index: 10;
             display: none;
             max-height: 200px;
@@ -242,7 +283,7 @@
         }
 
         .dropdown-juegos label:hover {
-            background-color: #f0f0f0;
+            background-color: var(--hover-bg-color);
         }
 
         .dropdown-juegos input[type="checkbox"] {
@@ -251,7 +292,7 @@
         }
 
         .control-panel button {
-            background-color: #3498db;
+            background-color: var(--primary-color);
             color: white;
             font-weight: bold;
             border: none;
@@ -260,39 +301,39 @@
         }
 
         .control-panel button:hover {
-            background-color: #2980b9;
+            background-color: var(--primary-hover-color);
         }
 
         .control-panel button.danger {
-            background-color: #e74c3c;
+            background-color: var(--danger-color);
         }
 
         .control-panel button.danger:hover {
-            background-color: #c0392b;
+            background-color: var(--danger-hover-color);
         }
 
         .control-panel button.undo-redo {
-            background-color: #bdc3c7;
-            color: #34495e;
+            background-color: var(--neutral-color);
+            color: var(--surface-color);
         }
 
         .control-panel button.undo-redo:hover {
-            background-color: #95a5a6;
+            background-color: var(--neutral-hover-color);
         }
 
         .control-panel button.success {
-            background-color: #2ecc71;
+            background-color: var(--success-color);
         }
 
         .control-panel button.success:hover {
-            background-color: #27ae60;
+            background-color: var(--success-hover-color);
         }
 
         .control-panel input[type="color"] {
             -webkit-appearance: none;
             -moz-appearance: none;
             appearance: none;
-            border: 1px solid #bdc3c7;
+            border: 1px solid var(--neutral-color);
             width: 40px;
             height: 40px;
             background-color: transparent;
@@ -300,14 +341,13 @@
             padding: 0;
         }
 
-        /* Nuevas tablas para los elementos que se van agregando */
         .preview-table-container {
             margin-top: 15px;
-            border: 1px solid #ddd;
+            border: 1px solid var(--border-color);
             border-radius: 5px;
             max-height: 200px;
             overflow-y: auto;
-            background-color: #f9f9f9;
+            background-color: var(--bg-color);
         }
 
         .preview-table {
@@ -318,28 +358,27 @@
         .preview-table th, .preview-table td {
             padding: 8px;
             text-align: left;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 1px solid var(--border-color);
             cursor: pointer;
         }
 
         .preview-table tbody tr:hover {
-            background-color: #f0f0f0;
+            background-color: var(--hover-bg-color);
         }
 
         .preview-table th {
-            background-color: #ecf0f1;
+            background-color: var(--surface-color);
             font-weight: bold;
         }
 
         .preview-table tr.selected {
-            background-color: #d1ecf1;
+            background-color: var(--selected-bg-color);
         }
 
         .preview-table input[type="checkbox"] {
             margin-right: 10px;
         }
 
-        /* Reloj digital */
         .reloj-container {
             text-align: center;
             margin-bottom: 20px;
@@ -351,62 +390,55 @@
         .reloj {
             font-size: 2em;
             font-weight: bold;
-            color: #2c3e50;
-            background-color: #ecf0f1;
+            color: var(--text-color);
+            background-color: var(--surface-color);
             padding: 10px 20px;
             border-radius: 8px;
             display: inline-block;
         }
 
-
-        /* Contenedor principal de la tabla */
         .horario-container {
             max-width: 100%;
             margin: 0 auto;
             border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            background-color: white;
+            box-shadow: 0 4px 6px var(--shadow-color);
+            background-color: var(--surface-color);
             flex-grow: 1;
         }
 
-        /* Contenedor que permite el scroll horizontal de la tabla */
         .horario-tabla {
             overflow-x: auto;
             position: relative;
         }
 
-        /* Estilos de la tabla - Alturas y anchos ajustados */
         .tabla {
             width: 100%;
             border-collapse: collapse;
             min-width: 800px;
         }
 
-        /* Celdas de encabezado y datos */
         .tabla th, .tabla td {
-            border: 1px solid #ecf0f1;
+            border: 1px solid var(--border-color);
             padding: 2px 4px;
             text-align: center;
         }
 
-        /* Celdas de encabezado */
         .tabla thead th {
-            background-color: #ecf0f1;
+            background-color: var(--surface-color);
             font-weight: bold;
-            color: #34495e;
+            color: var(--text-color);
             position: relative;
             padding: 6px;
             top: 0;
         }
 
-        /* COLUMNAS FIJAS para el scroll horizontal */
         .tabla th:first-child, .tabla td:first-child {
             position: sticky;
             left: 0;
             z-index: 5;
-            background-color: #f4f7f9;
-            white-space: nowrap; /* Mantiene el texto de las celdas fijas en una línea */
+            background-color: var(--sticky-col-bg);
+            white-space: nowrap;
         }
 
         .tabla thead th:first-child {
@@ -417,8 +449,8 @@
             position: sticky;
             left: 150px;
             z-index: 5;
-            background-color: #f4f7f9;
-            white-space: nowrap; /* Mantiene el texto de las celdas fijas en una línea */
+            background-color: var(--sticky-col-bg);
+            white-space: nowrap;
         }
 
         .tabla thead th:nth-child(2) {
@@ -438,7 +470,7 @@
         }
 
         .tabla thead th.agregar-horario-th {
-            background-color: #3498db;
+            background-color: var(--primary-color);
             padding: 0;
             cursor: pointer;
             transition: background-color 0.3s ease;
@@ -448,7 +480,7 @@
         }
 
         .tabla thead th.agregar-horario-th:hover {
-            background-color: #2980b9;
+            background-color: var(--primary-hover-color);
         }
 
         .tabla thead th.agregar-horario-th span {
@@ -471,7 +503,7 @@
         }
 
         .tabla th .delete-time {
-            background-color: #e74c3c;
+            background-color: var(--danger-color);
             color: white;
             border: none;
             border-radius: 50%;
@@ -493,7 +525,6 @@
             background-color: #d1d1d1;
         }
 
-        /* Estilos de celdas y relevos */
         .croupier-cell-content {
             display: flex;
             flex-direction: column;
@@ -511,7 +542,7 @@
             position: absolute;
             top: 5px;
             right: 5px;
-            background-color: #e74c3c;
+            background-color: var(--danger-color);
             color: white;
             border: none;
             border-radius: 50%;
@@ -542,13 +573,12 @@
             gap: 5px;
         }
 
-        /* Estilos para la tarjeta de Salida */
         .salida-card {
             display: flex;
             align-items: center;
             gap: 5px;
             padding: 3px 8px;
-            background-color: #f0f0f0;
+            background-color: var(--hover-bg-color);
             border-radius: 5px;
             cursor: pointer;
             transition: background-color 0.2s ease;
@@ -557,7 +587,7 @@
         }
 
         .salida-card:hover {
-            background-color: #e0e0e0;
+            background-color: var(--neutral-hover-color);
         }
 
         .salida-card.warning {
@@ -602,7 +632,6 @@
         }
 
 
-        /* Celdas del nombre del croupier */
         .croupier-row td:first-child {
             cursor: default;
         }
@@ -610,11 +639,11 @@
         .relevo-cell {
             padding: 2px 4px;
             border-radius: 4px;
-            font-size: 0.7em; /* Ancho ajustado para que el texto ocupe menos espacio */
+            font-size: 0.7em;
             font-weight: bold;
             color: white;
             line-height: 1.2;
-            display: block; /* La tarjeta ocupa todo el ancho de la celda */
+            display: block;
         }
 
         .relevo-cell.ayudante-pagador {
@@ -625,20 +654,18 @@
             transition: background-color 0.3s ease;
         }
 
-        /* Estilos para arrastrar y soltar */
         .croupier-row.sortable-chosen {
-            background-color: #e0e0e0;
-            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            background-color: var(--neutral-hover-color);
+            box-shadow: 0 0 10px var(--shadow-color);
             transform: scale(1.02);
             cursor: grabbing;
         }
 
         .croupier-row.sortable-ghost {
             opacity: 0.5;
-            background-color: #c8ebfb;
+            background-color: var(--selected-bg-color);
         }
 
-        /* Cronómetro */
         .cronometro-cell {
             display: flex;
             justify-content: center;
@@ -653,34 +680,33 @@
             align-items: center;
             justify-content: center;
             padding: 2px;
-            background-color: #f0f0f0;
+            background-color: var(--hover-bg-color);
             border-radius: 5px;
-            border: 1px solid #bdc3c7;
+            border: 1px solid var(--neutral-color);
             transition: background-color 0.3s ease;
             font-weight: bold;
         }
 
         .cronometro-display:hover {
-            background-color: #e8e8e8;
+            background-color: var(--neutral-color);
         }
 
         .cronometro-display.running {
-            background-color: #2ecc71;
+            background-color: var(--success-color);
             color: white;
-            border-color: #27ae60;
+            border-color: var(--success-hover-color);
         }
 
         .cronometro-display.warning {
-            background-color: #e74c3c;
+            background-color: var(--danger-color);
             color: white;
-            border-color: #c0392b;
+            border-color: var(--danger-hover-color);
         }
 
         .cronometro-display .timer {
             font-size: 0.8em;
         }
 
-        /* Modal general */
         .modal {
             display: none;
             position: fixed;
@@ -696,10 +722,10 @@
         }
 
         .modal-content {
-            background-color: #fefefe;
+            background-color: var(--surface-color);
             padding: 30px;
             border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            box-shadow: 0 5px 15px var(--shadow-color);
             width: 90%;
             max-width: 500px;
             position: relative;
@@ -708,7 +734,7 @@
         }
 
         .close-btn {
-            color: #aaa;
+            color: var(--text-secondary-color);
             position: absolute;
             top: 10px;
             right: 15px;
@@ -719,15 +745,17 @@
         }
 
         .close-btn:hover {
-            color: #34495e;
+            color: var(--text-color);
         }
 
         .modal-body select, .modal-body input {
             width: 100%;
             padding: 10px;
             border-radius: 5px;
-            border: 1px solid #ccc;
+            border: 1px solid var(--neutral-color);
             box-sizing: border-box;
+            background-color: var(--bg-color);
+            color: var(--text-color);
         }
 
         .modal-body h4 {
@@ -755,7 +783,7 @@
         .modal-footer {
             margin-top: 20px;
             text-align: right;
-            border-top: 1px solid #ecf0f1;
+            border-top: 1px solid var(--border-color);
             padding-top: 15px;
         }
 
@@ -764,7 +792,6 @@
             margin-left: 10px;
         }
 
-        /* Estilos del nuevo selector de mesas con drag-and-drop */
         #mesas-selector {
             display: flex;
             justify-content: space-between;
@@ -774,15 +801,15 @@
 
         #mesas-selector > div {
             flex: 1;
-            border: 1px solid #ccc;
+            border: 1px solid var(--border-color);
             border-radius: 5px;
             padding: 10px;
-            background-color: #f9f9f9;
+            background-color: var(--bg-color);
         }
 
         #mesas-selector h5 {
             margin: 0 0 10px 0;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 1px solid var(--border-color);
             padding-bottom: 5px;
         }
 
@@ -790,44 +817,43 @@
             min-height: 100px;
             max-height: 200px;
             overflow-y: auto;
-            border: 1px solid #eee;
-            background-color: #fff;
+            border: 1px solid var(--border-color);
+            background-color: var(--surface-color);
             padding: 5px;
         }
 
         #mesas-selector .mesa-item {
             padding: 8px;
             margin: 5px;
-            background-color: #ecf0f1;
+            background-color: var(--hover-bg-color);
             border-radius: 5px;
-            cursor: grab; /* Cambiado a grab para indicar que se puede arrastrar */
+            cursor: grab;
             transition: background-color 0.2s;
             text-align: center;
         }
 
         #mesas-selector .mesa-item:hover {
-            background-color: #bdc3c7;
+            background-color: var(--neutral-color);
         }
 
         #mesas-seleccionadas .mesa-item {
-            background-color: #3498db;
+            background-color: var(--primary-color);
             color: white;
         }
 
         #mesas-disponibles .sortable-ghost,
         #mesas-seleccionadas .sortable-ghost {
             opacity: 0.4;
-            background-color: #c8ebfb;
+            background-color: var(--selected-bg-color);
         }
         
         #mesas-disponibles .sortable-chosen,
         #mesas-seleccionadas .sortable-chosen {
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 8px var(--shadow-color);
             transform: scale(1.05);
             cursor: grabbing;
         }
 
-        /* Modal de Salida */
         #salida-modal-content {
             text-align: center;
         }
@@ -835,7 +861,7 @@
         #salida-modal-content .salida-time-display {
             font-size: 3em;
             font-weight: bold;
-            color: #34495e;
+            color: var(--text-color);
             margin: 20px 0;
         }
 
@@ -844,7 +870,6 @@
             width: 100%;
         }
 
-        /* Estilos para los radio buttons del modal de relevo */
         #relevo-modal-options {
             display: flex;
             justify-content: center;
@@ -859,7 +884,7 @@
         }
 
         .juego-tag {
-            background-color: #2ecc71;
+            background-color: var(--success-color);
             color: white;
             padding: 3px 6px;
             border-radius: 4px;
@@ -867,11 +892,10 @@
             margin-right: 5px;
         }
 
-        /* Estilos del panel de croupiers */
         #croupier-details-container {
             text-align: left;
             margin-top: 15px;
-            border-top: 1px solid #ecf0f1;
+            border-top: 1px solid var(--border-color);
             padding-top: 15px;
         }
 
@@ -922,7 +946,7 @@
         }
 
         #edit-croupier-buttons {
-            display: flex; /* CAMBIO: Ahora se muestra por defecto */
+            display: flex;
             gap: 10px;
             margin-top: 10px;
         }
@@ -932,22 +956,16 @@
             flex: 1;
         }
 
-        /* CAMBIO: Se ocultan los botones de guardar/cancelar por defecto */
         #btn-guardar-edicion, #btn-cancelar-edicion {
             display: none;
         }
         
-        /*
-         * ESTILO CORREGIDO: Se aplica la opacidad a la celda del croupier
-         * y al cronómetro cuando se le añade la clase 'translucent'.
-         */
         .translucent {
             opacity: 0.5;
             transition: opacity 0.3s ease;
         }
 
 
-        /* MEDIA QUERY PARA MÓVILES - AJUSTE DE LA TABLA Y EL MODAL */
         @media (max-width: 600px) {
             .horario-tabla {
                 overflow-x: auto;
@@ -990,7 +1008,6 @@
                 font-size: 0.7em;
             }
 
-            /* Ajustes del modal para móviles */
             .modal-content {
                 width: 95%;
                 padding: 15px;
@@ -1027,14 +1044,13 @@
             }
         }
 
-        /* Estilos del pie de página */
         footer {
             margin-top: 20px;
             padding: 15px 0;
             text-align: center;
             font-size: 0.8em;
-            color: #95a5a6;
-            border-top: 1px solid #ecf0f1;
+            color: var(--text-secondary-color);
+            border-top: 1px solid var(--border-color);
         }
     </style>
 </head>
@@ -1053,6 +1069,12 @@
                 <span class="collapse-icon">▼</span>
             </div>
             <div class="panel-content panel-hidden">
+                <h4>Tema de la Página</h4>
+                <div class="form-group">
+                    <button id="btn-toggle-theme">Cambiar Tema</button>
+                </div>
+                <hr style="margin: 15px 0;">
+
                 <h4>Historial</h4>
                 <div class="form-group">
                     <button id="btn-undo" class="undo-redo">Deshacer</button>
@@ -1181,6 +1203,7 @@
     <div class="reloj-container">
         <div id="reloj-digital" class="reloj"></div>
     </div>
+
     <div class="horario-container">
         <div class="horario-tabla">
             <table class="tabla" id="tabla-horario">
@@ -1198,9 +1221,7 @@
             <h2 id="modal-title">Asignar actividad</h2>
             <div class="modal-body">
                 <p>Croupier: <strong id="croupier-info"></strong><br>Horario: <strong id="horario-info"></strong></p>
-
                 <hr style="margin: 20px 0;">
-
                 <h4>Selecciona la actividad:</h4>
                 <div id="relevo-modal-options">
                     <div>
@@ -1216,7 +1237,6 @@
                         <label for="opcion-descanso">Descanso</label>
                     </div>
                 </div>
-
                 <div id="relevo-controls-container">
                     <h4>Asignar mesas:</h4>
                     <div id="mesas-selector">
@@ -1229,20 +1249,16 @@
                             <div id="mesas-seleccionadas"></div>
                         </div>
                     </div>
-
                     <div id="color-container">
                         <label for="color-relevo">Color de la tarjeta:</label>
                         <input type="color" id="color-relevo" value="#3498db">
                     </div>
-
                     <div class="checkbox-container">
                         <input type="checkbox" id="aplicar-descanso-auto" checked>
                         <label for="aplicar-descanso-auto">Asignar descanso automático al croupier relevado</label>
                     </div>
                 </div>
-
                 <hr style="margin: 20px 0;">
-
                 <h4>Asignar descanso manual</h4>
                 <div id="croupier-container-descanso">
                     <label for="select-croupier-descanso">Seleccionar croupier para descanso:</label>
@@ -1362,8 +1378,8 @@
         const relevoModal = document.getElementById('relevo-modal');
         const closeBtnRelevo = relevoModal.querySelector('.close-btn');
         const modalTitle = document.getElementById('modal-title');
-        let mesasDisponiblesDiv = document.getElementById('mesas-disponibles'); // Cambiado a let
-        let mesasSeleccionadasDiv = document.getElementById('mesas-seleccionadas'); // Cambiado a let
+        let mesasDisponiblesDiv = document.getElementById('mesas-disponibles');
+        let mesasSeleccionadasDiv = document.getElementById('mesas-seleccionadas');
         const croupierContainerDescanso = document.getElementById('croupier-container-descanso');
         const selectCroupierDescanso = document.getElementById('select-croupier-descanso');
         const colorContainer = document.getElementById('color-container');
@@ -1405,6 +1421,8 @@
         const collapsibleHeader = document.getElementById('collapsible-header');
         const controlesContainer = document.getElementById('controles-container');
         const croupierSearchInput = document.getElementById('croupier-search-input');
+        const themeToggleButton = document.getElementById('btn-toggle-theme'); // Botón de tema
+
         function guardarDatos(){localStorage.setItem('croupiersData',JSON.stringify(croupiersData));localStorage.setItem('horarios',JSON.stringify(horarios));localStorage.setItem('mesasDeJuego',JSON.stringify(mesasDeJuego));localStorage.setItem('juegosMaestro',JSON.stringify(juegosMaestro));localStorage.setItem('datosRelevos',JSON.stringify(datosRelevos));localStorage.setItem('croupierColors',JSON.stringify(croupierColors));localStorage.setItem('croupierSalidas',JSON.stringify(croupierSalidas));localStorage.setItem('horarioColors',JSON.stringify(horarioColors));localStorage.setItem('cronometroState',JSON.stringify(cronometroStartTime));localStorage.setItem('croupiersEnEspera',JSON.stringify(croupiersEnEspera));}
         function cargarDatos(){const savedCroupiersData=localStorage.getItem('croupiersData');const savedMesas=localStorage.getItem('mesasDeJuego');const savedJuegos=localStorage.getItem('juegosMaestro');const savedHorarios=localStorage.getItem('horarios');const savedDatos=localStorage.getItem('datosRelevos');const savedColors=localStorage.getItem('croupierColors');const savedSalidas=localStorage.getItem('croupierSalidas');const savedHorarioColors=localStorage.getItem('horarioColors');const savedCroupiersEnEspera=localStorage.getItem('croupiersEnEspera');if(savedCroupiersData)croupiersData=JSON.parse(savedCroupiersData);if(savedMesas)mesasDeJuego=JSON.parse(savedMesas);if(savedJuegos)juegosMaestro=JSON.parse(savedJuegos);if(savedHorarios)horarios=JSON.parse(savedHorarios);if(savedDatos)datosRelevos=JSON.parse(savedDatos);if(savedColors)croupierColors=JSON.parse(savedColors);if(savedSalidas)croupierSalidas=JSON.parse(savedSalidas);if(savedHorarioColors)horarioColors=JSON.parse(savedHorarioColors);if(savedCroupiersEnEspera)croupiersEnEspera=JSON.parse(savedCroupiersEnEspera);}
         function cargarCronometroState(){const savedCronoState=localStorage.getItem('cronometroState');if(savedCronoState){cronometroStartTime=JSON.parse(savedCronoState);}}
@@ -1718,8 +1736,46 @@
         if(!juegosSelectorCroupier.contains(event.target)){juegosSelectorCroupier.classList.remove('active');}
         if(!document.getElementById('juegos-selector-edit').contains(event.target)){document.getElementById('juegos-selector-edit').classList.remove('active');}});juegosSelectorCroupier.addEventListener('click',()=>{juegosSelectorCroupier.classList.toggle('active');});const juegosSelectorEdit=document.getElementById('juegos-selector-edit');if(juegosSelectorEdit){juegosSelectorEdit.addEventListener('click',(e)=>{juegosSelectorEdit.classList.toggle('active');e.stopPropagation();});}
         dropdownJuegos.addEventListener('click',(event)=>{event.stopPropagation();});dropdownJuegosEdit.addEventListener('click',(event)=>{event.stopPropagation();});collapsibleHeader.addEventListener('click',()=>{controlesContainer.classList.toggle('content-hidden');collapsibleHeader.classList.toggle('collapsed');});document.querySelectorAll('.control-panel .panel-header').forEach(header=>{header.addEventListener('click',()=>{const content=header.nextElementSibling;header.classList.toggle('collapsed');content.classList.toggle('panel-hidden');});});radioReleva.addEventListener('change',()=>toggleRelevoControls('releva'));radioAyudante.addEventListener('change',()=>toggleRelevoControls('ayudante-pagador'));radioDescanso.addEventListener('change',()=>toggleRelevoControls('descanso'));croupierSearchInput.addEventListener('input',(event)=>{const searchTerm=event.target.value.trim();renderizarCroupiersPreTable(searchTerm);});croupierSearchInput.addEventListener('keydown',(event)=>{if(event.key==='Enter'){event.preventDefault();const filteredCroupiers=croupiersEnEspera.filter(croupier=>croupier.nombreCompleto.toLowerCase().includes(croupierSearchInput.value.toLowerCase()));if(filteredCroupiers.length>0){const firstMatchName=filteredCroupiers[0].nombreCompleto;seleccionarCroupierPre(firstMatchName);}
-        croupierSearchInput.value='';croupierSearchInput.focus();renderizarCroupiersPreTable();}});function inicializarSortableJS(){new Sortable(tbody,{animation:150,ghostClass:'sortable-ghost',filter:function(evt,target){const checkbox=target.querySelector('.croupier-checkbox');return!checkbox||!checkbox.checked;},onEnd:function(evt){const newOrder=[...tbody.children].map(row=>row.dataset.croupier);const orderedCroupiersData=newOrder.map(name=>croupiersData.find(c=>c.nombreCompleto===name));croupiersData=orderedCroupiersData;renderizarHorario();}});}
-        function inicializar(){cargarDatos();cargarCronometroState();renderizarHorario(false);actualizarBotonesDeshacerRehacer();setInterval(()=>{actualizarReloj();startAutomaticTimers();},1000);actualizarReloj();startSavedTimers();inicializarSortableJS();renderizarJuegosDropdownAdd();}
+        croupierSearchInput.value='';croupierSearchInput.focus();renderizarCroupiersPreTable();}});
+        
+        // ===== LÓGICA PARA MODO OSCURO AÑADIDA AQUÍ =====
+        themeToggleButton.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            let theme = 'light';
+            if (document.body.classList.contains('dark-mode')) {
+                theme = 'dark';
+            }
+            localStorage.setItem('theme', theme);
+        });
+
+        function aplicarTemaGuardado() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+            } else {
+                document.body.classList.remove('dark-mode');
+            }
+        }
+        // ===== FIN DE LA LÓGICA PARA MODO OSCURO =====
+        
+        function inicializarSortableJS(){new Sortable(tbody,{animation:150,ghostClass:'sortable-ghost',filter:function(evt,target){const checkbox=target.querySelector('.croupier-checkbox');return!checkbox||!checkbox.checked;},onEnd:function(evt){const newOrder=[...tbody.children].map(row=>row.dataset.croupier);const orderedCroupiersData=newOrder.map(name=>croupiersData.find(c=>c.nombreCompleto===name));croupiersData=orderedCroupiersData;renderizarHorario();}});}
+        
+        function inicializar(){
+            aplicarTemaGuardado(); // Aplicar tema al inicio
+            cargarDatos();
+            cargarCronometroState();
+            renderizarHorario(false);
+            actualizarBotonesDeshacerRehacer();
+            setInterval(()=>{
+                actualizarReloj();
+                startAutomaticTimers();
+            },1000);
+            actualizarReloj();
+            startSavedTimers();
+            inicializarSortableJS();
+            renderizarJuegosDropdownAdd();
+        }
+
         inicializar();
     </script>
 
