@@ -1082,7 +1082,6 @@
     </style>
 </head>
 <body>
-
     <div class="collapsible-header collapsed" id="collapsible-header">
         <h1>Sistema de Horario de Relevos</h1>
         <span class="collapse-icon">▼</span>
@@ -1346,8 +1345,6 @@
             </div>
         </div>
     </div>
-    
-    <div id="toast-container"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
@@ -1702,8 +1699,8 @@
         const{croupier,horario}=celdaActiva;let croupierEncontrado=null;if(mesaToCheck){croupiersData.forEach(c=>{if(c.nombreCompleto!==croupier){const relevo=datosRelevos[c.nombreCompleto]&&datosRelevos[c.nombreCompleto][horario];if(relevo&&relevo.actividad==='releva'&&relevo.mesas.includes(mesaToCheck)){croupierEncontrado=c.nombreCompleto;}}});}
         if(croupierEncontrado){const option=selectCroupier.querySelector(`option[value="${croupierEncontrado}"]`);if(option){option.selected=true;}}}}
         function abrirSalidaModal(croupier){croupierSalidaActivo=croupier;const croupierObj=croupiersData.find(c=>c.nombreCompleto===croupier);salidaModalTitle.querySelector('span').textContent=croupierObj.alias;const horaSalida=croupierSalidas[croupier]||'';salidaTimeDisplay.textContent=horaSalida||'--:--';inputSalidaTime.value=horaSalida;salidaModal.style.display='flex';}
-        function guardarSalida(){if(croupierSalidaActivo){const nuevaHora=inputSalidaTime.value;croupierSalidas[croupierSalidaActivo]=nuevaHora;delete notificacionesMostradas[croupierSalidaActivo]; renderizarHorario();cerrarSalidaModal();}}
-        function borrarSalida(){if(croupierSalidaActivo){croupierSalidas[croupierSalidaActivo]='';delete notificacionesMostradas[croupierSalidaActivo]; renderizarHorario();cerrarSalidaModal();}}
+        function guardarSalida(){if(croupierSalidaActivo){const nuevaHora=inputSalidaTime.value;croupierSalidas[croupierSalidaActivo]=nuevaHora;renderizarHorario();cerrarSalidaModal();}}
+        function borrarSalida(){if(croupierSalidaActivo){croupierSalidas[croupierSalidaActivo]='';renderizarHorario();cerrarSalidaModal();}}
         function cerrarSalidaModal(){salidaModal.style.display='none';croupierSalidaActivo=null;}
         function openCronoModal(croupier){croupierCronoActivo=croupier;const croupierObj=croupiersData.find(c=>c.nombreCompleto===croupier);cronoModalTitle.querySelector('span').textContent=croupierObj.alias;const isRunning=!!cronometroIntervals[croupier];cronoBtnStart.disabled=isRunning;cronoBtnStop.disabled=!isRunning;const display=document.querySelector(`[data-croupier-crono="${croupier}"] .timer`);cronoModalTimer.textContent=display.textContent;const timerContainer=document.getElementById('crono-modal-content').querySelector('.timer-container');if(isRunning){timerContainer.classList.add('running');}else{timerContainer.classList.remove('running');}
         cronoModal.style.display='flex';}
