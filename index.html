@@ -411,7 +411,6 @@
             transition: background-color 0.3s ease, color 0.3s ease;
         }
 
-        /* ===== INICIO: ESTILOS PARA RELOJ PULSANTE ===== */
         .reloj.warning-pulse {
             background-color: var(--danger-color);
             color: white;
@@ -423,8 +422,6 @@
             70% { transform: scale(1.05); box-shadow: 0 0 10px 20px rgba(231, 76, 60, 0); }
             100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
         }
-        /* ===== FIN: ESTILOS PARA RELOJ PULSANTE ===== */
-
 
         .horario-container {
             max-width: 100%;
@@ -594,6 +591,7 @@
 
         .croupier-cell-content .croupier-name {
             font-weight: bold;
+            cursor: pointer;
         }
 
         .croupier-cell-content .salida-row {
@@ -843,7 +841,7 @@
 
         #mesas-disponibles, #mesas-seleccionadas {
             min-height: 100px;
-            max-height: 300px; /* Aumentado */
+            max-height: 300px;
             overflow-y: auto;
             border: 1px solid var(--border-color);
             background-color: var(--surface-color);
@@ -855,7 +853,7 @@
             margin: 5px;
             background-color: var(--hover-bg-color);
             border-radius: 5px;
-            cursor: pointer; /* Cambiado de 'grab' a 'pointer' */
+            cursor: pointer;
             transition: background-color 0.2s;
             text-align: center;
         }
@@ -979,6 +977,35 @@
             opacity: 0.5;
             transition: opacity 0.3s ease;
         }
+        
+        .croupier-tooltip {
+            display: none;
+            position: absolute;
+            background-color: var(--surface-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px;
+            box-shadow: 0 4px 8px var(--shadow-color);
+            z-index: 100;
+            font-size: 0.9em;
+            max-width: 250px;
+            pointer-events: none;
+        }
+
+        .croupier-tooltip h5 {
+            margin: 0 0 5px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 1em;
+        }
+
+        .croupier-tooltip ul {
+            margin: 0;
+            padding-left: 20px;
+            list-style-type: disc;
+        }
+
 
         @media (max-width: 600px) {
             .horario-tabla {
@@ -1042,7 +1069,7 @@
             }
 
             #mesas-disponibles, #mesas-seleccionadas {
-                max-height: 180px; /* Aumentado */
+                max-height: 180px;
             }
 
             .modal-body p {
@@ -1333,6 +1360,8 @@
         </div>
     </div>
     
+    <div id="croupier-tooltip" class="croupier-tooltip"></div>
+    
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
     <script>
@@ -1356,6 +1385,7 @@
         let croupierSalidaActivo = null;
         let croupierSeleccionadoPre = null;
         let isEditingPreCroupier = false;
+        let tooltipElementoActivo = null;
 
         // --- SELECTORES DE ELEMENTOS ---
         const tablaHorario = document.getElementById('tabla-horario');
@@ -1433,6 +1463,7 @@
         const croupierSearchInput = document.getElementById('croupier-search-input');
         const themeToggleButton = document.getElementById('btn-toggle-theme');
         const contadorRegistrados = document.getElementById('contador-croupiers-registrados');
+        const croupierTooltip = document.getElementById('croupier-tooltip'); 
 
 
         function guardarDatos(){localStorage.setItem('croupiersData',JSON.stringify(croupiersData));localStorage.setItem('horarios',JSON.stringify(horarios));localStorage.setItem('mesasDeJuego',JSON.stringify(mesasDeJuego));localStorage.setItem('juegosMaestro',JSON.stringify(juegosMaestro));localStorage.setItem('datosRelevos',JSON.stringify(datosRelevos));localStorage.setItem('croupierColors',JSON.stringify(croupierColors));localStorage.setItem('croupierSalidas',JSON.stringify(croupierSalidas));localStorage.setItem('horarioColors',JSON.stringify(horarioColors));localStorage.setItem('cronometroState',JSON.stringify(cronometroStartTime));localStorage.setItem('croupiersEnEspera',JSON.stringify(croupiersEnEspera));}
@@ -1469,8 +1500,58 @@
         function startSavedTimers(){for(const croupier in cronometroStartTime){startCronometro(croupier,cronometroStartTime[croupier]);}}
         function renderizarCabecera(){thead.innerHTML='';const thCroupier=document.createElement('th');thCroupier.className='croupier-header';const selectAll=document.createElement('input');selectAll.type='checkbox';selectAll.id='select-all-croupiers';selectAll.addEventListener('change',(e)=>{const checkboxes=document.querySelectorAll('.croupier-checkbox');checkboxes.forEach(cb=>cb.checked=e.target.checked);});thCroupier.appendChild(selectAll);thCroupier.innerHTML+=` Nombre y Salida <span id="contador-croupiers-tabla" class="contador-badge">${croupiersData.length}</span>`;thead.appendChild(thCroupier);const thCrono=document.createElement('th');thCrono.className='crono-header';thCrono.textContent='Crono.';thead.appendChild(thCrono);horarios.forEach(hora=>{const th=document.createElement('th');th.dataset.horario=hora;const contentDiv=document.createElement('div');contentDiv.className='horario-header-content';const editSpan=document.createElement('span');editSpan.className='edit-time';editSpan.textContent=hora;editSpan.addEventListener('click',()=>editarHorario(hora));const deleteBtn=document.createElement('button');deleteBtn.className='delete-time';deleteBtn.textContent='x';deleteBtn.addEventListener('click',(e)=>{e.stopPropagation();borrarHorario(hora);});contentDiv.appendChild(editSpan);contentDiv.appendChild(deleteBtn);if(horarioColors[hora]){th.style.backgroundColor=horarioColors[hora];}
         th.appendChild(contentDiv);thead.appendChild(th);});const thAgregar=document.createElement('th');thAgregar.className='agregar-horario-th';thAgregar.innerHTML='<span>+</span>';thAgregar.addEventListener('click',abrirAgregarHorarioModal);thead.appendChild(thAgregar);}
+
+        function mostrarTooltip(croupierObj, elemento) {
+            const juegos = croupierObj.juegosQuePaga;
+            if (juegos && juegos.length > 0) {
+                let tooltipContent = `<h5>Juegos que paga:</h5><ul>`;
+                juegos.forEach(juego => {
+                    tooltipContent += `<li>${juego}</li>`;
+                });
+                tooltipContent += `</ul>`;
+                croupierTooltip.innerHTML = tooltipContent;
+            } else {
+                croupierTooltip.innerHTML = 'Este croupier no tiene juegos asignados.';
+            }
+
+            const rect = elemento.getBoundingClientRect();
+            croupierTooltip.style.left = `${rect.left + window.scrollX}px`;
+            croupierTooltip.style.top = `${rect.bottom + window.scrollY + 5}px`;
+            croupierTooltip.style.display = 'block';
+        }
+
+        function ocultarTooltip() {
+            if (tooltipElementoActivo) {
+                tooltipElementoActivo = null;
+            }
+            croupierTooltip.style.display = 'none';
+        }
+
         function renderizarCuerpo(){tbody.innerHTML='';croupiersData.forEach(croupierObj=>{const croupierNombre=croupierObj.nombreCompleto;const tr=document.createElement('tr');tr.classList.add('croupier-row');tr.dataset.croupier=croupierNombre;const tdNombre=document.createElement('td');const croupierColor=croupierColors[croupierNombre];if(croupierColor){tdNombre.style.backgroundColor=croupierColor;}
-        const contentDiv=document.createElement('div');contentDiv.className='croupier-cell-content';const nameRow=document.createElement('div');nameRow.className='name-row';const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.className='croupier-checkbox';checkbox.value=croupierNombre;nameRow.appendChild(checkbox);const nameSpan=document.createElement('span');nameSpan.className='croupier-name';nameSpan.textContent=croupierObj.alias;nameRow.appendChild(nameSpan);const deleteBtn=document.createElement('button');deleteBtn.className='delete-croupier';deleteBtn.textContent='x';deleteBtn.addEventListener('click',(e)=>{e.stopPropagation();borrarCroupier(croupierNombre);});contentDiv.appendChild(deleteBtn);contentDiv.appendChild(nameRow);const salidaCard=document.createElement('div');salidaCard.className='salida-card';salidaCard.dataset.croupierSalida=croupierNombre;salidaCard.innerHTML=`
+        const contentDiv=document.createElement('div');contentDiv.className='croupier-cell-content';const nameRow=document.createElement('div');nameRow.className='name-row';const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.className='croupier-checkbox';checkbox.value=croupierNombre;nameRow.appendChild(checkbox);const nameSpan=document.createElement('span');nameSpan.className='croupier-name';nameSpan.textContent=croupierObj.alias;
+        
+        nameSpan.addEventListener('mouseenter', (e) => {
+            if (tooltipElementoActivo) return; 
+            mostrarTooltip(croupierObj, e.target);
+        });
+
+        nameSpan.addEventListener('mouseleave', () => {
+            if (tooltipElementoActivo) return;
+            ocultarTooltip();
+        });
+
+        nameSpan.addEventListener('click', (e) => {
+            e.stopPropagation(); 
+            
+            if (tooltipElementoActivo === e.target) {
+                ocultarTooltip();
+            } else {
+                mostrarTooltip(croupierObj, e.target);
+                tooltipElementoActivo = e.target;
+            }
+        });
+        
+        nameRow.appendChild(nameSpan);const deleteBtn=document.createElement('button');deleteBtn.className='delete-croupier';deleteBtn.textContent='x';deleteBtn.addEventListener('click',(e)=>{e.stopPropagation();borrarCroupier(croupierNombre);});contentDiv.appendChild(deleteBtn);contentDiv.appendChild(nameRow);const salidaCard=document.createElement('div');salidaCard.className='salida-card';salidaCard.dataset.croupierSalida=croupierNombre;salidaCard.innerHTML=`
                     <span class="icon-salida">⏰</span>
                     <span class="salida-time">${croupierSalidas[croupierNombre]||'--:--'}</span>
                 `;salidaCard.addEventListener('click',()=>abrirSalidaModal(croupierNombre));contentDiv.appendChild(salidaCard);tdNombre.appendChild(contentDiv);tr.appendChild(tdNombre);tdNombre.addEventListener('click',(e)=>{if(e.target.type==='checkbox'||e.target.tagName==='INPUT'||e.target.classList.contains('delete-croupier')||e.target.closest('.salida-card')){return;}
@@ -1607,9 +1688,8 @@
             
             llenarSelectoresModal();
             
-            // --- Lógica de clic para mover mesas ---
             let mesasSelector = document.getElementById('mesas-selector');
-            let newMesasSelector = mesasSelector.cloneNode(true); // Clonar para limpiar listeners antiguos
+            let newMesasSelector = mesasSelector.cloneNode(true); 
             mesasSelector.parentNode.replaceChild(newMesasSelector, mesasSelector);
 
             let mesasDisponiblesDiv = newMesasSelector.querySelector('#mesas-disponibles');
@@ -1648,7 +1728,6 @@
                     }
                 }
             });
-            // --- Fin de la lógica de clic ---
 
             sugerirCroupierDescanso();
 
@@ -1742,12 +1821,21 @@
         closeBtnSalida.addEventListener('click', cerrarSalidaModal);
         closeBtnCrono.addEventListener('click', closeCronoModal);
 
-        btnAgregarCroupierDB.addEventListener('click',agregarCroupierDB);btnPreAgregarJuego.addEventListener('click',agregarJuegoMaestro);btnAgregarCroupierTabla.addEventListener('click',agregarCroupiersSeleccionados);selectAllPreCroupiers.addEventListener('change',(e)=>{document.querySelectorAll('#croupier-pre-table .pre-croupier-checkbox').forEach(cb=>cb.checked=e.target.checked);});btnAgregarMesa.addEventListener('click',agregarMesa);btnAplicarColor.addEventListener('click',aplicarColorACroupiers);btnGuardarRelevo.addEventListener('click',guardarRelevo);btnBorrarRelevo.addEventListener('click',borrarRelevo);btnClearAll.addEventListener('click',borrarTodosLosDatos);btnClearHorarioOnly.addEventListener('click',borrarSoloHorarios);btnClearCroupiersOnly.addEventListener('click',borrarSoloCroupiers);btnBackup.addEventListener('click',generarBackup);fileInputRestore.addEventListener('change',restaurarBackup);btnUndo.addEventListener('click',deshacer);btnRedo.addEventListener('click',rehacer);btnEditarCroupier.addEventListener('click',()=>toggleEditModePreCroupier(true));btnGuardarEdicion.addEventListener('click',guardarEdicionPreCroupier);btnCancelarEdicion.addEventListener('click',()=>{if(croupierSeleccionadoPre){seleccionarCroupierPre(croupierSeleccionadoPre);}else{croupierDetailsContainer.style.display='none';}});btnEliminarCroupierPre.addEventListener('click',borrarCroupierPre);btnGuardarNuevoHorario.addEventListener('click',guardarNuevoHorario);btnGuardarSalida.addEventListener('click',guardarSalida);btnBorrarSalida.addEventListener('click',borrarSalida);cronoBtnStart.addEventListener('click',()=>{if(croupierCronoActivo){const now=new Date();startCronometro(croupierCronoActivo,now.getTime());cronoBtnStart.disabled=true;cronoBtnStop.disabled=false;}});cronoBtnStop.addEventListener('click',()=>{if(croupierCronoActivo){stopCronometro(croupierCronoActivo,false);cronoBtnStart.disabled=false;cronoBtnStop.disabled=true;}});cronoBtnReset.addEventListener('click',()=>{if(croupierCronoActivo){resetCronometro(croupierCronoActivo);cronoBtnStart.disabled=false;cronoBtnStop.disabled=true;}});window.addEventListener('click',(event)=>{if(event.target===relevoModal){cerrarRelevoModal();}
-        if(event.target===cronoModal){closeCronoModal();}
-        if(event.target===agregarHorarioModal){cerrarAgregarHorarioModal();}
-        if(event.target===salidaModal){cerrarSalidaModal();}
-        if(!juegosSelectorCroupier.contains(event.target)){juegosSelectorCroupier.classList.remove('active');}
-        if(!document.getElementById('juegos-selector-edit').contains(event.target)){document.getElementById('juegos-selector-edit').classList.remove('active');}});juegosSelectorCroupier.addEventListener('click',()=>{juegosSelectorCroupier.classList.toggle('active');});const juegosSelectorEdit=document.getElementById('juegos-selector-edit');if(juegosSelectorEdit){juegosSelectorEdit.addEventListener('click',(e)=>{juegosSelectorEdit.classList.toggle('active');e.stopPropagation();});}
+        btnAgregarCroupierDB.addEventListener('click',agregarCroupierDB);btnPreAgregarJuego.addEventListener('click',agregarJuegoMaestro);btnAgregarCroupierTabla.addEventListener('click',agregarCroupiersSeleccionados);selectAllPreCroupiers.addEventListener('change',(e)=>{document.querySelectorAll('#croupier-pre-table .pre-croupier-checkbox').forEach(cb=>cb.checked=e.target.checked);});btnAgregarMesa.addEventListener('click',agregarMesa);btnAplicarColor.addEventListener('click',aplicarColorACroupiers);btnGuardarRelevo.addEventListener('click',guardarRelevo);btnBorrarRelevo.addEventListener('click',borrarRelevo);btnClearAll.addEventListener('click',borrarTodosLosDatos);btnClearHorarioOnly.addEventListener('click',borrarSoloHorarios);btnClearCroupiersOnly.addEventListener('click',borrarSoloCroupiers);btnBackup.addEventListener('click',generarBackup);fileInputRestore.addEventListener('change',restaurarBackup);btnUndo.addEventListener('click',deshacer);btnRedo.addEventListener('click',rehacer);btnEditarCroupier.addEventListener('click',()=>toggleEditModePreCroupier(true));btnGuardarEdicion.addEventListener('click',guardarEdicionPreCroupier);btnCancelarEdicion.addEventListener('click',()=>{if(croupierSeleccionadoPre){seleccionarCroupierPre(croupierSeleccionadoPre);}else{croupierDetailsContainer.style.display='none';}});btnEliminarCroupierPre.addEventListener('click',borrarCroupierPre);btnGuardarNuevoHorario.addEventListener('click',guardarNuevoHorario);btnGuardarSalida.addEventListener('click',guardarSalida);btnBorrarSalida.addEventListener('click',borrarSalida);cronoBtnStart.addEventListener('click',()=>{if(croupierCronoActivo){const now=new Date();startCronometro(croupierCronoActivo,now.getTime());cronoBtnStart.disabled=true;cronoBtnStop.disabled=false;}});cronoBtnStop.addEventListener('click',()=>{if(croupierCronoActivo){stopCronometro(croupierCronoActivo,false);cronoBtnStart.disabled=false;cronoBtnStop.disabled=true;}});cronoBtnReset.addEventListener('click',()=>{if(croupierCronoActivo){resetCronometro(croupierCronoActivo);cronoBtnStart.disabled=false;cronoBtnStop.disabled=true;}});
+        
+        window.addEventListener('click',(event)=>{
+            if(event.target===relevoModal){cerrarRelevoModal();}
+            if(event.target===cronoModal){closeCronoModal();}
+            if(event.target===agregarHorarioModal){cerrarAgregarHorarioModal();}
+            if(event.target===salidaModal){cerrarSalidaModal();}
+            if(!juegosSelectorCroupier.contains(event.target)){juegosSelectorCroupier.classList.remove('active');}
+            if(!document.getElementById('juegos-selector-edit').contains(event.target)){document.getElementById('juegos-selector-edit').classList.remove('active');}
+            if (tooltipElementoActivo && event.target !== tooltipElementoActivo) {
+                ocultarTooltip();
+            }
+        });
+        
+        juegosSelectorCroupier.addEventListener('click',()=>{juegosSelectorCroupier.classList.toggle('active');});const juegosSelectorEdit=document.getElementById('juegos-selector-edit');if(juegosSelectorEdit){juegosSelectorEdit.addEventListener('click',(e)=>{juegosSelectorEdit.classList.toggle('active');e.stopPropagation();});}
         dropdownJuegos.addEventListener('click',(event)=>{event.stopPropagation();});dropdownJuegosEdit.addEventListener('click',(event)=>{event.stopPropagation();});collapsibleHeader.addEventListener('click',()=>{controlesContainer.classList.toggle('content-hidden');collapsibleHeader.classList.toggle('collapsed');});document.querySelectorAll('.control-panel .panel-header').forEach(header=>{header.addEventListener('click',()=>{const content=header.nextElementSibling;header.classList.toggle('collapsed');content.classList.toggle('panel-hidden');});});radioReleva.addEventListener('change',()=>toggleRelevoControls('releva'));radioAyudante.addEventListener('change',()=>toggleRelevoControls('ayudante-pagador'));radioDescanso.addEventListener('change',()=>toggleRelevoControls('descanso'));croupierSearchInput.addEventListener('input',(event)=>{const searchTerm=event.target.value.trim();renderizarCroupiersPreTable(searchTerm);});croupierSearchInput.addEventListener('keydown',(event)=>{if(event.key==='Enter'){event.preventDefault();const filteredCroupiers=croupiersEnEspera.filter(croupier=>croupier.nombreCompleto.toLowerCase().includes(croupierSearchInput.value.toLowerCase()));if(filteredCroupiers.length>0){const firstMatchName=filteredCroupiers[0].nombreCompleto;seleccionarCroupierPre(firstMatchName);}
         croupierSearchInput.value='';croupierSearchInput.focus();renderizarCroupiersPreTable();}});
         
