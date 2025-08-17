@@ -1601,22 +1601,24 @@
                         }
                     }
                 }
-
-                if (latestActivity) {
-                    if (latestActivity.actividad === 'releva' && !isCronoRunning) {
-                        const [h, m] = latestActivityHorario.split(':').map(Number);
-                        const cronoStartTimeValue = new Date();
-                        cronoStartTimeValue.setHours(h, m, 0, 0);
-                        startCronometro(croupier, cronoStartTimeValue.getTime());
-                    } else if (latestActivity.actividad !== 'releva' && isCronoRunning) {
-                        stopCronometro(croupier, true);
-                    }
-                } else {
-                    if (isCronoRunning) {
-                        stopCronometro(croupier, true);
-                    }
-                }
                 
+                // --- INICIO DE LA CORRECCIÓN ---
+                // Definimos qué actividades cuentan como "trabajando"
+                const isWorking = latestActivity && (latestActivity.actividad === 'releva' || latestActivity.actividad === 'ayudante-pagador');
+
+                if (isWorking && !isCronoRunning) {
+                    // Si el croupier está trabajando y el crono está parado, lo iniciamos.
+                    const [h, m] = latestActivityHorario.split(':').map(Number);
+                    const cronoStartTimeValue = new Date();
+                    cronoStartTimeValue.setHours(h, m, 0, 0);
+                    startCronometro(croupier, cronoStartTimeValue.getTime());
+                } else if (!isWorking && isCronoRunning) {
+                    // Si el croupier NO está trabajando (descanso, sin actividad) y el crono está corriendo, lo detenemos.
+                    stopCronometro(croupier, true);
+                }
+                // --- FIN DE LA CORRECCIÓN ---
+
+
                 const salidaCard = document.querySelector(`[data-croupier-salida="${croupier}"]`);
                 const salidaTime = croupierSalidas[croupier];
                 if (salidaCard && salidaTime) {
