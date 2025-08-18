@@ -1526,38 +1526,143 @@
             }
             croupierTooltip.style.display = 'none';
         }
-
-        function renderizarCuerpo(){tbody.innerHTML='';croupiersData.forEach(croupierObj=>{const croupierNombre=croupierObj.nombreCompleto;const tr=document.createElement('tr');tr.classList.add('croupier-row');tr.dataset.croupier=croupierNombre;const tdNombre=document.createElement('td');const croupierColor=croupierColors[croupierNombre];if(croupierColor){tdNombre.style.backgroundColor=croupierColor;}
-        const contentDiv=document.createElement('div');contentDiv.className='croupier-cell-content';const nameRow=document.createElement('div');nameRow.className='name-row';const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.className='croupier-checkbox';checkbox.value=croupierNombre;nameRow.appendChild(checkbox);const nameSpan=document.createElement('span');nameSpan.className='croupier-name';nameSpan.textContent=croupierObj.alias;
         
-        nameSpan.addEventListener('mouseenter', (e) => {
-            if (tooltipElementoActivo) return; 
-            mostrarTooltip(croupierObj, e.target);
-        });
+        /**
+         * Calcula si un color de fondo es claro u oscuro y devuelve el color de texto de contraste (blanco o negro).
+         * @param {string} hexcolor - El color en formato hexadecimal (ej: "#3498db").
+         * @returns {string} - Devuelve "#000000" para fondos claros o "#FFFFFF" para fondos oscuros.
+         */
+        function getContrastingTextColor(hexcolor) {
+            if (!hexcolor) return '#000000'; // Color de texto por defecto si no hay color de fondo
 
-        nameSpan.addEventListener('mouseleave', () => {
-            if (tooltipElementoActivo) return;
-            ocultarTooltip();
-        });
+            // Eliminar el '#' si existe
+            hexcolor = hexcolor.replace("#", "");
 
-        nameSpan.addEventListener('click', (e) => {
-            e.stopPropagation(); 
-            
-            if (tooltipElementoActivo === e.target) {
-                ocultarTooltip();
-            } else {
-                mostrarTooltip(croupierObj, e.target);
-                tooltipElementoActivo = e.target;
+            // Convertir de 3 a 6 dígitos si es necesario (ej: "FFF" a "FFFFFF")
+            if (hexcolor.length === 3) {
+                hexcolor = hexcolor.split('').map(char => char + char).join('');
             }
-        });
-        
-        nameRow.appendChild(nameSpan);const deleteBtn=document.createElement('button');deleteBtn.className='delete-croupier';deleteBtn.textContent='x';deleteBtn.addEventListener('click',(e)=>{e.stopPropagation();borrarCroupier(croupierNombre);});contentDiv.appendChild(deleteBtn);contentDiv.appendChild(nameRow);const salidaCard=document.createElement('div');salidaCard.className='salida-card';salidaCard.dataset.croupierSalida=croupierNombre;salidaCard.innerHTML=`
-                    <span class="icon-salida">⏰</span>
-                    <span class="salida-time">${croupierSalidas[croupierNombre]||'--:--'}</span>
-                `;salidaCard.addEventListener('click',()=>abrirSalidaModal(croupierNombre));contentDiv.appendChild(salidaCard);tdNombre.appendChild(contentDiv);tr.appendChild(tdNombre);tdNombre.addEventListener('click',(e)=>{if(e.target.type==='checkbox'||e.target.tagName==='INPUT'||e.target.classList.contains('delete-croupier')||e.target.closest('.salida-card')){return;}
-        checkbox.checked=!checkbox.checked;});const tdCrono=document.createElement('td');tdCrono.className='cronometro-cell';tdCrono.dataset.croupierCrono=croupierNombre;const cronoDisplay=document.createElement('div');cronoDisplay.className='cronometro-display';cronoDisplay.innerHTML=`<span class="timer">00:00:00</span>`;cronoDisplay.addEventListener('click',(e)=>{e.stopPropagation();openCronoModal(croupierNombre);});tdCrono.appendChild(cronoDisplay);tr.appendChild(tdCrono);horarios.forEach(hora=>{const td=document.createElement('td');td.dataset.croupier=croupierNombre;td.dataset.horario=hora;if(horarioColors[hora]){td.style.backgroundColor=horarioColors[hora];}
-        td.addEventListener('click',()=>abrirRelevoModal(croupierNombre,hora));td.addEventListener('mouseenter',()=>{tr.querySelector('.croupier-cell-content').classList.add('translucent');tr.querySelector('.cronometro-display').classList.add('translucent');});td.addEventListener('mouseleave',()=>{tr.querySelector('.croupier-cell-content').classList.remove('translucent');tr.querySelector('.cronometro-display').classList.remove('translucent');});const relevoData=datosRelevos[croupierNombre]?datosRelevos[croupierNombre][hora]:null;if(relevoData){const relevoDiv=crearTarjetaRelevo(relevoData);td.appendChild(relevoDiv);}
-        tr.appendChild(td);});tr.appendChild(document.createElement('td'));tbody.appendChild(tr);});}
+
+            // Convertir hex a RGB
+            const r = parseInt(hexcolor.substring(0, 2), 16);
+            const g = parseInt(hexcolor.substring(2, 4), 16);
+            const b = parseInt(hexcolor.substring(4, 6), 16);
+
+            // Calcular la luminosidad percibida (YIQ)
+            const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+
+            // Devolver negro para fondos claros, blanco para fondos oscuros
+            return (yiq >= 149) ? '#000000' : '#FFFFFF';
+        }
+
+        function renderizarCuerpo(){
+            tbody.innerHTML='';
+            croupiersData.forEach(croupierObj=>{
+                const croupierNombre=croupierObj.nombreCompleto;
+                const tr=document.createElement('tr');
+                tr.classList.add('croupier-row');
+                tr.dataset.croupier=croupierNombre;
+                const tdNombre=document.createElement('td');
+                const croupierColor=croupierColors[croupierNombre];
+                
+                if(croupierColor){
+                    tdNombre.style.backgroundColor=croupierColor;
+                    tdNombre.style.color = getContrastingTextColor(croupierColor);
+                }
+
+                const contentDiv=document.createElement('div');
+                contentDiv.className='croupier-cell-content';
+                const nameRow=document.createElement('div');
+                nameRow.className='name-row';
+                const checkbox=document.createElement('input');
+                checkbox.type='checkbox';
+                checkbox.className='croupier-checkbox';
+                checkbox.value=croupierNombre;
+                nameRow.appendChild(checkbox);
+                const nameSpan=document.createElement('span');
+                nameSpan.className='croupier-name';
+                nameSpan.textContent=croupierObj.alias;
+                
+                nameSpan.addEventListener('mouseenter', (e) => {
+                    if (tooltipElementoActivo) return; 
+                    mostrarTooltip(croupierObj, e.target);
+                });
+
+                nameSpan.addEventListener('mouseleave', () => {
+                    if (tooltipElementoActivo) return;
+                    ocultarTooltip();
+                });
+
+                nameSpan.addEventListener('click', (e) => {
+                    e.stopPropagation(); 
+                    
+                    if (tooltipElementoActivo === e.target) {
+                        ocultarTooltip();
+                    } else {
+                        mostrarTooltip(croupierObj, e.target);
+                        tooltipElementoActivo = e.target;
+                    }
+                });
+                
+                nameRow.appendChild(nameSpan);
+                const deleteBtn=document.createElement('button');
+                deleteBtn.className='delete-croupier';
+                deleteBtn.textContent='x';
+                deleteBtn.addEventListener('click',(e)=>{e.stopPropagation();borrarCroupier(croupierNombre);});
+                contentDiv.appendChild(deleteBtn);
+                contentDiv.appendChild(nameRow);
+                const salidaCard=document.createElement('div');
+                salidaCard.className='salida-card';
+                salidaCard.dataset.croupierSalida=croupierNombre;
+                salidaCard.innerHTML=`
+                            <span class="icon-salida">⏰</span>
+                            <span class="salida-time">${croupierSalidas[croupierNombre]||'--:--'}</span>
+                        `;
+                salidaCard.addEventListener('click',()=>abrirSalidaModal(croupierNombre));
+                contentDiv.appendChild(salidaCard);
+                tdNombre.appendChild(contentDiv);
+                tr.appendChild(tdNombre);
+                tdNombre.addEventListener('click',(e)=>{
+                    if(e.target.type==='checkbox'||e.target.tagName==='INPUT'||e.target.classList.contains('delete-croupier')||e.target.closest('.salida-card')){return;}
+                    checkbox.checked=!checkbox.checked;
+                });
+                const tdCrono=document.createElement('td');
+                tdCrono.className='cronometro-cell';
+                tdCrono.dataset.croupierCrono=croupierNombre;
+                const cronoDisplay=document.createElement('div');
+                cronoDisplay.className='cronometro-display';
+                cronoDisplay.innerHTML=`<span class="timer">00:00:00</span>`;
+                cronoDisplay.addEventListener('click',(e)=>{e.stopPropagation();openCronoModal(croupierNombre);});
+                tdCrono.appendChild(cronoDisplay);
+                tr.appendChild(tdCrono);
+                horarios.forEach(hora=>{
+                    const td=document.createElement('td');
+                    td.dataset.croupier=croupierNombre;
+                    td.dataset.horario=hora;
+                    if(horarioColors[hora]){
+                        td.style.backgroundColor=horarioColors[hora];
+                    }
+                    td.addEventListener('click',()=>abrirRelevoModal(croupierNombre,hora));
+                    td.addEventListener('mouseenter',()=>{
+                        tr.querySelector('.croupier-cell-content').classList.add('translucent');
+                        tr.querySelector('.cronometro-display').classList.add('translucent');
+                    });
+                    td.addEventListener('mouseleave',()=>{
+                        tr.querySelector('.croupier-cell-content').classList.remove('translucent');
+                        tr.querySelector('.cronometro-display').classList.remove('translucent');
+                    });
+                    const relevoData=datosRelevos[croupierNombre]?datosRelevos[croupierNombre][hora]:null;
+                    if(relevoData){
+                        const relevoDiv=crearTarjetaRelevo(relevoData);
+                        td.appendChild(relevoDiv);
+                    }
+                    tr.appendChild(td);
+                });
+                tr.appendChild(document.createElement('td'));
+                tbody.appendChild(tr);
+            });
+        }
+
         function scrollToColumn(time){const tableContainer=document.querySelector('.horario-tabla');const columnHeader=document.querySelector(`th[data-horario="${time}"]`);if(columnHeader&&tableContainer){const fixedColumnsWidth=document.querySelector('.tabla th:first-child').offsetWidth+document.querySelector('.tabla th:nth-child(2)').offsetWidth;tableContainer.scroll({left:columnHeader.offsetLeft-fixedColumnsWidth,behavior:'smooth'});}}
         function renderizarCroupiersPreTable(searchTerm=''){croupierPreTableBody.innerHTML='';const filteredCroupiers=croupiersEnEspera.filter(croupier=>croupier.nombreCompleto.toLowerCase().includes(searchTerm.toLowerCase()));contadorRegistrados.textContent = filteredCroupiers.length; filteredCroupiers.forEach(croupier=>{const tr=document.createElement('tr');tr.dataset.nombreCompleto=croupier.nombreCompleto;tr.addEventListener('click',()=>{seleccionarCroupierPre(croupier.nombreCompleto);});const tdCheckbox=document.createElement('td');const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.className='pre-croupier-checkbox';checkbox.value=croupier.nombreCompleto;checkbox.addEventListener('change',(e)=>e.stopPropagation());tdCheckbox.appendChild(checkbox);tr.appendChild(tdCheckbox);const tdNombre=document.createElement('td');tdNombre.textContent=croupier.nombreCompleto;tr.appendChild(tdNombre);croupierPreTableBody.appendChild(tr);});btnAgregarCroupierTabla.disabled=croupiersEnEspera.length===0;selectAllPreCroupiers.disabled=croupiersEnEspera.length===0;if(searchTerm===''&&croupiersEnEspera.length>0){seleccionarCroupierPre(croupiersEnEspera[0].nombreCompleto);}else if(filteredCroupiers.length>0){seleccionarCroupierPre(filteredCroupiers[0].nombreCompleto);}
         else{croupierSeleccionadoPre=null;croupierDetailsContainer.style.display='none';}}
@@ -1587,38 +1692,37 @@
                 let latestActivity = null;
                 let latestActivityHorario = null;
 
+                // Encuentra la última actividad programada que ya pasó para este croupier
                 for (let i = sortedHorarios.length - 1; i >= 0; i--) {
                     const horario = sortedHorarios[i];
                     const [h, m] = horario.split(':');
                     const horarioDate = new Date();
                     horarioDate.setHours(h, m, 0, 0);
 
-                    if (horarioDate <= now) {
+                    if (horarioDate <= now) { // Si la hora programada ya pasó
                         if (datosRelevos[croupier] && datosRelevos[croupier][horario]) {
                             latestActivity = datosRelevos[croupier][horario];
                             latestActivityHorario = horario;
-                            break;
+                            break; // Encontramos la más reciente, salimos del bucle
                         }
                     }
                 }
                 
-                // --- INICIO DE LA CORRECCIÓN ---
-                // Definimos qué actividades cuentan como "trabajando"
                 const isWorking = latestActivity && (latestActivity.actividad === 'releva' || latestActivity.actividad === 'ayudante-pagador');
 
                 if (isWorking && !isCronoRunning) {
-                    // Si el croupier está trabajando y el crono está parado, lo iniciamos.
+                    // Si debería estar trabajando pero el cronómetro no está corriendo, inícialo desde la hora programada.
                     const [h, m] = latestActivityHorario.split(':').map(Number);
                     const cronoStartTimeValue = new Date();
                     cronoStartTimeValue.setHours(h, m, 0, 0);
                     startCronometro(croupier, cronoStartTimeValue.getTime());
+
                 } else if (!isWorking && isCronoRunning) {
-                    // Si el croupier NO está trabajando (descanso, sin actividad) y el crono está corriendo, lo detenemos.
+                    // Si no debería estar trabajando (descanso, etc.) pero el cronómetro está corriendo, detenlo y reinícialo.
                     stopCronometro(croupier, true);
                 }
-                // --- FIN DE LA CORRECCIÓN ---
 
-
+                // Lógica para la advertencia de hora de salida
                 const salidaCard = document.querySelector(`[data-croupier-salida="${croupier}"]`);
                 const salidaTime = croupierSalidas[croupier];
                 if (salidaCard && salidaTime) {
