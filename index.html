@@ -213,6 +213,12 @@
             align-items: center;
             gap: 5px;
         }
+        
+        /* ===> INICIO DEL CAMBIO: AÑADIR CURSOR PARA INDICAR QUE SE PUEDE MOVER <=== */
+        .mesa-list .mesa-tag {
+            cursor: move;
+        }
+        /* ===> FIN DEL CAMBIO <=== */
 
         .mesa-list .mesa-tag, .juego-list-inline .juego-tag {
             background-color: var(--neutral-color);
@@ -1965,6 +1971,28 @@
         
         function inicializarSortableJS(){new Sortable(tbody,{animation:150,ghostClass:'sortable-ghost',filter:function(evt,target){const checkbox=target.querySelector('.croupier-checkbox');return!checkbox||!checkbox.checked;},onEnd:function(evt){const newOrder=[...tbody.children].map(row=>row.dataset.croupier);const orderedCroupiersData=newOrder.map(name=>croupiersData.find(c=>c.nombreCompleto===name));croupiersData=orderedCroupiersData;renderizarHorario();}});}
         
+        // ===> INICIO DEL CAMBIO: FUNCIÓN PARA HACER LAS MESAS REORDENABLES <===
+        function inicializarSortableMesas() {
+            const mesasListEl = document.getElementById('mesas-list');
+            if (mesasListEl) {
+                new Sortable(mesasListEl, {
+                    animation: 150, // Animación suave al mover
+                    ghostClass: 'sortable-ghost', // Usa la misma clase fantasma que ya tienes definida
+                    // Se ejecuta cuando sueltas un elemento
+                    onEnd: function (evt) {
+                        // Mueve el elemento en el array de datos 'mesasDeJuego'
+                        // para que coincida con el nuevo orden en la interfaz
+                        const movedItem = mesasDeJuego.splice(evt.oldIndex, 1)[0];
+                        mesasDeJuego.splice(evt.newIndex, 0, movedItem);
+
+                        // Guarda el nuevo orden en el localStorage
+                        guardarDatos();
+                    }
+                });
+            }
+        }
+        // ===> FIN DEL CAMBIO <===
+
         function inicializar(){
             aplicarTemaGuardado();
             cargarDatos();
@@ -1978,6 +2006,7 @@
             actualizarReloj();
             startSavedTimers();
             inicializarSortableJS();
+            inicializarSortableMesas(); // <-- LLAMADA A LA NUEVA FUNCIÓN
             renderizarJuegosDropdownAdd();
         }
 
