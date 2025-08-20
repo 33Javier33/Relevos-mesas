@@ -1507,7 +1507,9 @@
         let horarioColors = {};
         let croupiersEnEspera = [];
         let cronometroIntervals = {};
-        let cronometroStartTime = {};
+        // CAMBIO CLAVE: La variable `cronometroStartTime` se reemplaza por `cronometroState`.
+        // Ahora almacena el tiempo total transcurrido y si el cronómetro está corriendo.
+        let cronometroState = {};
         let historial = [];
         let historialIndex = -1;
         const MAX_HISTORIAL = 20;
@@ -1518,7 +1520,7 @@
         let isEditingPreCroupier = false;
         let tooltipElementoActivo = null;
         let fechaVisible;
-        let currentContratoFilter = 'todos'; // Variable para el filtro de contrato
+        let currentContratoFilter = 'todos';
 
         // --- SELECTORES DE ELEMENTOS ---
         const tablaHorario = document.getElementById('tabla-horario');
@@ -1609,12 +1611,11 @@
         const inputNuevaFecha = document.getElementById('input-nueva-fecha');
         const btnGuardarNuevaFecha = document.getElementById('btn-guardar-nueva-fecha');
 
-        // --- NUEVA FUNCIÓN ---
-        // Combina la fecha fijada manualmente con la hora actual del sistema.
-        // Esto evita que el cambio de día a medianoche afecte los cálculos.
+        // Esta función combina la fecha fijada manualmente con la hora actual del sistema.
+        // Se usa SÓLO para determinar si un horario ya pasó y calcular ajustes iniciales.
         function getAppCurrentTime() {
-            const now = new Date(); // Obtiene HH:MM:SS del sistema
-            const appTime = new Date(fechaVisible); // Comienza con la fecha fijada manualmente
+            const now = new Date();
+            const appTime = new Date(fechaVisible);
             appTime.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
             return appTime;
         }
@@ -1644,11 +1645,11 @@
             cerrarFechaModal();
         }
 
-        function guardarDatos(){localStorage.setItem('croupiersData',JSON.stringify(croupiersData));localStorage.setItem('horarios',JSON.stringify(horarios));localStorage.setItem('mesasDeJuego',JSON.stringify(mesasDeJuego));localStorage.setItem('juegosMaestro',JSON.stringify(juegosMaestro));localStorage.setItem('datosRelevos',JSON.stringify(datosRelevos));localStorage.setItem('croupierColors',JSON.stringify(croupierColors));localStorage.setItem('croupierSalidas',JSON.stringify(croupierSalidas));localStorage.setItem('horarioColors',JSON.stringify(horarioColors));localStorage.setItem('cronometroState',JSON.stringify(cronometroStartTime));localStorage.setItem('croupiersEnEspera',JSON.stringify(croupiersEnEspera));}
+        function guardarDatos(){localStorage.setItem('croupiersData',JSON.stringify(croupiersData));localStorage.setItem('horarios',JSON.stringify(horarios));localStorage.setItem('mesasDeJuego',JSON.stringify(mesasDeJuego));localStorage.setItem('juegosMaestro',JSON.stringify(juegosMaestro));localStorage.setItem('datosRelevos',JSON.stringify(datosRelevos));localStorage.setItem('croupierColors',JSON.stringify(croupierColors));localStorage.setItem('croupierSalidas',JSON.stringify(croupierSalidas));localStorage.setItem('horarioColors',JSON.stringify(horarioColors));localStorage.setItem('cronometroState',JSON.stringify(cronometroState));localStorage.setItem('croupiersEnEspera',JSON.stringify(croupiersEnEspera));}
         function cargarDatos(){const savedCroupiersData=localStorage.getItem('croupiersData');const savedMesas=localStorage.getItem('mesasDeJuego');const savedJuegos=localStorage.getItem('juegosMaestro');const savedHorarios=localStorage.getItem('horarios');const savedDatos=localStorage.getItem('datosRelevos');const savedColors=localStorage.getItem('croupierColors');const savedSalidas=localStorage.getItem('croupierSalidas');const savedHorarioColors=localStorage.getItem('horarioColors');const savedCroupiersEnEspera=localStorage.getItem('croupiersEnEspera');if(savedCroupiersData)croupiersData=JSON.parse(savedCroupiersData);if(savedMesas)mesasDeJuego=JSON.parse(savedMesas);if(savedJuegos)juegosMaestro=JSON.parse(savedJuegos);if(savedHorarios)horarios=JSON.parse(savedHorarios);if(savedDatos)datosRelevos=JSON.parse(savedDatos);if(savedColors)croupierColors=JSON.parse(savedColors);if(savedSalidas)croupierSalidas=JSON.parse(savedSalidas);if(savedHorarioColors)horarioColors=JSON.parse(savedHorarioColors);if(savedCroupiersEnEspera)croupiersEnEspera=JSON.parse(savedCroupiersEnEspera);}
-        function cargarCronometroState(){const savedCronoState=localStorage.getItem('cronometroState');if(savedCronoState){cronometroStartTime=JSON.parse(savedCronoState);}}
-        function generarBackup(){const backupData={croupiersData,horarios,mesasDeJuego,juegosMaestro,datosRelevos,croupierColors,croupierSalidas,horarioColors,cronometroStartTime,croupiersEnEspera};const jsonString=JSON.stringify(backupData,null,2);const blob=new Blob([jsonString],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;const now=new Date();const filename=`backup-horario-${now.toISOString().slice(0,10)}.json`;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);alert('Backup guardado correctamente.');}
-        function restaurarBackup(event){const file=event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=function(e){try{const backupData=JSON.parse(e.target.result);if(confirm('¿Estás seguro de que quieres restaurar la información? Se sobrescribirán todos los datos actuales del sistema.')){croupiersData=backupData.croupiersData||[];horarios=backupData.horarios||[];mesasDeJuego=backupData.mesasDeJuego||[];juegosMaestro=backupData.juegosMaestro||[];datosRelevos=backupData.datosRelevos||{};croupierColors=backupData.croupierColors||{};croupierSalidas=backupData.croupierSalidas||{};horarioColors=backupData.horarioColors||{};cronometroStartTime=backupData.cronometroStartTime||{};croupiersEnEspera=backupData.croupiersEnEspera||[];stopAllTimers(false);localStorage.clear();guardarDatos();renderizarHorario();startSavedTimers();alert('Datos restaurados correctamente.');}}catch(error){alert('Error al leer el archivo. Asegúrate de que sea un archivo de backup válido.');console.error('Error al restaurar el backup:',error);}};reader.readAsText(file);}
+        function cargarCronometroState(){const savedCronoState=localStorage.getItem('cronometroState');if(savedCronoState){cronometroState=JSON.parse(savedCronoState);}}
+        function generarBackup(){const backupData={croupiersData,horarios,mesasDeJuego,juegosMaestro,datosRelevos,croupierColors,croupierSalidas,horarioColors,cronometroState,croupiersEnEspera};const jsonString=JSON.stringify(backupData,null,2);const blob=new Blob([jsonString],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;const now=new Date();const filename=`backup-horario-${now.toISOString().slice(0,10)}.json`;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);alert('Backup guardado correctamente.');}
+        function restaurarBackup(event){const file=event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=function(e){try{const backupData=JSON.parse(e.target.result);if(confirm('¿Estás seguro de que quieres restaurar la información? Se sobrescribirán todos los datos actuales del sistema.')){croupiersData=backupData.croupiersData||[];horarios=backupData.horarios||[];mesasDeJuego=backupData.mesasDeJuego||[];juegosMaestro=backupData.juegosMaestro||[];datosRelevos=backupData.datosRelevos||{};croupierColors=backupData.croupierColors||{};croupierSalidas=backupData.croupierSalidas||{};horarioColors=backupData.horarioColors||{};cronometroState=backupData.cronometroState||{};croupiersEnEspera=backupData.croupiersEnEspera||[];stopAllTimers(false);localStorage.clear();guardarDatos();renderizarHorario();startSavedTimers();alert('Datos restaurados correctamente.');}}catch(error){alert('Error al leer el archivo. Asegúrate de que sea un archivo de backup válido.');console.error('Error al restaurar el backup:',error);}};reader.readAsText(file);}
         function guardarEstado(){if(historialIndex<historial.length-1){historial=historial.slice(0,historialIndex+1);}
         const estado={croupiersData:JSON.parse(JSON.stringify(croupiersData)),horarios:[...horarios],mesasDeJuego:[...mesasDeJuego],juegosMaestro:[...juegosMaestro],datosRelevos:JSON.parse(JSON.stringify(datosRelevos)),croupierColors:JSON.parse(JSON.stringify(croupierColors)),croupierSalidas:JSON.parse(JSON.stringify(croupierSalidas)),horarioColors:JSON.parse(JSON.stringify(horarioColors)),croupiersEnEspera:JSON.parse(JSON.stringify(croupiersEnEspera))};historial.push(estado);historialIndex++;if(historial.length>MAX_HISTORIAL){historial.shift();historialIndex--;}
         actualizarBotonesDeshacerRehacer();}
@@ -1670,12 +1671,41 @@
             if (scrollToTime) {
                 scrollToColumn(scrollToTime);
             }
-            refreshCronometros();
         }
 
-        function stopAllTimers(resetState=true){for(const croupier in cronometroIntervals){clearInterval(cronometroIntervals[croupier]);const displayCard=document.querySelector(`[data-croupier-crono="${croupier}"] .cronometro-display`);if(displayCard)displayCard.classList.remove('running','warning');if(resetState){delete cronometroStartTime[croupier];}}
-        cronometroIntervals={};if(resetState){localStorage.removeItem('cronometroState');}}
-        function startSavedTimers(){for(const croupier in cronometroStartTime){startCronometro(croupier,cronometroStartTime[croupier]);}}
+        // CAMBIO CLAVE: Nueva función para verificar si un cronómetro está corriendo.
+        function isCronoRunning(croupier) {
+            return cronometroState[croupier] && cronometroState[croupier].startTime !== null;
+        }
+
+        function stopAllTimers(resetState=true){
+            for(const croupier in cronometroIntervals){
+                clearInterval(cronometroIntervals[croupier]);
+                const displayCard=document.querySelector(`[data-croupier-crono="${croupier}"] .cronometro-display`);
+                if(displayCard) displayCard.classList.remove('running','warning');
+            }
+            cronometroIntervals={};
+            if(resetState){
+                cronometroState={};
+                localStorage.removeItem('cronometroState');
+            }
+        }
+        
+        // CAMBIO CLAVE: `startSavedTimers` ahora recrea los intervalos para los cronómetros que se quedaron corriendo.
+        function startSavedTimers(){
+            for(const croupier in cronometroState){
+                const state = cronometroState[croupier];
+                if(state && state.startTime !== null) {
+                    // Si el cronómetro estaba corriendo cuando se cerró la página,
+                    // reiniciamos su intervalo para que siga contando.
+                    startCronometro(croupier);
+                } else {
+                    // Si estaba detenido, solo mostramos su tiempo acumulado.
+                    const totalElapsed = state ? state.elapsedMs : 0;
+                    updateCronoDisplay(croupier, formatElapsedTime(totalElapsed));
+                }
+            }
+        }
         
         function renderizarCabecera(){
             thead.innerHTML='';
@@ -2024,13 +2054,13 @@
         function actualizarReloj(){const now=new Date();const hours=now.getHours().toString().padStart(2,'0');const minutes=now.getMinutes().toString().padStart(2,'0');const seconds=now.getSeconds().toString().padStart(2,'0');relojDigital.textContent=`${hours}:${minutes}:${seconds}`;}
         
         function startAutomaticTimers() {
-            const now = getAppCurrentTime(); // MODIFICADO: Usa la fecha fijada para la comparación
+            const now = getAppCurrentTime(); 
             const sortedHorarios = [...horarios].sort();
             let isAnyCroupierLeavingSoon = false;
 
             croupiersData.forEach(croupierObj => {
                 const croupier = croupierObj.nombreCompleto;
-                const isCronoRunning = !!cronometroIntervals[croupier];
+                const running = isCronoRunning(croupier);
 
                 let latestActivity = null;
                 let latestActivityHorario = null;
@@ -2038,7 +2068,7 @@
                 for (let i = sortedHorarios.length - 1; i >= 0; i--) {
                     const horario = sortedHorarios[i];
                     const [h, m] = horario.split(':');
-                    const horarioDate = new Date(fechaVisible); // MODIFICADO: Usa la fecha fijada
+                    const horarioDate = new Date(fechaVisible);
                     horarioDate.setHours(h, m, 0, 0);
 
                     if (horarioDate <= now) {
@@ -2052,21 +2082,23 @@
                 
                 const isWorking = latestActivity && (latestActivity.actividad === 'releva' || latestActivity.actividad === 'ayudante-pagador');
 
-                if (isWorking && !isCronoRunning) {
+                if (isWorking && !running) {
+                    // CAMBIO CLAVE: Lógica para calcular el tiempo de ajuste inicial
                     const [h, m] = latestActivityHorario.split(':').map(Number);
-                    const cronoStartTimeValue = new Date(fechaVisible); // MODIFICADO: Usa la fecha fijada
-                    cronoStartTimeValue.setHours(h, m, 0, 0);
-                    startCronometro(croupier, cronoStartTimeValue.getTime());
+                    const horarioDate = new Date(fechaVisible);
+                    horarioDate.setHours(h, m, 0, 0);
+                    const offsetMs = now.getTime() - horarioDate.getTime();
+                    startCronometro(croupier, offsetMs > 0 ? offsetMs : 0);
 
-                } else if (!isWorking && isCronoRunning) {
-                    stopCronometro(croupier, true);
+                } else if (!isWorking && running) {
+                    stopCronometro(croupier);
                 }
 
                 const salidaCard = document.querySelector(`[data-croupier-salida="${croupier}"]`);
                 const salidaTime = croupierSalidas[croupier];
                 if (salidaCard && salidaTime) {
                     const [salidaHour, salidaMinute] = salidaTime.split(':').map(Number);
-                    const salidaDate = new Date(fechaVisible); // MODIFICADO: Usa la fecha fijada
+                    const salidaDate = new Date(fechaVisible);
                     salidaDate.setHours(salidaHour, salidaMinute, 0);
                     const diffInMinutes = (salidaDate.getTime() - now.getTime()) / (1000 * 60);
 
@@ -2088,69 +2120,97 @@
             }
         }
         
-        function startCronometro(croupier, startTime = getAppCurrentTime().getTime()) { // MODIFICADO: Valor por defecto usa la hora de la app
-            if (cronometroIntervals[croupier]) {
-                clearInterval(cronometroIntervals[croupier]);
-            }
-            cronometroStartTime[croupier] = startTime;
+        // --- NUEVA LÓGICA DE CRONÓMETROS ---
+        function startCronometro(croupier, initialElapsedMs = 0) {
+            if (isCronoRunning(croupier)) return;
 
-            const ahora = getAppCurrentTime().getTime(); // MODIFICADO: Usa la hora de la app
-            const tiempoTranscurrido = ahora - cronometroStartTime[croupier];
-            const tiempoFormateado = formatElapsedTime(tiempoTranscurrido);
-            updateCronoDisplay(croupier, tiempoFormateado);
-
-            const displayElements = document.querySelectorAll(`[data-croupier-crono="${croupier}"] .timer`);
-            const displayCard = document.querySelector(`[data-croupier-crono="${croupier}"] .cronometro-display`);
-            if (displayCard) {
-                displayCard.classList.add('running');
-                displayCard.classList.remove('warning');
+            let state = cronometroState[croupier];
+            if (!state) {
+                state = { elapsedMs: 0, startTime: null };
+                cronometroState[croupier] = state;
             }
             
+            if (initialElapsedMs > 0 && state.elapsedMs === 0) {
+                 state.elapsedMs = initialElapsedMs;
+            }
+
+            state.startTime = Date.now();
+
+            const displayCard = document.querySelector(`[data-croupier-crono="${croupier}"] .cronometro-display`);
+            if (displayCard) displayCard.classList.add('running');
+            
+            if (cronometroIntervals[croupier]) clearInterval(cronometroIntervals[croupier]);
+
             cronometroIntervals[croupier] = setInterval(() => {
-                const now = getAppCurrentTime().getTime(); // MODIFICADO: Usa la hora de la app
-                const elapsed = now - cronometroStartTime[croupier];
-                const formattedTime = formatElapsedTime(elapsed);
-                displayElements.forEach(display => display.textContent = formattedTime);
-                if (croupierCronoActivo === croupier) {
-                    cronoModalTimer.textContent = formattedTime;
-                    document.getElementById('crono-modal-content').querySelector('.timer-container').classList.add('running');
-                }
+                if(state.startTime === null) return; // Doble chequeo por si acaso
+                const sessionElapsed = Date.now() - state.startTime;
+                const totalElapsed = state.elapsedMs + sessionElapsed;
+                updateCronoDisplay(croupier, formatElapsedTime(totalElapsed));
             }, 1000);
             
             guardarDatos();
         }
 
-        function updateCronoDisplay(croupier,timeString){const displayElements=document.querySelectorAll(`[data-croupier-crono="${croupier}"] .timer`);displayElements.forEach(display=>display.textContent=timeString);if(croupierCronoActivo===croupier){cronoModalTimer.textContent=timeString;}}
-        function stopCronometro(croupier,resetState=false){if(cronometroIntervals[croupier]){clearInterval(cronometroIntervals[croupier]);delete cronometroIntervals[croupier];const displayCard=document.querySelector(`[data-croupier-crono="${croupier}"] .cronometro-display`);if(displayCard)displayCard.classList.remove('running');if(croupierCronoActivo===croupier){document.getElementById('crono-modal-content').querySelector('.timer-container').classList.remove('running');}}
-        if(resetState){delete cronometroStartTime[croupier];updateCronoDisplay(croupier,'00:00:00');}
-        guardarDatos();}
-        function resetCronometro(croupier){stopCronometro(croupier,true);}
+        function stopCronometro(croupier) {
+            if (!isCronoRunning(croupier)) return;
+            
+            let state = cronometroState[croupier];
+            if (state && state.startTime) {
+                const sessionElapsed = Date.now() - state.startTime;
+                state.elapsedMs += sessionElapsed;
+                state.startTime = null;
+            }
+
+            if (cronometroIntervals[croupier]) {
+                clearInterval(cronometroIntervals[croupier]);
+                delete cronometroIntervals[croupier];
+            }
+
+            const displayCard = document.querySelector(`[data-croupier-crono="${croupier}"] .cronometro-display`);
+            if (displayCard) displayCard.classList.remove('running');
+
+            updateCronoDisplay(croupier, formatElapsedTime(state.elapsedMs));
+            guardarDatos();
+        }
+
+        function resetCronometro(croupier) {
+            stopCronometro(croupier);
+            cronometroState[croupier] = { elapsedMs: 0, startTime: null };
+            updateCronoDisplay(croupier, '00:00:00');
+            guardarDatos();
+        }
+
+        function updateCronoDisplay(croupier,timeString){
+            const displayElements=document.querySelectorAll(`[data-croupier-crono="${croupier}"] .timer`);
+            displayElements.forEach(display=>display.textContent=timeString);
+            if(croupierCronoActivo===croupier){
+                cronoModalTimer.textContent=timeString;
+            }
+        }
         
         function ajustarTiempoManual() {
             if (!croupierCronoActivo) return;
 
             const minutosStr = cronoManualInput.value.trim();
-            if (minutosStr === '') {
-                alert('Por favor, introduce un número de minutos.');
+            if (minutosStr === '' || isNaN(minutosStr)) {
+                alert('Por favor, introduce un número válido de minutos.');
                 return;
             }
 
             const minutos = parseInt(minutosStr, 10);
-            if (isNaN(minutos) || minutos < 0) {
-                alert('El valor introducido no es un número válido de minutos.');
-                return;
-            }
+            const totalElapsedMs = minutos * 60 * 1000;
             
-            const ahora = getAppCurrentTime().getTime(); // MODIFICADO: Usa la hora de la app
-            const tiempoTranscurridoMs = minutos * 60 * 1000;
-            const nuevoStartTime = ahora - tiempoTranscurridoMs;
+            stopCronometro(croupierCronoActivo);
             
-            startCronometro(croupierCronoActivo, nuevoStartTime);
+            cronometroState[croupierCronoActivo] = { elapsedMs: totalElapsedMs, startTime: null };
+            startCronometro(croupierCronoActivo);
 
             cronoBtnStart.disabled = true;
             cronoBtnStop.disabled = false;
             cronoManualInput.value = '';
         }
+        // --- FIN NUEVA LÓGICA DE CRONÓMETROS ---
+
 
         function formatElapsedTime(elapsed){const totalSeconds=Math.floor(elapsed/1000);const hours=Math.floor((totalSeconds%86400)/3600);const minutes=Math.floor((totalSeconds%3600)/60);const seconds=totalSeconds%60;const formatTime=(time)=>time.toString().padStart(2,'0');return`${formatTime(hours)}:${formatTime(minutes)}:${formatTime(seconds)}`;}
         function editarHorario(oldTime){const th=document.querySelector(`th[data-horario="${oldTime}"]`);if(!th)return;const contentDiv=th.querySelector('.horario-header-content');if(!contentDiv)return;const editSpan=contentDiv.querySelector('.edit-time');if(editSpan.querySelector('input'))return;const originalContent=contentDiv.innerHTML;contentDiv.innerHTML='';contentDiv.classList.add('editing');const input=document.createElement('input');input.type='time';input.value=oldTime;contentDiv.appendChild(input);input.focus();const guardarCambio=()=>{const newTime=input.value;if(newTime&&newTime!==oldTime&&!horarios.includes(newTime)){const croupiers=croupiersData.map(c=>c.nombreCompleto);croupiers.forEach(croupier=>{if(datosRelevos[croupier]&&datosRelevos[croupier][oldTime]){const relevoData=datosRelevos[croupier][oldTime];delete datosRelevos[croupier][oldTime];datosRelevos[croupier][newTime]=relevoData;}});if(horarioColors[oldTime]){horarioColors[newTime]=horarioColors[oldTime];delete horarioColors[oldTime];}
@@ -2158,7 +2218,7 @@
         function borrarHorario(hora){if(confirm(`¿Estás seguro de que quieres eliminar el horario ${hora}? Se borrarán todos los relevos en esta columna.`)){const index=horarios.indexOf(hora);if(index>-1){horarios.splice(index,1);}
         const croupiers=croupiersData.map(c=>c.nombreCompleto);croupiers.forEach(croupier=>{if(datosRelevos[croupier]){delete datosRelevos[croupier][hora];}});if(horarioColors[hora]){delete horarioColors[hora];}
         renderizarHorario();startAutomaticTimers();}}
-        function borrarCroupier(croupierABorrar){if(confirm(`¿Estás seguro de que quieres eliminar a ${croupierABorrar} de la tabla de horarios? Se mantendrá en la base de datos de croupiers.`)){const croupierIndex=croupiersData.findIndex(c=>c.nombreCompleto===croupierABorrar);if(croupierIndex>-1){croupiersData.splice(croupierIndex,1);delete datosRelevos[croupierABorrar];delete croupierColors[croupierABorrar];delete croupierSalidas[croupierABorrar];stopCronometro(croupierABorrar,true);renderizarHorario();}}}
+        function borrarCroupier(croupierABorrar){if(confirm(`¿Estás seguro de que quieres eliminar a ${croupierABorrar} de la tabla de horarios? Se mantendrá en la base de datos de croupiers.`)){const croupierIndex=croupiersData.findIndex(c=>c.nombreCompleto===croupierABorrar);if(croupierIndex>-1){croupiersData.splice(croupierIndex,1);delete datosRelevos[croupierABorrar];delete croupierColors[croupierABorrar];delete croupierSalidas[croupierABorrar];resetCronometro(croupierABorrar);renderizarHorario();}}}
         function borrarMesa(mesaABorrar){if(confirm(`¿Estás seguro de que quieres eliminar la mesa "${mesaABorrar}"?`)){const index=mesasDeJuego.indexOf(mesaABorrar);if(index>-1){mesasDeJuego.splice(index,1);for(const croupier in datosRelevos){for(const horario in datosRelevos[croupier]){const relevo=datosRelevos[croupier][horario];if(relevo.actividad==='releva'){relevo.mesas=relevo.mesas.filter(m=>m!==mesaABorrar);if(relevo.mesas.length===0){delete datosRelevos[croupier][horario];}}}}
         renderizarHorario();}}}
         function borrarTodosLosDatos(){if(confirm('¿Estás seguro de que quieres borrar a TODOS los croupiers, sus horarios, mesas y juegos? Esta acción es irreversible.')){croupiersData=[];horarios=[];mesasDeJuego=[];juegosMaestro=[];datosRelevos={};croupierColors={};croupierSalidas={};horarioColors={};historial=[];historialIndex=-1;croupiersEnEspera=[];localStorage.clear();stopAllTimers(true);renderizarHorario();actualizarBotonesDeshacerRehacer();alert('Todos los datos del sistema han sido borrados.');}}
@@ -2338,9 +2398,21 @@
         function guardarSalida(){if(croupierSalidaActivo){const nuevaHora=inputSalidaTime.value;croupierSalidas[croupierSalidaActivo]=nuevaHora;renderizarHorario();cerrarSalidaModal();}}
         function borrarSalida(){if(croupierSalidaActivo){croupierSalidas[croupierSalidaActivo]='';renderizarHorario();cerrarSalidaModal();}}
         function cerrarSalidaModal(){salidaModal.style.display='none';croupierSalidaActivo=null;}
-        function openCronoModal(croupier){croupierCronoActivo=croupier;const croupierObj=croupiersData.find(c=>c.nombreCompleto===croupier);cronoModalTitle.querySelector('span').textContent=croupierObj.alias;const isRunning=!!cronometroIntervals[croupier];cronoBtnStart.disabled=isRunning;cronoBtnStop.disabled=!isRunning;const display=document.querySelector(`[data-croupier-crono="${croupier}"] .timer`);cronoModalTimer.textContent=display.textContent;const timerContainer=document.getElementById('crono-modal-content').querySelector('.timer-container');if(isRunning){timerContainer.classList.add('running');}else{timerContainer.classList.remove('running');}
-        cronoManualInput.value = '';
-        cronoModal.style.display='flex';}
+        function openCronoModal(croupier){
+            croupierCronoActivo=croupier;
+            const croupierObj=croupiersData.find(c=>c.nombreCompleto===croupier);
+            cronoModalTitle.querySelector('span').textContent=croupierObj.alias;
+            const running = isCronoRunning(croupier);
+            cronoBtnStart.disabled=running;
+            cronoBtnStop.disabled=!running;
+            const state = cronometroState[croupier];
+            const displayTime = state ? formatElapsedTime(state.elapsedMs + (state.startTime ? (Date.now() - state.startTime) : 0)) : '00:00:00';
+            cronoModalTimer.textContent = displayTime;
+            const timerContainer=document.getElementById('crono-modal-content').querySelector('.timer-container');
+            if(running){timerContainer.classList.add('running');}else{timerContainer.classList.remove('running');}
+            cronoManualInput.value = '';
+            cronoModal.style.display='flex';
+        }
         function closeCronoModal(){cronoModal.style.display='none';croupierCronoActivo=null;}
         function cerrarRelevoModal(){relevoModal.style.display='none';}
         function abrirAgregarHorarioModal(){if(horarios.length>0){const ultimaHora=horarios[horarios.length-1];const[horas,minutos]=ultimaHora.split(':').map(Number);const nuevaHoraObj=new Date();nuevaHoraObj.setHours(horas,minutos);nuevaHoraObj.setMinutes(nuevaHoraObj.getMinutes()+15);inputNuevoHorario.value=nuevaHoraObj.toTimeString().slice(0,5);}else{inputNuevoHorario.value='09:00';}
@@ -2348,13 +2420,12 @@
         function cerrarAgregarHorarioModal(){agregarHorarioModal.style.display='none';}
         function guardarNuevoHorario(){const nuevaHora=inputNuevoHorario.value;agregarHorario(nuevaHora);cerrarAgregarHorarioModal();}
         function agregarHorario(nuevaHora){if(nuevaHora&&!horarios.includes(nuevaHora)){horarios.push(nuevaHora);renderizarHorario(true,nuevaHora);}}
-        function guardarRelevo(){const{croupier,horario}=celdaActiva;const mesasSeleccionadasDiv = document.getElementById('mesas-seleccionadas');const actividadSeleccionada=document.querySelector('input[name="actividad"]:checked').value;const croupiersDescansoManual=Array.from(selectCroupierDescanso.selectedOptions).map(option=>option.value).filter(val=>val!=="");const aplicarDescansoAutomatico=aplicarDescansoAutoCheckbox.checked;if(!datosRelevos[croupier])datosRelevos[croupier]={};delete datosRelevos[croupier][horario];if(actividadSeleccionada==='releva'){const mesasReleva=Array.from(mesasSeleccionadasDiv.children).map(item=>item.dataset.mesa);const colorSeleccionado=colorRelevoInput.value;if(aplicarDescansoAutomatico){const croupiersRelevados=new Set();croupiersData.forEach(c=>{const relevoAnterior=datosRelevos[c.nombreCompleto]&&datosRelevos[c.nombreCompleto][horario];if(relevoAnterior&&relevoAnterior.actividad==='releva'){const mesasComunes=relevoAnterior.mesas.filter(mesa=>mesasReleva.includes(mesa));if(mesasComunes.length>0){croupiersRelevados.add(c.nombreCompleto);}}});croupiersRelevados.forEach(c=>{if(!datosRelevos[c])datosRelevos[c]={};datosRelevos[c][horario]={actividad:'descanso',mesas:[],color:'#f39c12'};stopCronometro(c,true);});}
+        function guardarRelevo(){const{croupier,horario}=celdaActiva;const mesasSeleccionadasDiv = document.getElementById('mesas-seleccionadas');const actividadSeleccionada=document.querySelector('input[name="actividad"]:checked').value;const croupiersDescansoManual=Array.from(selectCroupierDescanso.selectedOptions).map(option=>option.value).filter(val=>val!=="");const aplicarDescansoAutomatico=aplicarDescansoAutoCheckbox.checked;if(!datosRelevos[croupier])datosRelevos[croupier]={};delete datosRelevos[croupier][horario];if(actividadSeleccionada==='releva'){const mesasReleva=Array.from(mesasSeleccionadasDiv.children).map(item=>item.dataset.mesa);const colorSeleccionado=colorRelevoInput.value;if(aplicarDescansoAutomatico){const croupiersRelevados=new Set();croupiersData.forEach(c=>{const relevoAnterior=datosRelevos[c.nombreCompleto]&&datosRelevos[c.nombreCompleto][horario];if(relevoAnterior&&relevoAnterior.actividad==='releva'){const mesasComunes=relevoAnterior.mesas.filter(mesa=>mesasReleva.includes(mesa));if(mesasComunes.length>0){croupiersRelevados.add(c.nombreCompleto);}}});croupiersRelevados.forEach(c=>{if(!datosRelevos[c])datosRelevos[c]={};datosRelevos[c][horario]={actividad:'descanso',mesas:[],color:'#f39c12'};});}
         if(mesasReleva.length>0){datosRelevos[croupier][horario]={actividad:'releva',mesas:mesasReleva,color:colorSeleccionado};}else{datosRelevos[croupier][horario]={actividad:'sin-actividad',mesas:[],color:'#95a5a6'};}}else if(actividadSeleccionada==='ayudante-pagador'){datosRelevos[croupier][horario]={actividad:'ayudante-pagador',mesas:[],color:'#8e44ad'};}else if(actividadSeleccionada==='descanso'){datosRelevos[croupier][horario]={actividad:'descanso',mesas:[],color:'#f39c12'};}
         croupiersDescansoManual.forEach(c=>{if(!datosRelevos[c])datosRelevos[c]={};datosRelevos[c][horario]={actividad:'descanso',mesas:[],color:'#f39c12'};});if(!datosRelevos[croupier][horario]){datosRelevos[croupier][horario]={actividad:'sin-actividad',mesas:[],color:'#95a5a6'};}
         renderizarHorario();cerrarRelevoModal();startAutomaticTimers();}
         function borrarRelevo(){const{croupier,horario}=celdaActiva;if(confirm('¿Estás seguro de que quieres borrar este relevo?')){if(datosRelevos[croupier]&&datosRelevos[croupier][horario]){delete datosRelevos[croupier][horario];}
         renderizarHorario();cerrarRelevoModal();startAutomaticTimers();}}
-        function refreshCronometros(){stopAllTimers(false);cargarCronometroState();startSavedTimers();}
         
         function guardarEdicionPreCroupier(){
             const oldName=croupierSeleccionadoPre;
@@ -2388,7 +2459,7 @@
                     if(datosRelevos[oldName]){datosRelevos[newName]=datosRelevos[oldName];delete datosRelevos[oldName];}
                     if(croupierColors[oldName]){croupierColors[newName]=croupierColors[oldName];delete croupierColors[oldName];}
                     if(croupierSalidas[oldName]){croupierSalidas[newName]=croupierSalidas[oldName];delete croupierSalidas[oldName];}
-                    if(cronometroStartTime[oldName]){cronometroStartTime[newName]=cronometroStartTime[oldName];delete cronometroStartTime[oldName];}
+                    if(cronometroState[oldName]){cronometroState[newName]=cronometroState[oldName];delete cronometroState[oldName];}
                 }
             }
             
@@ -2404,8 +2475,9 @@
         closeBtnFecha.addEventListener('click', cerrarFechaModal);
 
         btnAgregarCroupierDB.addEventListener('click',agregarCroupierDB);btnPreAgregarJuego.addEventListener('click',agregarJuegoMaestro);btnAgregarCroupierTabla.addEventListener('click',agregarCroupiersSeleccionados);selectAllPreCroupiers.addEventListener('change',(e)=>{document.querySelectorAll('#croupier-pre-table .pre-croupier-checkbox').forEach(cb=>cb.checked=e.target.checked);});btnAgregarMesa.addEventListener('click',agregarMesa);btnAplicarColor.addEventListener('click',aplicarColorACroupiers);btnGuardarRelevo.addEventListener('click',guardarRelevo);btnBorrarRelevo.addEventListener('click',borrarRelevo);btnClearAll.addEventListener('click',borrarTodosLosDatos);btnClearHorarioOnly.addEventListener('click',borrarSoloHorarios);btnClearCroupiersOnly.addEventListener('click',borrarSoloCroupiers);btnBackup.addEventListener('click',generarBackup);fileInputRestore.addEventListener('change',restaurarBackup);btnUndo.addEventListener('click',deshacer);btnRedo.addEventListener('click',rehacer);btnEditarCroupier.addEventListener('click',()=>toggleEditModePreCroupier(true));btnGuardarEdicion.addEventListener('click',guardarEdicionPreCroupier);btnCancelarEdicion.addEventListener('click',()=>{if(croupierSeleccionadoPre){seleccionarCroupierPre(croupierSeleccionadoPre);}else{croupierDetailsContainer.style.display='none';}});btnEliminarCroupierPre.addEventListener('click',borrarCroupierPre);btnGuardarNuevoHorario.addEventListener('click',guardarNuevoHorario);btnGuardarSalida.addEventListener('click',guardarSalida);btnBorrarSalida.addEventListener('click',borrarSalida);
-        cronoBtnStart.addEventListener('click',()=>{if(croupierCronoActivo){startCronometro(croupierCronoActivo, getAppCurrentTime().getTime());cronoBtnStart.disabled=true;cronoBtnStop.disabled=false;}}); // MODIFICADO
-        cronoBtnStop.addEventListener('click',()=>{if(croupierCronoActivo){stopCronometro(croupierCronoActivo,false);cronoBtnStart.disabled=false;cronoBtnStop.disabled=true;}});cronoBtnReset.addEventListener('click',()=>{if(croupierCronoActivo){resetCronometro(croupierCronoActivo);cronoBtnStart.disabled=false;cronoBtnStop.disabled=true;}});
+        cronoBtnStart.addEventListener('click',()=>{if(croupierCronoActivo){startCronometro(croupierCronoActivo);cronoBtnStart.disabled=true;cronoBtnStop.disabled=false;}});
+        cronoBtnStop.addEventListener('click',()=>{if(croupierCronoActivo){stopCronometro(croupierCronoActivo);cronoBtnStart.disabled=false;cronoBtnStop.disabled=true;}});
+        cronoBtnReset.addEventListener('click',()=>{if(croupierCronoActivo){resetCronometro(croupierCronoActivo);cronoBtnStart.disabled=false;cronoBtnStop.disabled=true;}});
         btnSetManualTime.addEventListener('click', ajustarTiempoManual);
         
         fechaDisplay.addEventListener('click', abrirFechaModal);
@@ -2498,8 +2570,7 @@
                 const [year, month, day] = fechaGuardadaStr.split('-');
                 fechaVisible = new Date(year, month - 1, day);
             } else {
-                fechaVisible = new Date(); // Establece la fecha por primera vez
-                // "Congela" la fecha guardándola inmediatamente
+                fechaVisible = new Date();
                 localStorage.setItem('fechaGuardada', fechaVisible.toISOString().split('T')[0]);
             }
 
