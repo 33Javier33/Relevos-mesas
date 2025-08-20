@@ -1920,8 +1920,26 @@
         }
 
         function renderizarMesasList(){mesasListDiv.innerHTML='';mesasDeJuego.forEach(mesa=>{const mesaTag=document.createElement('div');mesaTag.className='mesa-tag';mesaTag.textContent=mesa;const deleteBtn=document.createElement('button');deleteBtn.className='delete-mesa';deleteBtn.textContent='x';deleteBtn.addEventListener('click',()=>borrarMesa(mesa));mesaTag.appendChild(deleteBtn);mesasListDiv.appendChild(mesaTag);});}
-        function renderizarJuegosDropdown(dropdownId='dropdown-juegos',selectedJuegos=[]){const dropdown=document.getElementById(dropdownId);if(!dropdown)return;dropdown.innerHTML='';juegosMaestro.forEach(juego=>{const label=document.createElement('label');const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.value=juego;if(selectedJuegos.includes(juego)){checkbox.checked=true;}
-        label.appendChild(checkbox);label.innerHTML+=juego;dropdown.appendChild(label);});}
+        
+        // --- FUNCIÓN CORREGIDA ---
+        function renderizarJuegosDropdown(dropdownId='dropdown-juegos',selectedJuegos=[]){
+            const dropdown=document.getElementById(dropdownId);
+            if(!dropdown) return;
+            dropdown.innerHTML='';
+            juegosMaestro.forEach(juego=>{
+                const label=document.createElement('label');
+                const checkbox=document.createElement('input');
+                checkbox.type='checkbox';
+                checkbox.value=juego;
+                if(selectedJuegos.includes(juego)){
+                    checkbox.checked=true;
+                }
+                label.appendChild(checkbox);
+                label.append(` ${juego}`); // <-- ESTA LÍNEA FUE CORREGIDA
+                dropdown.appendChild(label);
+            });
+        }
+        
         function renderizarJuegosDropdownAdd(){renderizarJuegosDropdown('dropdown-juegos',[]);}
         function renderizarJuegosDropdownEdit(selectedJuegos=[]){renderizarJuegosDropdown('dropdown-juegos-edit',selectedJuegos);}
         function crearTarjetaRelevo(relevoData){const relevoDiv=document.createElement('div');relevoDiv.className='relevo-cell';if(relevoData.actividad==='releva'){relevoDiv.style.backgroundColor=relevoData.color;relevoDiv.textContent=relevoData.mesas.join(' - ');}else if(relevoData.actividad==='ayudante-pagador'){relevoDiv.classList.add('ayudante-pagador');relevoDiv.textContent='AYUD. PAGADOR';}
@@ -2419,4 +2437,3 @@
 
 </body>
 </html>
-y
