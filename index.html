@@ -344,6 +344,37 @@
         .control-panel button.success:hover {
             background-color: var(--success-hover-color);
         }
+        
+        /* --- ESTILOS PARA BOTONES DE FILTRO --- */
+        .filter-btn {
+            flex: 1;
+            background-color: var(--neutral-color);
+            border: 1px solid var(--neutral-hover-color);
+            color: white;
+            padding: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s, color 0.3s;
+            font-size: 0.8em;
+        }
+        .filter-btn:not(:last-child) {
+            border-right: none;
+        }
+        .filter-btn:first-child {
+            border-top-left-radius: 5px;
+            border-bottom-left-radius: 5px;
+        }
+        .filter-btn:last-child {
+            border-top-right-radius: 5px;
+            border-bottom-right-radius: 5px;
+        }
+        .filter-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        .filter-btn:hover:not(.active) {
+            background-color: var(--neutral-hover-color);
+        }
+        /* --- FIN DE ESTILOS DE FILTRO --- */
 
         .control-panel input[type="color"] {
             -webkit-appearance: none;
@@ -452,7 +483,6 @@
             overflow: hidden;
             box-shadow: 0 4px 6px var(--shadow-color);
             background-color: var(--surface-color);
-            /* flex-grow: 1; <--- SE HA ELIMINADO ESTA LÍNEA para ajustar el espacio */
         }
 
         .horario-tabla {
@@ -1190,6 +1220,13 @@
                     <input type="text" id="nuevo-croupier-input" placeholder="Nombre y Apellido">
                 </div>
                 <div class="form-group">
+                    <select id="nuevo-croupier-contrato">
+                        <option value="planta">Planta</option>
+                        <option value="partime">Part-Time</option>
+                        <option value="llamado">Llamado</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <input type="text" id="nuevo-juego-input" placeholder="Agregar nuevo juego">
                     <button id="btn-pre-agregar-juego" style="width: auto;">+</button>
                 </div>
@@ -1202,6 +1239,13 @@
                 <hr style="margin: 15px 0;">
 
                 <h4>Croupiers registrados <span id="contador-croupiers-registrados" class="contador-badge">0</span></h4>
+                
+                <div class="form-group" id="croupier-filter-buttons" style="margin-bottom: 10px; gap: 0;">
+                    <button class="filter-btn active" data-filter="todos">Todos</button>
+                    <button class="filter-btn" data-filter="planta">Planta</button>
+                    <button class="filter-btn" data-filter="partime">Part Time</button>
+                    <button class="filter-btn" data-filter="llamado">Llamado</button>
+                </div>
                 <div class="form-group">
                     <input type="text" id="croupier-search-input" placeholder="Buscar croupier..." autocomplete="off">
                 </div>
@@ -1228,6 +1272,15 @@
                         </div>
                     </div>
 
+                    <div class="editable-field">
+                        <p><strong>Contrato:</strong></p>
+                        <span id="croupier-details-contrato-display" style="text-transform: capitalize;"></span>
+                        <select id="croupier-details-contrato-edit" style="display: none;">
+                            <option value="planta">Planta</option>
+                            <option value="partime">Part-Time</option>
+                            <option value="llamado">Llamado</option>
+                        </select>
+                    </div>
                     <div id="croupier-juegos-display">
                         <p><strong>Juegos que paga:</strong></p>
                         <div id="croupier-details-juegos" class="juego-list-inline"></div>
@@ -1452,13 +1505,15 @@
         let croupierSeleccionadoPre = null;
         let isEditingPreCroupier = false;
         let tooltipElementoActivo = null;
-        let fechaVisible; 
+        let fechaVisible;
+        let currentContratoFilter = 'todos'; // Variable para el filtro de contrato
 
         // --- SELECTORES DE ELEMENTOS ---
         const tablaHorario = document.getElementById('tabla-horario');
         const thead = tablaHorario.querySelector('thead tr');
         const tbody = document.getElementById('sortable-tbody');
         const nuevoCroupierInput = document.getElementById('nuevo-croupier-input');
+        const nuevoCroupierContrato = document.getElementById('nuevo-croupier-contrato'); // Selector para el contrato
         const nuevoJuegoInput = document.getElementById('nuevo-juego-input');
         const juegosSelectorCroupier = document.getElementById('juegos-selector-croupier');
         const dropdownJuegos = document.getElementById('dropdown-juegos');
@@ -1470,6 +1525,9 @@
         const croupierDetailsContainer = document.getElementById('croupier-details-container');
         const croupierDetailsNameDisplay = document.getElementById('croupier-details-name-display');
         const croupierDetailsNameEdit = document.getElementById('croupier-details-name-edit');
+        // Selectores para detalles del contrato
+        const croupierDetailsContratoDisplay = document.getElementById('croupier-details-contrato-display');
+        const croupierDetailsContratoEdit = document.getElementById('croupier-details-contrato-edit');
         const croupierJuegosDisplay = document.getElementById('croupier-juegos-display');
         const croupierDetailsJuegos = document.getElementById('croupier-details-juegos');
         const editCroupierJuegosSelector = document.getElementById('edit-croupier-juegos-selector');
@@ -1573,7 +1631,7 @@
         function guardarEstado(){if(historialIndex<historial.length-1){historial=historial.slice(0,historialIndex+1);}
         const estado={croupiersData:JSON.parse(JSON.stringify(croupiersData)),horarios:[...horarios],mesasDeJuego:[...mesasDeJuego],juegosMaestro:[...juegosMaestro],datosRelevos:JSON.parse(JSON.stringify(datosRelevos)),croupierColors:JSON.parse(JSON.stringify(croupierColors)),croupierSalidas:JSON.parse(JSON.stringify(croupierSalidas)),horarioColors:JSON.parse(JSON.stringify(horarioColors)),croupiersEnEspera:JSON.parse(JSON.stringify(croupiersEnEspera))};historial.push(estado);historialIndex++;if(historial.length>MAX_HISTORIAL){historial.shift();historialIndex--;}
         actualizarBotonesDeshacerRehacer();}
-        function cargarEstado(estado){croupiersData=JSON.parse(JSON.stringify(estado.croupiersData));horarios=[...estado.horarios];mesasDeJuego=[...estado.mesasDeJuego];juegosMaestro=[...estado.juegosMaestro];datosRelevos=JSON.parse(JSON.stringify(estado.datosRelevos));croupierColors=JSON.parse(JSON.stringify(estado.croupierColors));croupierSalidas=JSON.parse(JSON.stringify(estado.croupierSalidas));horarioColors=JSON.parse(JSON.stringify(estado.horarioColors));croupiersEnEspera=JSON.parse(JSON.stringify(estado.croupiersEnEspera));renderizarHorario(false);renderizarJuegosDropdown();renderizarCroupiersPreTable();}
+        function cargarEstado(estado){croupiersData=JSON.parse(JSON.stringify(estado.croupiersData));horarios=[...estado.horarios];mesasDeJuego=[...estado.mesasDeJuego];juegosMaestro=[...estado.juegosMaestro];datosRelevos=JSON.parse(JSON.stringify(estado.datosRelevos));croupierColors=JSON.parse(JSON.stringify(estado.croupierColors));croupierSalidas=JSON.parse(JSON.stringify(estado.croupierSalidas));horarioColors=JSON.parse(JSON.stringify(estado.horarioColors));croupiersEnEspera=JSON.parse(JSON.stringify(estado.croupiersEnEspera));renderizarHorario(false);renderizarJuegosDropdown();renderizarCroupiersPreTable('', currentContratoFilter);}
         function deshacer(){if(historialIndex>0){historialIndex--;cargarEstado(historial[historialIndex]);}}
         function rehacer(){if(historialIndex<historial.length-1){historialIndex++;cargarEstado(historial[historialIndex]);}}
         function actualizarBotonesDeshacerRehacer(){btnUndo.disabled=historialIndex<=0;btnRedo.disabled=historialIndex>=historial.length-1;}
@@ -1583,7 +1641,7 @@
             renderizarCuerpo();
             renderizarMesasList();
             renderizarJuegosDropdown();
-            renderizarCroupiersPreTable();
+            renderizarCroupiersPreTable('', currentContratoFilter);
             guardarDatos();
             if (shouldSaveState) {
                 guardarEstado();
@@ -1748,11 +1806,119 @@
         }
 
         function scrollToColumn(time){const tableContainer=document.querySelector('.horario-tabla');const columnHeader=document.querySelector(`th[data-horario="${time}"]`);if(columnHeader&&tableContainer){const fixedColumnsWidth=document.querySelector('.tabla th:first-child').offsetWidth+document.querySelector('.tabla th:nth-child(2)').offsetWidth;tableContainer.scroll({left:columnHeader.offsetLeft-fixedColumnsWidth,behavior:'smooth'});}}
-        function renderizarCroupiersPreTable(searchTerm=''){croupierPreTableBody.innerHTML='';const filteredCroupiers=croupiersEnEspera.filter(croupier=>croupier.nombreCompleto.toLowerCase().includes(searchTerm.toLowerCase()));contadorRegistrados.textContent = filteredCroupiers.length; filteredCroupiers.forEach(croupier=>{const tr=document.createElement('tr');tr.dataset.nombreCompleto=croupier.nombreCompleto;tr.addEventListener('click',()=>{seleccionarCroupierPre(croupier.nombreCompleto);});const tdCheckbox=document.createElement('td');const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.className='pre-croupier-checkbox';checkbox.value=croupier.nombreCompleto;checkbox.addEventListener('change',(e)=>e.stopPropagation());tdCheckbox.appendChild(checkbox);tr.appendChild(tdCheckbox);const tdNombre=document.createElement('td');tdNombre.textContent=croupier.nombreCompleto;tr.appendChild(tdNombre);croupierPreTableBody.appendChild(tr);});btnAgregarCroupierTabla.disabled=croupiersEnEspera.length===0;selectAllPreCroupiers.disabled=croupiersEnEspera.length===0;if(searchTerm===''&&croupiersEnEspera.length>0){seleccionarCroupierPre(croupiersEnEspera[0].nombreCompleto);}else if(filteredCroupiers.length>0){seleccionarCroupierPre(filteredCroupiers[0].nombreCompleto);}
-        else{croupierSeleccionadoPre=null;croupierDetailsContainer.style.display='none';}}
-        function seleccionarCroupierPre(nombreCompleto){const filas=document.querySelectorAll('#croupier-pre-table tbody tr');const clickedRow=document.querySelector(`[data-nombre-completo="${nombreCompleto}"]`);filas.forEach(fila=>fila.classList.remove('selected'));if(clickedRow){clickedRow.classList.add('selected');const croupier=croupiersEnEspera.find(c=>c.nombreCompleto===nombreCompleto);if(croupier){croupierSeleccionadoPre=nombreCompleto;croupierDetailsNameDisplay.textContent=croupier.nombreCompleto;croupierDetailsNameEdit.value=croupier.nombreCompleto;croupierDetailsJuegos.innerHTML='';croupier.juegosQuePaga.forEach(juego=>{const juegoTag=document.createElement('div');juegoTag.className='juego-tag';juegoTag.textContent=juego;croupierDetailsJuegos.appendChild(juegoTag);});if(croupier.juegosQuePaga.length===0){const noJuegosText=document.createElement('span');noJuegosText.textContent='No se han asignado juegos.';croupierDetailsJuegos.appendChild(noJuegosText);}
-        croupierDetailsContainer.style.display='block';toggleEditModePreCroupier(false);}}else{croupierSeleccionadoPre=null;croupierDetailsContainer.style.display='none';}}
-        function toggleEditModePreCroupier(isEditMode){isEditingPreCroupier=isEditMode;if(isEditMode){croupierDetailsNameDisplay.style.display='none';croupierDetailsNameEdit.style.display='block';croupierJuegosDisplay.style.display='none';editCroupierJuegosSelector.style.display='block';btnEditarCroupier.style.display='none';btnEliminarCroupierPre.style.display='none';btnGuardarEdicion.style.display='block';btnCancelarEdicion.style.display='block';renderizarJuegosDropdownEdit(croupiersEnEspera.find(c=>c.nombreCompleto===croupierSeleccionadoPre)?.juegosQuePaga||[]);}else{croupierDetailsNameDisplay.style.display='block';croupierDetailsNameEdit.style.display='none';croupierJuegosDisplay.style.display='block';editCroupierJuegosSelector.style.display='none';btnEditarCroupier.style.display='block';btnEliminarCroupierPre.style.display='block';btnGuardarEdicion.style.display='none';btnCancelarEdicion.style.display='none';}}
+        
+        function renderizarCroupiersPreTable(searchTerm = '', contratoFilter = 'todos') {
+            croupierPreTableBody.innerHTML = '';
+            
+            let filteredByContrato = croupiersEnEspera;
+            if (contratoFilter !== 'todos') {
+                filteredByContrato = croupiersEnEspera.filter(c => c.contrato === contratoFilter);
+            }
+
+            const filteredCroupiers = filteredByContrato.filter(croupier => 
+                croupier.nombreCompleto.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            contadorRegistrados.textContent = filteredCroupiers.length;
+
+            filteredCroupiers.forEach(croupier=>{
+                const tr=document.createElement('tr');
+                tr.dataset.nombreCompleto=croupier.nombreCompleto;
+                tr.addEventListener('click',()=>{seleccionarCroupierPre(croupier.nombreCompleto);});
+                const tdCheckbox=document.createElement('td');
+                const checkbox=document.createElement('input');
+                checkbox.type='checkbox';
+                checkbox.className='pre-croupier-checkbox';
+                checkbox.value=croupier.nombreCompleto;
+                checkbox.addEventListener('change',(e)=>e.stopPropagation());
+                tdCheckbox.appendChild(checkbox);
+                tr.appendChild(tdCheckbox);
+                const tdNombre=document.createElement('td');
+                tdNombre.textContent=croupier.nombreCompleto;
+                tr.appendChild(tdNombre);
+                croupierPreTableBody.appendChild(tr);
+            });
+            
+            btnAgregarCroupierTabla.disabled=croupiersEnEspera.length===0;
+            selectAllPreCroupiers.disabled=croupiersEnEspera.length===0;
+
+            if(croupierSeleccionadoPre && !filteredCroupiers.some(c => c.nombreCompleto === croupierSeleccionadoPre)) {
+                croupierSeleccionadoPre = null;
+            }
+
+            if(!croupierSeleccionadoPre && filteredCroupiers.length > 0){
+                seleccionarCroupierPre(filteredCroupiers[0].nombreCompleto);
+            } else if (croupierSeleccionadoPre) {
+                seleccionarCroupierPre(croupierSeleccionadoPre); 
+            } else {
+                croupierDetailsContainer.style.display = 'none';
+            }
+        }
+        
+        function seleccionarCroupierPre(nombreCompleto){
+            const filas=document.querySelectorAll('#croupier-pre-table tbody tr');
+            const clickedRow=document.querySelector(`[data-nombre-completo="${nombreCompleto}"]`);
+            filas.forEach(fila=>fila.classList.remove('selected'));
+            if(clickedRow){
+                clickedRow.classList.add('selected');
+                const croupier=croupiersEnEspera.find(c=>c.nombreCompleto===nombreCompleto);
+                if(croupier){
+                    croupierSeleccionadoPre=nombreCompleto;
+                    croupierDetailsNameDisplay.textContent=croupier.nombreCompleto;
+                    croupierDetailsNameEdit.value=croupier.nombreCompleto;
+                    
+                    croupierDetailsContratoDisplay.textContent = croupier.contrato || 'No especificado';
+                    croupierDetailsContratoEdit.value = croupier.contrato || 'planta';
+
+                    croupierDetailsJuegos.innerHTML='';
+                    croupier.juegosQuePaga.forEach(juego=>{
+                        const juegoTag=document.createElement('div');
+                        juegoTag.className='juego-tag';
+                        juegoTag.textContent=juego;
+                        croupierDetailsJuegos.appendChild(juegoTag);
+                    });
+                    if(croupier.juegosQuePaga.length===0){
+                        const noJuegosText=document.createElement('span');
+                        noJuegosText.textContent='No se han asignado juegos.';
+                        croupierDetailsJuegos.appendChild(noJuegosText);
+                    }
+                    croupierDetailsContainer.style.display='block';
+                    toggleEditModePreCroupier(false);
+                }
+            } else {
+                croupierSeleccionadoPre=null;
+                croupierDetailsContainer.style.display='none';
+            }
+        }
+
+        function toggleEditModePreCroupier(isEditMode){
+            isEditingPreCroupier=isEditMode;
+            if(isEditMode){
+                croupierDetailsNameDisplay.style.display='none';
+                croupierDetailsNameEdit.style.display='block';
+                croupierDetailsContratoDisplay.style.display = 'none';
+                croupierDetailsContratoEdit.style.display = 'block';
+                croupierJuegosDisplay.style.display='none';
+                editCroupierJuegosSelector.style.display='block';
+                btnEditarCroupier.style.display='none';
+                btnEliminarCroupierPre.style.display='none';
+                btnGuardarEdicion.style.display='block';
+                btnCancelarEdicion.style.display='block';
+                renderizarJuegosDropdownEdit(croupiersEnEspera.find(c=>c.nombreCompleto===croupierSeleccionadoPre)?.juegosQuePaga||[]);
+            } else {
+                croupierDetailsNameDisplay.style.display='block';
+                croupierDetailsNameEdit.style.display='none';
+                croupierDetailsContratoDisplay.style.display = 'block';
+                croupierDetailsContratoEdit.style.display = 'none';
+                croupierJuegosDisplay.style.display='block';
+                editCroupierJuegosSelector.style.display='none';
+                btnEditarCroupier.style.display='block';
+                btnEliminarCroupierPre.style.display='block';
+                btnGuardarEdicion.style.display='none';
+                btnCancelarEdicion.style.display='none';
+            }
+        }
+
         function renderizarMesasList(){mesasListDiv.innerHTML='';mesasDeJuego.forEach(mesa=>{const mesaTag=document.createElement('div');mesaTag.className='mesa-tag';mesaTag.textContent=mesa;const deleteBtn=document.createElement('button');deleteBtn.className='delete-mesa';deleteBtn.textContent='x';deleteBtn.addEventListener('click',()=>borrarMesa(mesa));mesaTag.appendChild(deleteBtn);mesasListDiv.appendChild(mesaTag);});}
         function renderizarJuegosDropdown(dropdownId='dropdown-juegos',selectedJuegos=[]){const dropdown=document.getElementById(dropdownId);if(!dropdown)return;dropdown.innerHTML='';juegosMaestro.forEach(juego=>{const label=document.createElement('label');const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.value=juego;if(selectedJuegos.includes(juego)){checkbox.checked=true;}
         label.appendChild(checkbox);label.innerHTML+=juego;dropdown.appendChild(label);});}
@@ -1906,18 +2072,64 @@
         function borrarSoloHorarios(){if(confirm('¿Estás seguro de que quieres borrar SOLAMENTE la tabla de horarios? La lista de croupiers y mesas se mantendrá.')){horarios=[];datosRelevos={};horarioColors={};historial=[];historialIndex=-1;localStorage.removeItem('fechaGuardada');stopAllTimers(true);renderizarHorario();actualizarBotonesDeshacerRehacer();alert('La tabla de horarios ha sido borrada.');}}
         function borrarSoloCroupiers(){if(confirm('¿Estás seguro de que quieres borrar SOLAMENTE a los croupiers de la tabla de horarios? La lista de horarios y mesas se mantendrá.')){croupiersData=[];datosRelevos={};croupierColors={};croupierSalidas={};stopAllTimers(true);renderizarHorario();alert('Los croupiers han sido eliminados de la tabla de horarios.');}}
         function borrarCroupierPre(){if(!croupierSeleccionadoPre)return;if(confirm(`¿Estás seguro de que quieres eliminar a ${croupierSeleccionadoPre} de la base de datos de croupiers? Esta acción es permanente.`)){croupiersEnEspera=croupiersEnEspera.filter(c=>c.nombreCompleto!==croupierSeleccionadoPre);const croupierEnTablaIndex=croupiersData.findIndex(c=>c.nombreCompleto===croupierSeleccionadoPre);if(croupierEnTablaIndex!==-1){borrarCroupier(croupierSeleccionadoPre);}
-        croupierSeleccionadoPre=null;renderizarCroupiersPreTable();croupierDetailsContainer.style.display='none';guardarDatos();}}
+        croupierSeleccionadoPre=null;renderizarCroupiersPreTable('', currentContratoFilter);croupierDetailsContainer.style.display='none';guardarDatos();}}
         function aplicarColorACroupiers(){const color=colorPicker.value;const checkboxes=document.querySelectorAll('.croupier-checkbox:checked');if(checkboxes.length===0){alert('Selecciona al menos un croupier para aplicar el color.');return;}
         checkboxes.forEach(checkbox=>{croupierColors[checkbox.value]=color;});renderizarHorario();}
         function generarAlias(nombreCompleto){const partes=nombreCompleto.split(' ').filter(p=>p.length>0);if(partes.length<2){return nombreCompleto.substring(0,10);}
         const nombre=partes[0];const inicialApellido=partes[1][0];return`${nombre} ${inicialApellido}.`;}
-        function agregarCroupierDB(){const nombreCompleto=nuevoCroupierInput.value.trim();if(!nombreCompleto){alert('El nombre y apellido son obligatorios.');return;}
-        if(croupiersEnEspera.some(c=>c.nombreCompleto===nombreCompleto)){alert('Este croupier ya existe en la base de datos.');return;}
-        const juegosSeleccionados=Array.from(dropdownJuegos.querySelectorAll('input:checked')).map(cb=>cb.value);const nuevoCroupier={nombreCompleto:nombreCompleto,juegosQuePaga:juegosSeleccionados};croupiersEnEspera.push(nuevoCroupier);renderizarCroupiersPreTable();guardarDatos();nuevoCroupierInput.value='';dropdownJuegos.querySelectorAll('input:checked').forEach(cb=>cb.checked=false);}
+        
+        function agregarCroupierDB(){
+            const nombreCompleto=nuevoCroupierInput.value.trim();
+            if(!nombreCompleto){
+                alert('El nombre y apellido son obligatorios.');
+                return;
+            }
+            if(croupiersEnEspera.some(c=>c.nombreCompleto===nombreCompleto)){
+                alert('Este croupier ya existe en la base de datos.');
+                return;
+            }
+            
+            const contrato = nuevoCroupierContrato.value;
+            const juegosSeleccionados=Array.from(dropdownJuegos.querySelectorAll('input:checked')).map(cb=>cb.value);
+            const nuevoCroupier={
+                nombreCompleto: nombreCompleto,
+                juegosQuePaga: juegosSeleccionados,
+                contrato: contrato 
+            };
+            croupiersEnEspera.push(nuevoCroupier);
+            renderizarCroupiersPreTable('', currentContratoFilter);
+            guardarDatos();
+            nuevoCroupierInput.value='';
+            dropdownJuegos.querySelectorAll('input:checked').forEach(cb=>cb.checked=false);
+        }
+
         function agregarJuegoMaestro(){const nombreJuego=nuevoJuegoInput.value.trim();if(nombreJuego&&!juegosMaestro.includes(nombreJuego)){juegosMaestro.push(nombreJuego);renderizarJuegosDropdownAdd();guardarDatos();nuevoJuegoInput.value='';}}
-        function agregarCroupiersSeleccionados(){const croupierCheckboxes=document.querySelectorAll('#croupier-pre-table .pre-croupier-checkbox:checked');if(croupierCheckboxes.length===0){alert('Selecciona al menos un croupier de la lista.');return;}
-        croupierCheckboxes.forEach(checkbox=>{const nombreCompleto=checkbox.value;const croupierDataFromDb=croupiersEnEspera.find(c=>c.nombreCompleto===nombreCompleto);if(croupierDataFromDb&&!croupiersData.some(c=>c.nombreCompleto===nombreCompleto)){const nuevoCroupier={nombreCompleto:croupierDataFromDb.nombreCompleto,alias:generarAlias(croupierDataFromDb.nombreCompleto),juegosQuePaga:croupierDataFromDb.juegosQuePaga};croupiersData.push(nuevoCroupier);if(!datosRelevos[nombreCompleto]){datosRelevos[nombreCompleto]={};}
-        croupierColors[nombreCompleto]='';croupierSalidas[nombreCompleto]='';}});renderizarHorario();}
+        
+        function agregarCroupiersSeleccionados(){
+            const croupierCheckboxes=document.querySelectorAll('#croupier-pre-table .pre-croupier-checkbox:checked');
+            if(croupierCheckboxes.length===0){
+                alert('Selecciona al menos un croupier de la lista.');
+                return;
+            }
+            croupierCheckboxes.forEach(checkbox=>{
+                const nombreCompleto=checkbox.value;
+                const croupierDataFromDb=croupiersEnEspera.find(c=>c.nombreCompleto===nombreCompleto);
+                if(croupierDataFromDb&&!croupiersData.some(c=>c.nombreCompleto===nombreCompleto)){
+                    const nuevoCroupier={
+                        nombreCompleto: croupierDataFromDb.nombreCompleto,
+                        alias: generarAlias(croupierDataFromDb.nombreCompleto),
+                        juegosQuePaga: croupierDataFromDb.juegosQuePaga,
+                        contrato: croupierDataFromDb.contrato
+                    };
+                    croupiersData.push(nuevoCroupier);
+                    if(!datosRelevos[nombreCompleto]){datosRelevos[nombreCompleto]={};}
+                    croupierColors[nombreCompleto]='';
+                    croupierSalidas[nombreCompleto]='';
+                }
+            });
+            renderizarHorario();
+        }
+
         function agregarMesa(){const nuevaMesa=nuevaMesaInput.value.trim();if(nuevaMesa&&!mesasDeJuego.includes(nuevaMesa)){mesasDeJuego.push(nuevaMesa);renderizarHorario();nuevaMesaInput.value='';}}
         function toggleRelevoControls(actividad){if(actividad==='releva'){relevoControlsContainer.style.display='block';}else{relevoControlsContainer.style.display='none';}}
 
@@ -2050,14 +2262,47 @@
         function borrarRelevo(){const{croupier,horario}=celdaActiva;if(confirm('¿Estás seguro de que quieres borrar este relevo?')){if(datosRelevos[croupier]&&datosRelevos[croupier][horario]){delete datosRelevos[croupier][horario];}
         renderizarHorario();cerrarRelevoModal();startAutomaticTimers();}}
         function refreshCronometros(){stopAllTimers(false);cargarCronometroState();startSavedTimers();}
-        function guardarEdicionPreCroupier(){const oldName=croupierSeleccionadoPre;const newName=croupierDetailsNameEdit.value.trim();const newJuegos=Array.from(dropdownJuegosEdit.querySelectorAll('input:checked')).map(cb=>cb.value);if(!newName){alert('El nombre no puede estar vacío.');return;}
-        if(newName!==oldName&&croupiersEnEspera.some(c=>c.nombreCompleto===newName)){alert('Ya existe un croupier con ese nombre en la base de datos.');return;}
-        const croupierIndexEnEspera=croupiersEnEspera.findIndex(c=>c.nombreCompleto===oldName);if(croupierIndexEnEspera!==-1){croupiersEnEspera[croupierIndexEnEspera].nombreCompleto=newName;croupiersEnEspera[croupierIndexEnEspera].juegosQuePaga=newJuegos;}
-        const croupierInTableIndex=croupiersData.findIndex(c=>c.nombreCompleto===oldName);if(croupierInTableIndex!==-1){croupiersData[croupierInTableIndex].nombreCompleto=newName;croupiersData[croupierInTableIndex].alias=generarAlias(newName);croupiersData[croupierInTableIndex].juegosQuePaga=newJuegos;if(oldName!==newName){if(datosRelevos[oldName]){datosRelevos[newName]=datosRelevos[oldName];delete datosRelevos[oldName];}
-        if(croupierColors[oldName]){croupierColors[newName]=croupierColors[oldName];delete croupierColors[oldName];}
-        if(croupierSalidas[oldName]){croupierSalidas[newName]=croupierSalidas[oldName];delete croupierSalidas[oldName];}
-        if(cronometroStartTime[oldName]){cronometroStartTime[newName]=cronometroStartTime[oldName];delete cronometroStartTime[oldName];}}}
-        croupierSeleccionadoPre=newName;renderizarHorario();seleccionarCroupierPre(newName);}
+        
+        function guardarEdicionPreCroupier(){
+            const oldName=croupierSeleccionadoPre;
+            const newName=croupierDetailsNameEdit.value.trim();
+            const newContrato = croupierDetailsContratoEdit.value; 
+            const newJuegos=Array.from(dropdownJuegosEdit.querySelectorAll('input:checked')).map(cb=>cb.value);
+            if(!newName){
+                alert('El nombre no puede estar vacío.');
+                return;
+            }
+            if(newName!==oldName&&croupiersEnEspera.some(c=>c.nombreCompleto===newName)){
+                alert('Ya existe un croupier con ese nombre en la base de datos.');
+                return;
+            }
+            
+            const croupierIndexEnEspera=croupiersEnEspera.findIndex(c=>c.nombreCompleto===oldName);
+            if(croupierIndexEnEspera!==-1){
+                croupiersEnEspera[croupierIndexEnEspera].nombreCompleto=newName;
+                croupiersEnEspera[croupierIndexEnEspera].juegosQuePaga=newJuegos;
+                croupiersEnEspera[croupierIndexEnEspera].contrato = newContrato;
+            }
+            
+            const croupierInTableIndex=croupiersData.findIndex(c=>c.nombreCompleto===oldName);
+            if(croupierInTableIndex!==-1){
+                croupiersData[croupierInTableIndex].nombreCompleto=newName;
+                croupiersData[croupierInTableIndex].alias=generarAlias(newName);
+                croupiersData[croupierInTableIndex].juegosQuePaga=newJuegos;
+                croupiersData[croupierInTableIndex].contrato = newContrato;
+
+                if(oldName!==newName){
+                    if(datosRelevos[oldName]){datosRelevos[newName]=datosRelevos[oldName];delete datosRelevos[oldName];}
+                    if(croupierColors[oldName]){croupierColors[newName]=croupierColors[oldName];delete croupierColors[oldName];}
+                    if(croupierSalidas[oldName]){croupierSalidas[newName]=croupierSalidas[oldName];delete croupierSalidas[oldName];}
+                    if(cronometroStartTime[oldName]){cronometroStartTime[newName]=cronometroStartTime[oldName];delete cronometroStartTime[oldName];}
+                }
+            }
+            
+            croupierSeleccionadoPre=newName;
+            renderizarHorario();
+            seleccionarCroupierPre(newName);
+        }
         
         closeBtnRelevo.addEventListener('click', cerrarRelevoModal);
         closeBtnAgregarHorario.addEventListener('click', cerrarAgregarHorarioModal);
@@ -2085,9 +2330,25 @@
         });
         
         juegosSelectorCroupier.addEventListener('click',()=>{juegosSelectorCroupier.classList.toggle('active');});const juegosSelectorEdit=document.getElementById('juegos-selector-edit');if(juegosSelectorEdit){juegosSelectorEdit.addEventListener('click',(e)=>{juegosSelectorEdit.classList.toggle('active');e.stopPropagation();});}
-        dropdownJuegos.addEventListener('click',(event)=>{event.stopPropagation();});dropdownJuegosEdit.addEventListener('click',(event)=>{event.stopPropagation();});collapsibleHeader.addEventListener('click',()=>{controlesContainer.classList.toggle('content-hidden');collapsibleHeader.classList.toggle('collapsed');});document.querySelectorAll('.control-panel .panel-header').forEach(header=>{header.addEventListener('click',()=>{const content=header.nextElementSibling;header.classList.toggle('collapsed');content.classList.toggle('panel-hidden');});});radioReleva.addEventListener('change',()=>toggleRelevoControls('releva'));radioAyudante.addEventListener('change',()=>toggleRelevoControls('ayudante-pagador'));radioDescanso.addEventListener('change',()=>toggleRelevoControls('descanso'));croupierSearchInput.addEventListener('input',(event)=>{const searchTerm=event.target.value.trim();renderizarCroupiersPreTable(searchTerm);});croupierSearchInput.addEventListener('keydown',(event)=>{if(event.key==='Enter'){event.preventDefault();const filteredCroupiers=croupiersEnEspera.filter(croupier=>croupier.nombreCompleto.toLowerCase().includes(croupierSearchInput.value.toLowerCase()));if(filteredCroupiers.length>0){const firstMatchName=filteredCroupiers[0].nombreCompleto;seleccionarCroupierPre(firstMatchName);}
-        croupierSearchInput.value='';croupierSearchInput.focus();renderizarCroupiersPreTable();}});
+        dropdownJuegos.addEventListener('click',(event)=>{event.stopPropagation();});dropdownJuegosEdit.addEventListener('click',(event)=>{event.stopPropagation();});collapsibleHeader.addEventListener('click',()=>{controlesContainer.classList.toggle('content-hidden');collapsibleHeader.classList.toggle('collapsed');});document.querySelectorAll('.control-panel .panel-header').forEach(header=>{header.addEventListener('click',()=>{const content=header.nextElementSibling;header.classList.toggle('collapsed');content.classList.toggle('panel-hidden');});});radioReleva.addEventListener('change',()=>toggleRelevoControls('releva'));radioAyudante.addEventListener('change',()=>toggleRelevoControls('ayudante-pagador'));radioDescanso.addEventListener('change',()=>toggleRelevoControls('descanso'));
         
+        croupierSearchInput.addEventListener('input',(event)=>{
+            const searchTerm=event.target.value.trim();
+            renderizarCroupiersPreTable(searchTerm, currentContratoFilter);
+        });
+
+        croupierSearchInput.addEventListener('keydown',(event)=>{if(event.key==='Enter'){event.preventDefault();const filteredCroupiers=croupiersEnEspera.filter(croupier=>croupier.nombreCompleto.toLowerCase().includes(croupierSearchInput.value.toLowerCase()));if(filteredCroupiers.length>0){const firstMatchName=filteredCroupiers[0].nombreCompleto;seleccionarCroupierPre(firstMatchName);}
+        croupierSearchInput.value='';croupierSearchInput.focus();renderizarCroupiersPreTable('', currentContratoFilter);}});
+        
+        document.getElementById('croupier-filter-buttons').addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') {
+                document.querySelectorAll('#croupier-filter-buttons .filter-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                currentContratoFilter = e.target.dataset.filter;
+                renderizarCroupiersPreTable(croupierSearchInput.value.trim(), currentContratoFilter);
+            }
+        });
+
         themeToggleButton.addEventListener('click', () => {
             document.body.classList.toggle('dark-mode');
             let theme = 'light';
@@ -2158,3 +2419,4 @@
 
 </body>
 </html>
+y
