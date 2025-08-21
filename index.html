@@ -425,8 +425,9 @@
         .preview-table input[type="checkbox"] {
             margin-right: 10px;
         }
-
-        .reloj-container {
+        
+        /* Contenedor del reloj y controles de color */
+        .reloj-y-controles-container {
             text-align: center;
             margin-bottom: 20px;
             display: flex;
@@ -435,7 +436,52 @@
             align-items: center;
             gap: 10px;
         }
+
+        .reloj-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+        }
         
+        /* Controles de color al lado del reloj */
+        .color-controls-top {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .color-controls-top input[type="color"] {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            border: 1px solid var(--neutral-color);
+            width: 35px;
+            height: 35px;
+            background-color: transparent;
+            cursor: pointer;
+            padding: 0;
+            border-radius: 50%;
+        }
+
+        .color-controls-top button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            cursor: pointer;
+            width: 35px;
+            height: 35px;
+            padding: 0;
+            border-radius: 50%;
+            font-size: 1.2em;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        /* Fin de estilos para los controles de color */
+
         .fecha {
             font-size: 1.2em;
             font-weight: 500;
@@ -658,7 +704,7 @@
             gap: 5px;
             padding: 3px 8px;
             background-color: var(--hover-bg-color);
-            border-radius: 5px;
+            border-radius: 5-px;
             cursor: pointer;
             transition: background-color 0.2s ease;
             font-size: 0.8em;
@@ -1351,10 +1397,6 @@
                 <div class="form-group" style="margin-top: 10px;">
                     <button id="btn-agregar-croupier-tabla">Agregar seleccionados al Horario</button>
                 </div>
-                <div class="form-group">
-                    <input type="color" id="color-picker" value="#3498db">
-                    <button id="btn-aplicar-color">Aplicar Color</button>
-                </div>
             </div>
         </div>
 
@@ -1374,11 +1416,16 @@
 
     </div>
 
-    <div class="reloj-container">
+    <div class="reloj-y-controles-container">
         <div id="fecha-actual" class="fecha"></div>
-        <div id="reloj-digital" class="reloj"></div>
+        <div class="reloj-container">
+            <div id="reloj-digital" class="reloj"></div>
+            <div class="color-controls-top" id="color-controls-top">
+                <input type="color" id="color-picker" value="#3498db">
+                <button id="btn-aplicar-color" title="Aplicar color a seleccionados">🎨</button>
+            </div>
+        </div>
     </div>
-
 
     <div class="horario-container">
         <div class="horario-tabla">
@@ -1722,6 +1769,7 @@
             thCroupier.appendChild(selectAll);
             thCroupier.innerHTML+=` Nombre y Salida <span id="contador-croupiers-tabla" class="contador-badge">${croupiersData.length}</span>`;
             thead.appendChild(thCroupier);
+            
             const thCrono=document.createElement('th');
             thCrono.className='crono-header';
             thCrono.textContent='Crono.';
@@ -2219,8 +2267,21 @@
         function borrarSoloCroupiers(){if(confirm('¿Estás seguro de que quieres borrar SOLAMENTE a los croupiers de la tabla de horarios? La lista de horarios y mesas se mantendrá.')){croupiersData=[];datosRelevos={};croupierColors={};croupierSalidas={};stopAllTimers(true);renderizarHorario();alert('Los croupiers han sido eliminados de la tabla de horarios.');}}
         function borrarCroupierPre(){if(!croupierSeleccionadoPre)return;if(confirm(`¿Estás seguro de que quieres eliminar a ${croupierSeleccionadoPre} de la base de datos de croupiers? Esta acción es permanente.`)){croupiersEnEspera=croupiersEnEspera.filter(c=>c.nombreCompleto!==croupierSeleccionadoPre);const croupierEnTablaIndex=croupiersData.findIndex(c=>c.nombreCompleto===croupierSeleccionadoPre);if(croupierEnTablaIndex!==-1){borrarCroupier(croupierSeleccionadoPre);}
         croupierSeleccionadoPre=null;renderizarCroupiersPreTable('', currentContratoFilter);croupierDetailsContainer.style.display='none';guardarDatos();}}
-        function aplicarColorACroupiers(){const color=colorPicker.value;const checkboxes=document.querySelectorAll('.croupier-checkbox:checked');if(checkboxes.length===0){alert('Selecciona al menos un croupier para aplicar el color.');return;}
-        checkboxes.forEach(checkbox=>{croupierColors[checkbox.value]=color;});renderizarHorario();}
+        
+        function aplicarColorACroupiers(){
+            const colorPicker = document.getElementById('color-picker');
+            const color = colorPicker.value;
+            const checkboxes=document.querySelectorAll('.croupier-checkbox:checked');
+            if(checkboxes.length===0){
+                alert('Selecciona al menos un croupier para aplicar el color.');
+                return;
+            }
+            checkboxes.forEach(checkbox=>{
+                croupierColors[checkbox.value]=color;
+            });
+            renderizarHorario();
+        }
+        
         function generarAlias(nombreCompleto){const partes=nombreCompleto.split(' ').filter(p=>p.length>0);if(partes.length<2){return nombreCompleto.substring(0,10);}
         const nombre=partes[0];const inicialApellido=partes[1][0];return`${nombre} ${inicialApellido}.`;}
         
