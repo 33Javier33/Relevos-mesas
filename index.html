@@ -51,7 +51,6 @@
             font-size: 14px; /* Tamaño base para móviles */
         }
 
-        /* --- INICIO: ESTILOS PARA EL NUEVO BOTÓN --- */
         .header-nav-link {
             display: inline-block;
             margin-top: 15px;
@@ -64,11 +63,6 @@
             transition: background-color 0.3s ease;
             font-size: 0.9em;
         }
-
-        .header-nav-link:hover {
-            background-color: var(--primary-hover-color);
-        }
-        /* --- FIN: ESTILOS PARA EL NUEVO BOTÓN --- */
 
         .contador-badge {
             background-color: var(--primary-color);
@@ -395,10 +389,8 @@
 </head>
 <body>
     <div class="reloj-y-controles-container">
-        <!-- --- INICIO: BOTÓN AÑADIDO --- -->
         <h1>Horario de Relevos</h1>
         <a href="/base/index.html" class="header-nav-link">Ir al Panel de Gestión</a>
-        <!-- --- FIN: BOTÓN AÑADIDO --- -->
         <div id="fecha-actual" class="fecha"></div>
         <div class="reloj-container">
             <div id="reloj-digital" class="reloj">00:00:00</div>
@@ -678,7 +670,9 @@
                 thCrono.textContent = 'Crono.';
                 DOM.thead.appendChild(thCrono);
                 
-                horarios.sort().forEach(hora => {
+                // --- INICIO: LÓGICA DE ORDEN CORREGIDA ---
+                horarios.sort(sortHorarios).forEach(hora => {
+                // --- FIN: LÓGICA DE ORDEN CORREGIDA ---
                     const th = document.createElement('th');
                     th.dataset.horario = hora;
                     const contentDiv = document.createElement('div');
@@ -938,7 +932,9 @@
 
             function llenarSelectorDescansoManual() {
                 DOM.selectCroupierDescanso.innerHTML = '';
-                const sortedHorarios = [...horarios].sort();
+                // --- INICIO: LÓGICA DE ORDEN CORREGIDA ---
+                const sortedHorarios = [...horarios].sort(sortHorarios);
+                // --- FIN: LÓGICA DE ORDEN CORREGIDA ---
                 const currentIndex = sortedHorarios.indexOf(celdaActiva.horario);
                 
                 croupiersData.forEach(c => {
@@ -1094,8 +1090,9 @@
 
                     let lastActivity = null;
                     let lastActivityTime = null;
-
-                    const sortedHorarios = [...horarios].sort();
+                    // --- INICIO: LÓGICA DE ORDEN CORREGIDA ---
+                    const sortedHorarios = [...horarios].sort(sortHorarios);
+                    // --- FIN: LÓGICA DE ORDEN CORREGIDA ---
                     for (const horario of sortedHorarios) {
                         if (horario <= currentTimeString) {
                             if (datosRelevos[croupier] && datosRelevos[croupier][horario]) {
@@ -1208,6 +1205,26 @@
             }
 
             // --- FUNCIONES UTILITARIAS ---
+            // --- INICIO: NUEVA FUNCIÓN PARA ORDENAR HORAS ---
+            function sortHorarios(a, b) {
+                // Trata las horas de la madrugada (ej. 00:00 a 05:59) como si fueran del día siguiente para ordenarlas correctamente
+                let aHour = parseInt(a.split(':')[0], 10);
+                let bHour = parseInt(b.split(':')[0], 10);
+
+                // Si la hora es menor a 6, le sumamos 24 para que sea mayor que las horas de la noche (ej. 23)
+                if (aHour < 6) aHour += 24;
+                if (bHour < 6) bHour += 24;
+
+                if (aHour < bHour) return -1;
+                if (aHour > bHour) return 1;
+
+                // Si las horas son iguales, compara los minutos
+                let aMin = parseInt(a.split(':')[1], 10);
+                let bMin = parseInt(b.split(':')[1], 10);
+                return aMin - bMin;
+            }
+            // --- FIN: NUEVA FUNCIÓN PARA ORDENAR HORAS ---
+
             function generarAlias(nombre) {
                 const partes = nombre.split(' ');
                 return partes.length > 1 ? `${partes[0]} ${partes[1][0]}.` : nombre;
