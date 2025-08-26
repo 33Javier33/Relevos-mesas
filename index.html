@@ -1088,43 +1088,45 @@
                     const croupier = croupierObj.nombreCompleto;
                     const isTimerRunning = cronometroIntervals.hasOwnProperty(croupier);
 
-                    // --- INICIO: LÓGICA DE CRONÓMETRO CORREGIDA ---
-                    let currentActivity = null;
-                    let currentActivityTime = null;
+                    // --- INICIO: LÓGICA DE CRONÓMETRO REESTRUCTURADA ---
+                    let lastAction = null;
+                    let lastActionTime = null;
                     const sortedHorarios = [...horarios].sort(sortHorarios);
 
-                    for (const horario of sortedHorarios) {
+                    // 1. Encontrar la última acción DEFINIDA del croupier hasta la hora actual.
+                    // Se itera hacia atrás para encontrar la asignación más reciente.
+                    for (let i = sortedHorarios.length - 1; i >= 0; i--) {
+                        const horario = sortedHorarios[i];
                         if (horario <= currentTimeString) {
-                            // Si hay una entrada de horario, comprobamos si el croupier tiene una actividad asignada.
                             if (datosRelevos[croupier] && datosRelevos[croupier][horario]) {
-                                // Si tiene actividad, la guardamos como la actividad actual.
-                                currentActivity = datosRelevos[croupier][horario].actividad;
-                                currentActivityTime = horario;
-                            } else {
-                                // Si el horario existe pero el croupier no tiene nada asignado (hueco libre),
-                                // reseteamos su actividad. Esto es clave para que el cronómetro se detenga.
-                                currentActivity = null;
+                                lastAction = datosRelevos[croupier][horario].actividad;
+                                lastActionTime = horario;
+                                break; // Encontramos la última acción, salimos del bucle.
                             }
-                        } else {
-                            // Si el horario es futuro, dejamos de buscar.
-                            break;
                         }
                     }
 
-                    const isWorkActivity = currentActivity === 'releva' || currentActivity === 'ayudante-pagador';
+                    // 2. Decidir qué hacer basándose en la última acción encontrada.
+                    const isWorkAction = lastAction === 'releva' || lastAction === 'ayudante-pagador';
 
-                    // Si la actividad actual es de trabajo y el cronómetro está parado, lo iniciamos.
-                    if (isWorkActivity && !isTimerRunning) {
-                        const [h, m] = currentActivityTime.split(':').map(Number);
+                    // Si la última acción fue de trabajo y el cronómetro está parado, iniciarlo.
+                    if (isWorkAction && !isTimerRunning) {
+                        const [h, m] = lastActionTime.split(':').map(Number);
                         const startTime = new Date(fechaVisible);
                         startTime.setHours(h, m, 0, 0);
                         iniciarCronometro(croupier, startTime.getTime());
                     } 
-                    // Si la actividad NO es de trabajo (descanso, hueco libre) y el cronómetro está corriendo, lo detenemos.
-                    else if (!isWorkActivity && isTimerRunning) {
+                    // Si la última acción fue un descanso y el cronómetro está corriendo, detenerlo.
+                    else if (lastAction === 'descanso' && isTimerRunning) {
                         detenerCronometro(croupier, true);
                     }
-                    // --- FIN: LÓGICA DE CRONÓMETRO CORREGIDA ---
+                    // Si no hay ninguna acción definida para el croupier (nunca ha empezado)
+                    // y por alguna razón el cronómetro está corriendo, lo detenemos.
+                    else if (lastAction === null && isTimerRunning) {
+                        detenerCronometro(croupier, true);
+                    }
+                    // En cualquier otro caso (trabajando y crono corriendo, o en descanso y crono parado), no hacemos nada.
+                    // --- FIN: LÓGICA DE CRONÓMETRO REESTRUCTURADA ---
                 });
 
                 const isWarning = croupiersData.some(c => {
@@ -1282,7 +1284,7 @@
 
                 document.getElementById('relevo-modal').addEventListener('click', (e) => {
                     if (e.target.classList.contains('mesa-item')) {
-                        const targetList = e.target.parentElement.id === 'mesas-disponibles' ? 'mesas-seleccionadas' : 'mesas-disponibles';
+                        const targetList = e.target.parentElement.id === 'mesas-disponibles' ? 'mesas-seleccionadas' : 'mesas-seleccionadas';
                         document.getElementById(targetList).appendChild(e.target);
                     }
                 });
