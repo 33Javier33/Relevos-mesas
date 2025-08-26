@@ -265,6 +265,10 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            cursor: grab; /* --- AÑADIDO: Indica que es movible --- */
+        }
+        .mesa-tag:active {
+            cursor: grabbing;
         }
 
         .delete-mesa {
@@ -280,6 +284,27 @@
             font-weight: bold;
             margin-left: 8px;
         }
+        
+        /* --- AÑADIDO: Estilos para el formulario de edición --- */
+        #croupier-details-container .form-group {
+            margin-bottom: 10px;
+        }
+        #croupier-details-container .edit-juegos-list {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            padding: 5px;
+            border-radius: 5px;
+        }
+        #croupier-details-container .edit-juegos-list label {
+             display: block;
+        }
+        #croupier-details-container .edit-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
 
         /* Modal Styles */
         .modal {
@@ -393,7 +418,7 @@
                     </table>
                 </div>
                 <div id="croupier-details-container" style="margin-top: 15px; display: none;">
-                    <!-- Los detalles se llenarán con JS -->
+                    <!-- El formulario de edición se generará aquí con JS -->
                 </div>
             </div>
 
@@ -404,7 +429,9 @@
                     <input type="text" id="nueva-mesa-input" placeholder="ID de Mesa">
                     <button id="btn-agregar-mesa">Agregar Mesa</button>
                 </div>
-                <div id="mesas-list" class="mesa-list"></div>
+                <div id="mesas-list" class="mesa-list">
+                    <!-- Las mesas se generarán aquí -->
+                </div>
             </div>
         </div>
     </div>
@@ -424,6 +451,9 @@
     <footer>
         CarlosPN Interactive®
     </footer>
+    
+    <!-- AÑADIDO: Script de SortableJS para arrastrar y soltar -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -490,7 +520,6 @@
                 localStorage.setItem('croupiersEnEspera', JSON.stringify(croupiersEnEspera));
                 localStorage.setItem('mesasDeJuego', JSON.stringify(mesasDeJuego));
                 localStorage.setItem('juegosMaestro', JSON.stringify(juegosMaestro));
-                // Dispara un evento de almacenamiento para notificar a otras pestañas
                 window.dispatchEvent(new Event('storage'));
             }
 
@@ -530,7 +559,8 @@
                     seleccionarCroupierPre(croupierSeleccionadoPre);
                 }
             }
-
+            
+            // --- MODIFICADO: Genera el formulario de edición ---
             function seleccionarCroupierPre(nombreCompleto) {
                 croupierSeleccionadoPre = nombreCompleto;
                 const filas = DOM.croupierPreTableBody.querySelectorAll('tr');
@@ -538,14 +568,40 @@
                 
                 const croupier = croupiersEnEspera.find(c => c.nombreCompleto === nombreCompleto);
                 if (croupier) {
+                    // Generar checkboxes de juegos
+                    const juegosCheckboxes = juegosMaestro.map(juego => `
+                        <label>
+                            <input type="checkbox" value="${juego}" ${croupier.juegosQuePaga.includes(juego) ? 'checked' : ''}>
+                            ${juego}
+                        </label>
+                    `).join('');
+
                     DOM.croupierDetailsContainer.innerHTML = `
-                        <h4>Detalles de ${croupier.nombreCompleto}</h4>
-                        <p><strong>Contrato:</strong> <span style="text-transform: capitalize;">${croupier.contrato}</span></p>
-                        <p><strong>Juegos:</strong> ${croupier.juegosQuePaga.join(', ') || 'Ninguno'}</p>
-                        <button id="btn-eliminar-croupier-pre" class="danger">Eliminar de la Base de Datos</button>
+                        <h4>Editar a ${croupier.nombreCompleto}</h4>
+                        <div class="form-group">
+                            <label for="edit-croupier-name">Nombre:</label>
+                            <input type="text" id="edit-croupier-name" value="${croupier.nombreCompleto}">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-croupier-contrato">Contrato:</label>
+                            <select id="edit-croupier-contrato">
+                                <option value="planta" ${croupier.contrato === 'planta' ? 'selected' : ''}>Planta</option>
+                                <option value="partime" ${croupier.contrato === 'partime' ? 'selected' : ''}>Part-Time</option>
+                                <option value="llamado" ${croupier.contrato === 'llamado' ? 'selected' : ''}>Llamado</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Juegos:</label>
+                            <div class="edit-juegos-list">${juegosCheckboxes}</div>
+                        </div>
+                        <div class="edit-actions">
+                            <button id="btn-guardar-croupier-edit" class="success">Guardar Cambios</button>
+                            <button id="btn-eliminar-croupier-pre" class="danger">Eliminar</button>
+                        </div>
                     `;
                     DOM.croupierDetailsContainer.style.display = 'block';
                     document.getElementById('btn-eliminar-croupier-pre').addEventListener('click', borrarCroupierPre);
+                    document.getElementById('btn-guardar-croupier-edit').addEventListener('click', guardarCambiosCroupier);
                 }
             }
 
@@ -555,6 +611,7 @@
                     const mesaTag = document.createElement('div');
                     mesaTag.className = 'mesa-tag';
                     mesaTag.textContent = mesa;
+                    mesaTag.dataset.id = mesa; // Data attribute para identificar
                     const deleteBtn = document.createElement('button');
                     deleteBtn.className = 'delete-mesa';
                     deleteBtn.textContent = '×';
@@ -601,26 +658,85 @@
                 renderizarCroupiersPreTable(currentContratoFilter);
             }
 
+            // --- AÑADIDO: Función para guardar los cambios del croupier ---
+            function guardarCambiosCroupier() {
+                if (!croupierSeleccionadoPre) return;
+
+                const originalName = croupierSeleccionadoPre;
+                const croupierIndex = croupiersEnEspera.findIndex(c => c.nombreCompleto === originalName);
+                if (croupierIndex === -1) return;
+
+                const nuevoNombre = document.getElementById('edit-croupier-name').value.trim();
+                const nuevoContrato = document.getElementById('edit-croupier-contrato').value;
+                const nuevosJuegos = Array.from(DOM.croupierDetailsContainer.querySelectorAll('.edit-juegos-list input:checked')).map(cb => cb.value);
+
+                if (!nuevoNombre) {
+                    showModal('Error', 'El nombre no puede estar vacío.');
+                    return;
+                }
+
+                // Verificar si el nuevo nombre ya existe (y no es el croupier actual)
+                if (nuevoNombre.toLowerCase() !== originalName.toLowerCase() && croupiersEnEspera.some(c => c.nombreCompleto.toLowerCase() === nuevoNombre.toLowerCase())) {
+                    showModal('Error', 'Ya existe otro croupier con ese nombre.');
+                    return;
+                }
+
+                // Actualizar en la base de datos (croupiersEnEspera)
+                croupiersEnEspera[croupierIndex] = {
+                    nombreCompleto: nuevoNombre,
+                    contrato: nuevoContrato,
+                    juegosQuePaga: nuevosJuegos
+                };
+
+                // Actualizar también en la tabla de horarios si el croupier estaba allí
+                let croupiersTabla = JSON.parse(localStorage.getItem('croupiersData')) || [];
+                const croupierEnTablaIndex = croupiersTabla.findIndex(c => c.nombreCompleto === originalName);
+                if (croupierEnTablaIndex > -1) {
+                    croupiersTabla[croupierEnTablaIndex] = { ...croupiersEnEspera[croupierIndex] };
+                    localStorage.setItem('croupiersData', JSON.stringify(croupiersTabla));
+
+                    // Si el nombre cambió, hay que actualizar las claves en datosRelevos, etc.
+                    if (originalName !== nuevoNombre) {
+                        ['datosRelevos', 'croupierColors', 'croupierSalidas', 'cronometroState'].forEach(key => {
+                            let data = JSON.parse(localStorage.getItem(key)) || {};
+                            if (data[originalName]) {
+                                data[nuevoNombre] = data[originalName];
+                                delete data[originalName];
+                                localStorage.setItem(key, JSON.stringify(data));
+                            }
+                        });
+                    }
+                }
+                
+                croupierSeleccionadoPre = nuevoNombre; // Actualizar el nombre seleccionado
+                guardarDatos();
+                renderizarCroupiersPreTable(currentContratoFilter); // Re-renderizar para reflejar cambios
+                showModal('Éxito', 'Los datos del croupier se han actualizado.');
+            }
+
             function borrarCroupierPre() {
                 if (!croupierSeleccionadoPre) return;
-                showModal(
-                    'Eliminar Croupier',
-                    `¿Estás seguro de que quieres eliminar a ${croupierSeleccionadoPre} de la base de datos? Se eliminará también de la tabla de horarios si está presente.`,
-                    'confirm',
-                    () => {
-                        croupiersEnEspera = croupiersEnEspera.filter(c => c.nombreCompleto !== croupierSeleccionadoPre);
-                        
-                        // Notificar a la otra página que elimine al croupier de la tabla principal
-                        let croupiersTabla = JSON.parse(localStorage.getItem('croupiersData')) || [];
-                        croupiersTabla = croupiersTabla.filter(c => c.nombreCompleto !== croupierSeleccionadoPre);
-                        localStorage.setItem('croupiersData', JSON.stringify(croupiersTabla));
+                showModal('Eliminar Croupier', `¿Estás seguro de que quieres eliminar a ${croupierSeleccionadoPre} de la base de datos? Se eliminará también de la tabla de horarios si está presente.`, 'confirm', () => {
+                    const originalName = croupierSeleccionadoPre;
+                    croupiersEnEspera = croupiersEnEspera.filter(c => c.nombreCompleto !== originalName);
+                    
+                    let croupiersTabla = JSON.parse(localStorage.getItem('croupiersData')) || [];
+                    croupiersTabla = croupiersTabla.filter(c => c.nombreCompleto !== originalName);
+                    localStorage.setItem('croupiersData', JSON.stringify(croupiersTabla));
 
-                        croupierSeleccionadoPre = null;
-                        DOM.croupierDetailsContainer.style.display = 'none';
-                        guardarDatos();
-                        renderizarCroupiersPreTable(currentContratoFilter);
-                    }
-                );
+                    ['datosRelevos', 'croupierColors', 'croupierSalidas', 'cronometroState'].forEach(key => {
+                        let data = JSON.parse(localStorage.getItem(key)) || {};
+                        if (data[originalName]) {
+                            delete data[originalName];
+                            localStorage.setItem(key, JSON.stringify(data));
+                        }
+                    });
+
+                    croupierSeleccionadoPre = null;
+                    DOM.croupierDetailsContainer.style.display = 'none';
+                    guardarDatos();
+                    renderizarCroupiersPreTable(currentContratoFilter);
+                });
             }
 
             function agregarJuegoMaestro() {
@@ -648,23 +764,17 @@
             }
 
             function borrarMesa(mesaABorrar) {
-                showModal(
-                    'Eliminar Mesa',
-                    `¿Estás seguro de que quieres eliminar la mesa "${mesaABorrar}"?`,
-                    'confirm',
-                    () => {
-                        mesasDeJuego = mesasDeJuego.filter(m => m !== mesaABorrar);
-                        guardarDatos();
-                        renderizarMesasList();
-                    }
-                );
+                showModal('Eliminar Mesa', `¿Estás seguro de que quieres eliminar la mesa "${mesaABorrar}"?`, 'confirm', () => {
+                    mesasDeJuego = mesasDeJuego.filter(m => m !== mesaABorrar);
+                    guardarDatos();
+                    renderizarMesasList();
+                });
             }
             
             // --- GESTIÓN DE DATOS GENERAL ---
             function borrarTodosLosDatos() {
                 showModal('Borrar TODO', '¿Estás seguro? Esta acción es irreversible y borrará TODOS los datos.', 'confirm', () => {
                     localStorage.clear();
-                    // Recargar para aplicar estado limpio
                     location.reload();
                 });
             }
@@ -675,7 +785,6 @@
                     localStorage.removeItem('datosRelevos');
                     localStorage.removeItem('horarioColors');
                     localStorage.removeItem('fechaGuardada');
-                    // Dispara evento para que la otra página se actualice
                     window.dispatchEvent(new Event('storage'));
                 });
             }
@@ -789,6 +898,16 @@
                 });
                 DOM.customAlertCancelBtn.addEventListener('click', () => {
                     DOM.customAlertModal.style.display = 'none';
+                });
+
+                // --- AÑADIDO: Inicializar SortableJS para las mesas ---
+                new Sortable(DOM.mesasListDiv, {
+                    animation: 150,
+                    onEnd: (evt) => {
+                        const nuevaListaOrdenada = Array.from(DOM.mesasListDiv.children).map(tag => tag.dataset.id);
+                        mesasDeJuego = nuevaListaOrdenada;
+                        guardarDatos();
+                    }
                 });
             }
 
