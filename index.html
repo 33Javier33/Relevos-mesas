@@ -670,9 +670,7 @@
                 thCrono.textContent = 'Crono.';
                 DOM.thead.appendChild(thCrono);
                 
-                // --- INICIO: LÓGICA DE ORDEN CORREGIDA ---
                 horarios.sort(sortHorarios).forEach(hora => {
-                // --- FIN: LÓGICA DE ORDEN CORREGIDA ---
                     const th = document.createElement('th');
                     th.dataset.horario = hora;
                     const contentDiv = document.createElement('div');
@@ -827,7 +825,19 @@
             function borrarHorario(hora) {
                 showModal('Confirmar', `¿Eliminar el horario ${hora} y todas sus asignaciones?`, 'confirm', () => {
                     horarios = horarios.filter(h => h !== hora);
-                    Object.keys(datosRelevos).forEach(croupier => delete datosRelevos[croupier][hora]);
+                    
+                    // --- INICIO: CORRECCIÓN ---
+                    // Se itera sobre los croupiers para borrar la asignación de ese horario.
+                    // Se añade una comprobación para asegurar que el objeto del croupier (datosRelevos[croupier]) 
+                    // existe y es un objeto antes de intentar borrar una propiedad. Esto evita errores si
+                    // los datos están en un estado inesperado.
+                    Object.keys(datosRelevos).forEach(croupier => {
+                        if (datosRelevos[croupier] && typeof datosRelevos[croupier] === 'object') {
+                            delete datosRelevos[croupier][hora];
+                        }
+                    });
+                    // --- FIN: CORRECCIÓN ---
+
                     delete horarioColors[hora];
                     guardarDatos();
                     renderizarHorario();
@@ -932,9 +942,7 @@
 
             function llenarSelectorDescansoManual() {
                 DOM.selectCroupierDescanso.innerHTML = '';
-                // --- INICIO: LÓGICA DE ORDEN CORREGIDA ---
                 const sortedHorarios = [...horarios].sort(sortHorarios);
-                // --- FIN: LÓGICA DE ORDEN CORREGIDA ---
                 const currentIndex = sortedHorarios.indexOf(celdaActiva.horario);
                 
                 croupiersData.forEach(c => {
@@ -1090,9 +1098,7 @@
 
                     let lastActivity = null;
                     let lastActivityTime = null;
-                    // --- INICIO: LÓGICA DE ORDEN CORREGIDA ---
                     const sortedHorarios = [...horarios].sort(sortHorarios);
-                    // --- FIN: LÓGICA DE ORDEN CORREGIDA ---
                     for (const horario of sortedHorarios) {
                         if (horario <= currentTimeString) {
                             if (datosRelevos[croupier] && datosRelevos[croupier][horario]) {
@@ -1205,25 +1211,17 @@
             }
 
             // --- FUNCIONES UTILITARIAS ---
-            // --- INICIO: NUEVA FUNCIÓN PARA ORDENAR HORAS ---
             function sortHorarios(a, b) {
-                // Trata las horas de la madrugada (ej. 00:00 a 05:59) como si fueran del día siguiente para ordenarlas correctamente
                 let aHour = parseInt(a.split(':')[0], 10);
                 let bHour = parseInt(b.split(':')[0], 10);
-
-                // Si la hora es menor a 6, le sumamos 24 para que sea mayor que las horas de la noche (ej. 23)
                 if (aHour < 6) aHour += 24;
                 if (bHour < 6) bHour += 24;
-
                 if (aHour < bHour) return -1;
                 if (aHour > bHour) return 1;
-
-                // Si las horas son iguales, compara los minutos
                 let aMin = parseInt(a.split(':')[1], 10);
                 let bMin = parseInt(b.split(':')[1], 10);
                 return aMin - bMin;
             }
-            // --- FIN: NUEVA FUNCIÓN PARA ORDENAR HORAS ---
 
             function generarAlias(nombre) {
                 const partes = nombre.split(' ');
