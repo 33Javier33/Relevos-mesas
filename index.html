@@ -51,6 +51,25 @@
             font-size: 14px; /* Tamaño base para móviles */
         }
 
+        /* --- INICIO: ESTILOS PARA EL NUEVO BOTÓN --- */
+        .header-nav-link {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 8px 16px;
+            background-color: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+            font-size: 0.9em;
+        }
+
+        .header-nav-link:hover {
+            background-color: var(--primary-hover-color);
+        }
+        /* --- FIN: ESTILOS PARA EL NUEVO BOTÓN --- */
+
         .contador-badge {
             background-color: var(--primary-color);
             color: white;
@@ -70,6 +89,10 @@
             justify-content: center;
             align-items: center;
             gap: 8px;
+            padding: 10px;
+            background-color: var(--surface-color);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px var(--shadow-color);
         }
 
         .reloj-container {
@@ -126,7 +149,7 @@
             font-size: 1rem;
             font-weight: 500;
             color: var(--text-secondary-color);
-            background-color: var(--surface-color);
+            background-color: var(--hover-bg-color);
             padding: 6px 15px;
             border-radius: 8px;
             cursor: pointer;
@@ -136,7 +159,7 @@
             font-size: 1.8rem;
             font-weight: bold;
             color: var(--text-color);
-            background-color: var(--surface-color);
+            background-color: var(--hover-bg-color);
             padding: 8px 15px;
             border-radius: 8px;
         }
@@ -372,6 +395,10 @@
 </head>
 <body>
     <div class="reloj-y-controles-container">
+        <!-- --- INICIO: BOTÓN AÑADIDO --- -->
+        <h1>Horario de Relevos</h1>
+        <a href="base.html" class="header-nav-link">Ir al Panel de Gestión</a>
+        <!-- --- FIN: BOTÓN AÑADIDO --- -->
         <div id="fecha-actual" class="fecha"></div>
         <div class="reloj-container">
             <div id="reloj-digital" class="reloj">00:00:00</div>
@@ -1289,10 +1316,13 @@
                     filter: '.croupier-row:not(.row-selected)',
                     preventOnFilter: false,
                     onEnd: (evt) => {
-                        const [movedItem] = croupiersData.splice(evt.oldIndex, 1);
-                        croupiersData.splice(evt.newIndex, 0, movedItem);
+                        const oldIndices = evt.oldIndicies.map(i => i.index).sort((a, b) => b - a);
+                        const itemsToMove = [];
+                        oldIndices.forEach(oldIndex => {
+                            itemsToMove.unshift(croupiersData.splice(oldIndex, 1)[0]);
+                        });
+                        croupiersData.splice(evt.newIndex, 0, ...itemsToMove);
                         guardarDatos();
-                        renderizarCuerpo();
                     }
                 });
             }
