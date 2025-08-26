@@ -825,19 +825,11 @@
             function borrarHorario(hora) {
                 showModal('Confirmar', `¿Eliminar el horario ${hora} y todas sus asignaciones?`, 'confirm', () => {
                     horarios = horarios.filter(h => h !== hora);
-                    
-                    // --- INICIO: CORRECCIÓN ---
-                    // Se itera sobre los croupiers para borrar la asignación de ese horario.
-                    // Se añade una comprobación para asegurar que el objeto del croupier (datosRelevos[croupier]) 
-                    // existe y es un objeto antes de intentar borrar una propiedad. Esto evita errores si
-                    // los datos están en un estado inesperado.
                     Object.keys(datosRelevos).forEach(croupier => {
                         if (datosRelevos[croupier] && typeof datosRelevos[croupier] === 'object') {
                             delete datosRelevos[croupier][hora];
                         }
                     });
-                    // --- FIN: CORRECCIÓN ---
-
                     delete horarioColors[hora];
                     guardarDatos();
                     renderizarHorario();
@@ -1096,30 +1088,43 @@
                     const croupier = croupierObj.nombreCompleto;
                     const isTimerRunning = cronometroIntervals.hasOwnProperty(croupier);
 
-                    let lastActivity = null;
-                    let lastActivityTime = null;
+                    // --- INICIO: LÓGICA DE CRONÓMETRO CORREGIDA ---
+                    let currentActivity = null;
+                    let currentActivityTime = null;
                     const sortedHorarios = [...horarios].sort(sortHorarios);
+
                     for (const horario of sortedHorarios) {
                         if (horario <= currentTimeString) {
+                            // Si hay una entrada de horario, comprobamos si el croupier tiene una actividad asignada.
                             if (datosRelevos[croupier] && datosRelevos[croupier][horario]) {
-                                lastActivity = datosRelevos[croupier][horario].actividad;
-                                lastActivityTime = horario;
+                                // Si tiene actividad, la guardamos como la actividad actual.
+                                currentActivity = datosRelevos[croupier][horario].actividad;
+                                currentActivityTime = horario;
+                            } else {
+                                // Si el horario existe pero el croupier no tiene nada asignado (hueco libre),
+                                // reseteamos su actividad. Esto es clave para que el cronómetro se detenga.
+                                currentActivity = null;
                             }
                         } else {
+                            // Si el horario es futuro, dejamos de buscar.
                             break;
                         }
                     }
 
-                    const isWorkActivity = lastActivity === 'releva' || lastActivity === 'ayudante-pagador';
+                    const isWorkActivity = currentActivity === 'releva' || currentActivity === 'ayudante-pagador';
 
+                    // Si la actividad actual es de trabajo y el cronómetro está parado, lo iniciamos.
                     if (isWorkActivity && !isTimerRunning) {
-                        const [h, m] = lastActivityTime.split(':').map(Number);
+                        const [h, m] = currentActivityTime.split(':').map(Number);
                         const startTime = new Date(fechaVisible);
                         startTime.setHours(h, m, 0, 0);
                         iniciarCronometro(croupier, startTime.getTime());
-                    } else if (lastActivity === 'descanso' && isTimerRunning) {
+                    } 
+                    // Si la actividad NO es de trabajo (descanso, hueco libre) y el cronómetro está corriendo, lo detenemos.
+                    else if (!isWorkActivity && isTimerRunning) {
                         detenerCronometro(croupier, true);
                     }
+                    // --- FIN: LÓGICA DE CRONÓMETRO CORREGIDA ---
                 });
 
                 const isWarning = croupiersData.some(c => {
