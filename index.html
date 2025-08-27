@@ -1083,43 +1083,56 @@
             function actualizarSistema() {
                 const now = new Date();
                 DOM.relojDigital.textContent = now.toTimeString().slice(0, 8);
-                const currentTimeString = now.toTimeString().slice(0, 5);
                 let isAnyWarning = false;
 
                 croupiersData.forEach(croupierObj => {
                     const croupier = croupierObj.nombreCompleto;
                     const isTimerRunning = cronometroIntervals.hasOwnProperty(croupier);
 
-                    // Lógica de Cronómetro
+                    // --- INICIO DE LA CORRECCIÓN CRONÓMETRO ---
                     let lastAction = null;
                     let lastActionTime = null;
-                    const sortedHorarios = [...horarios].sort(sortHorarios);
+                    let lastActionTimestamp = null;
 
-                    for (let i = sortedHorarios.length - 1; i >= 0; i--) {
-                        const horario = sortedHorarios[i];
-                        if (horario <= currentTimeString) {
-                            if (datosRelevos[croupier] && datosRelevos[croupier][horario]) {
-                                lastAction = datosRelevos[croupier][horario].actividad;
-                                lastActionTime = horario;
-                                break; 
+                    // Crear puntos de horario como objetos Date para manejar el cruce de medianoche
+                    const schedulePoints = horarios.sort(sortHorarios).map(hora => {
+                        const [h, m] = hora.split(':').map(Number);
+                        const scheduleDate = new Date(fechaVisible);
+                        scheduleDate.setHours(h, m, 0, 0);
+
+                        // Si el horario es de madrugada (ej. antes de las 6 AM),
+                        // se asume que pertenece al día siguiente del turno.
+                        if (h < 6) {
+                            scheduleDate.setDate(scheduleDate.getDate() + 1);
+                        }
+                        return { date: scheduleDate, timeString: hora };
+                    });
+
+                    // Encontrar el punto de horario más reciente que ya ha pasado
+                    for (const point of schedulePoints) {
+                        if (point.date <= now) {
+                            if (datosRelevos[croupier] && datosRelevos[croupier][point.timeString]) {
+                                lastActionTime = point.timeString;
+                                lastActionTimestamp = point.date.getTime();
+                                lastAction = datosRelevos[croupier][lastActionTime].actividad;
                             }
+                        } else {
+                            // Como la lista está ordenada, podemos detenernos al encontrar un horario futuro
+                            break;
                         }
                     }
 
                     const isWorkAction = lastAction === 'releva' || lastAction === 'ayudante-pagador';
 
                     if (isWorkAction && !isTimerRunning) {
-                        const [h, m] = lastActionTime.split(':').map(Number);
-                        const startTime = new Date(fechaVisible);
-                        startTime.setHours(h, m, 0, 0);
-                        iniciarCronometro(croupier, startTime.getTime());
-                    } else if (lastAction === 'descanso' && isTimerRunning) {
-                        detenerCronometro(croupier, true);
-                    } else if (lastAction === null && isTimerRunning) {
+                        iniciarCronometro(croupier, lastActionTimestamp);
+                    } else if (!isWorkAction && isTimerRunning) { // Se detiene si la última acción NO es de trabajo
                         detenerCronometro(croupier, true);
                     }
+                    // --- FIN DE LA CORRECCIÓN CRONÓMETRO ---
 
-                    // --- INICIO: LÓGICA DE ALERTA DE SALIDA (CORREGIDA) ---
+
+                    // Lógica de alerta de salida
                     const salidaTime = croupierSalidas[croupier];
                     const rowElement = document.querySelector(`tr[data-croupier="${croupier}"]`);
                     const salidaCardElement = rowElement ? rowElement.querySelector('.salida-card') : null;
@@ -1140,20 +1153,23 @@
                     if (shouldWarn) {
                         isAnyWarning = true;
                     }
-                    // --- FIN: LÓGICA DE ALERTA DE SALIDA ---
                 });
 
                 DOM.relojDigital.classList.toggle('warning-pulse', isAnyWarning);
             }
 
             function iniciarCronometro(croupier, startTime) {
+                if (!startTime) return; // Evitar iniciar si no hay una hora de inicio válida
                 if (cronometroIntervals[croupier]) clearInterval(cronometroIntervals[croupier]);
+                
                 cronometroStartTime[croupier] = startTime;
                 
                 const update = () => {
-                    const elapsed = new Date().getTime() - startTime;
-                    const formatted = new Date(elapsed).toISOString().slice(11, 19);
-                    actualizarDisplayCrono(croupier, formatted);
+                    const elapsed = new Date().getTime() - cronometroStartTime[croupier];
+                    if (elapsed >= 0) {
+                       const formatted = new Date(elapsed).toISOString().slice(11, 19);
+                       actualizarDisplayCrono(croupier, formatted);
+                    }
                 };
                 cronometroIntervals[croupier] = setInterval(update, 1000);
                 update();
