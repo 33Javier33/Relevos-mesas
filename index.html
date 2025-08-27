@@ -288,10 +288,23 @@
             padding: 2px 5px; background-color: var(--hover-bg-color);
             border-radius: 5px; cursor: pointer; font-size: 0.7rem; font-weight: bold;
         }
-        .salida-card.warning { background-color: var(--danger-color); color: white; animation: pulse-warning-card 1.5s infinite; }
-        @keyframes pulse-warning-card { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
         
         .croupier-row td:first-child { cursor: grab; }
+        
+        /* --- INICIO: ESTILOS DE ALERTA DE SALIDA RESTAURADOS --- */
+        .croupier-row td.salida-warning {
+            background-color: var(--danger-color) !important; /* Usar !important para sobreescribir otros colores de fondo */
+            animation: pulse 1.5s infinite;
+        }
+        .croupier-row td.salida-warning .croupier-name,
+        .croupier-row td.salida-warning .salida-time {
+            color: white !important;
+        }
+        .croupier-row td.salida-warning .salida-card {
+            background-color: var(--danger-hover-color);
+        }
+        /* --- FIN: ESTILOS DE ALERTA DE SALIDA RESTAURADOS --- */
+
 
         .relevo-cell {
             padding: 2px; border-radius: 4px; font-size: 0.65rem; font-weight: bold;
@@ -1089,26 +1102,21 @@
                     const croupier = croupierObj.nombreCompleto;
                     const isTimerRunning = cronometroIntervals.hasOwnProperty(croupier);
 
-                    // --- INICIO DE LA CORRECCIÓN CRONÓMETRO ---
+                    // Lógica de Cronómetro
                     let lastAction = null;
                     let lastActionTime = null;
                     let lastActionTimestamp = null;
 
-                    // Crear puntos de horario como objetos Date para manejar el cruce de medianoche
                     const schedulePoints = horarios.sort(sortHorarios).map(hora => {
                         const [h, m] = hora.split(':').map(Number);
                         const scheduleDate = new Date(fechaVisible);
                         scheduleDate.setHours(h, m, 0, 0);
-
-                        // Si el horario es de madrugada (ej. antes de las 6 AM),
-                        // se asume que pertenece al día siguiente del turno.
                         if (h < 6) {
                             scheduleDate.setDate(scheduleDate.getDate() + 1);
                         }
                         return { date: scheduleDate, timeString: hora };
                     });
 
-                    // Encontrar el punto de horario más reciente que ya ha pasado
                     for (const point of schedulePoints) {
                         if (point.date <= now) {
                             if (datosRelevos[croupier] && datosRelevos[croupier][point.timeString]) {
@@ -1117,7 +1125,6 @@
                                 lastAction = datosRelevos[croupier][lastActionTime].actividad;
                             }
                         } else {
-                            // Como la lista está ordenada, podemos detenernos al encontrar un horario futuro
                             break;
                         }
                     }
@@ -1126,40 +1133,46 @@
 
                     if (isWorkAction && !isTimerRunning) {
                         iniciarCronometro(croupier, lastActionTimestamp);
-                    } else if (!isWorkAction && isTimerRunning) { // Se detiene si la última acción NO es de trabajo
+                    } else if (!isWorkAction && isTimerRunning) {
                         detenerCronometro(croupier, true);
                     }
-                    // --- FIN DE LA CORRECCIÓN CRONÓMETRO ---
 
 
-                    // Lógica de alerta de salida
+                    // --- INICIO: LÓGICA DE ALERTA DE SALIDA RESTAURADA ---
                     const salidaTime = croupierSalidas[croupier];
                     const rowElement = document.querySelector(`tr[data-croupier="${croupier}"]`);
-                    const salidaCardElement = rowElement ? rowElement.querySelector('.salida-card') : null;
+                    const nameCell = rowElement ? rowElement.querySelector('td:first-child') : null;
 
                     let shouldWarn = false;
                     if (salidaTime) {
                         const [h, m] = salidaTime.split(':').map(Number);
                         const salidaDate = new Date(fechaVisible);
                         salidaDate.setHours(h, m, 0, 0);
+                        
+                        // Manejar cruce de medianoche para la hora de salida
+                        if (h < 6) {
+                           salidaDate.setDate(salidaDate.getDate() + 1);
+                        }
+
                         const diff = (salidaDate.getTime() - now.getTime()) / 60000; // Diferencia en minutos
                         shouldWarn = diff > 0 && diff <= 20;
                     }
 
-                    if (salidaCardElement) {
-                        salidaCardElement.classList.toggle('warning', shouldWarn);
+                    if (nameCell) {
+                        nameCell.classList.toggle('salida-warning', shouldWarn);
                     }
                     
                     if (shouldWarn) {
                         isAnyWarning = true;
                     }
+                    // --- FIN: LÓGICA DE ALERTA DE SALIDA RESTAURADA ---
                 });
 
                 DOM.relojDigital.classList.toggle('warning-pulse', isAnyWarning);
             }
 
             function iniciarCronometro(croupier, startTime) {
-                if (!startTime) return; // Evitar iniciar si no hay una hora de inicio válida
+                if (!startTime) return;
                 if (cronometroIntervals[croupier]) clearInterval(cronometroIntervals[croupier]);
                 
                 cronometroStartTime[croupier] = startTime;
@@ -1373,4 +1386,3 @@
     </script>
 </body>
 </html>
-
