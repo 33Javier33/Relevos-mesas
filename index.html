@@ -1357,13 +1357,23 @@
                     filter: '.croupier-row:not(.row-selected)',
                     preventOnFilter: false,
                     onEnd: (evt) => {
-                        const oldIndices = evt.oldIndicies.map(i => i.index).sort((a, b) => b - a);
-                        const itemsToMove = [];
-                        oldIndices.forEach(oldIndex => {
-                            itemsToMove.unshift(croupiersData.splice(oldIndex, 1)[0]);
+                        // --- INICIO DE LA CORRECCIÓN ---
+                        // Se reconstruye el array 'croupiersData' basándose en el nuevo orden del DOM.
+                        // Este método es más fiable porque lee el resultado final del arrastre,
+                        // asegurando que el orden se guarde correctamente sin importar
+                        // si se arrastra un solo elemento o múltiples elementos.
+                        
+                        // 1. Obtener el nuevo orden de nombres desde los atributos 'data-croupier' de las filas de la tabla.
+                        const newOrderNames = Array.from(DOM.tbody.children).map(tr => tr.dataset.croupier);
+                        
+                        // 2. Reordenar el array de datos 'croupiersData' para que coincida con el nuevo orden de nombres.
+                        croupiersData.sort((a, b) => {
+                            return newOrderNames.indexOf(a.nombreCompleto) - newOrderNames.indexOf(b.nombreCompleto);
                         });
-                        croupiersData.splice(evt.newIndex, 0, ...itemsToMove);
+
+                        // 3. Guardar el array ya reordenado en el localStorage.
                         guardarDatos();
+                        // --- FIN DE LA CORRECCIÓN ---
                     }
                 });
             }
