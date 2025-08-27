@@ -288,25 +288,10 @@
             padding: 2px 5px; background-color: var(--hover-bg-color);
             border-radius: 5px; cursor: pointer; font-size: 0.7rem; font-weight: bold;
         }
-        .salida-card.warning { background-color: #e74c3c; color: white; animation: pulse-warning-card 1.5s infinite; }
+        .salida-card.warning { background-color: var(--danger-color); color: white; animation: pulse-warning-card 1.5s infinite; }
         @keyframes pulse-warning-card { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
         
         .croupier-row td:first-child { cursor: grab; }
-        
-        /* --- AÑADIDO: Estilo para la celda del nombre en alerta de salida --- */
-        .croupier-row td.salida-warning {
-            background-color: var(--danger-color) !important; /* Usar !important para sobreescribir otros colores de fondo */
-            animation: pulse 1.5s infinite;
-        }
-        .croupier-row td.salida-warning .croupier-name,
-        .croupier-row td.salida-warning .salida-card,
-        .croupier-row td.salida-warning .salida-time {
-            color: white !important;
-        }
-        .croupier-row td.salida-warning .salida-card {
-            background-color: var(--danger-hover-color);
-        }
-
 
         .relevo-cell {
             padding: 2px; border-radius: 4px; font-size: 0.65rem; font-weight: bold;
@@ -1134,23 +1119,24 @@
                         detenerCronometro(croupier, true);
                     }
 
-                    // --- INICIO: LÓGICA DE ALERTA DE SALIDA (MODIFICADA) ---
+                    // --- INICIO: LÓGICA DE ALERTA DE SALIDA (CORREGIDA) ---
                     const salidaTime = croupierSalidas[croupier];
                     const rowElement = document.querySelector(`tr[data-croupier="${croupier}"]`);
-                    const nameCell = rowElement ? rowElement.querySelector('td:first-child') : null;
+                    const salidaCardElement = rowElement ? rowElement.querySelector('.salida-card') : null;
 
                     let shouldWarn = false;
                     if (salidaTime) {
                         const [h, m] = salidaTime.split(':').map(Number);
                         const salidaDate = new Date(fechaVisible);
                         salidaDate.setHours(h, m, 0, 0);
-                        const diff = (salidaDate.getTime() - now.getTime()) / 60000;
+                        const diff = (salidaDate.getTime() - now.getTime()) / 60000; // Diferencia en minutos
                         shouldWarn = diff > 0 && diff <= 20;
                     }
 
-                    if (nameCell) {
-                        nameCell.classList.toggle('salida-warning', shouldWarn);
+                    if (salidaCardElement) {
+                        salidaCardElement.classList.toggle('warning', shouldWarn);
                     }
+                    
                     if (shouldWarn) {
                         isAnyWarning = true;
                     }
@@ -1357,23 +1343,11 @@
                     filter: '.croupier-row:not(.row-selected)',
                     preventOnFilter: false,
                     onEnd: (evt) => {
-                        // --- INICIO DE LA CORRECCIÓN ---
-                        // Se reconstruye el array 'croupiersData' basándose en el nuevo orden del DOM.
-                        // Este método es más fiable porque lee el resultado final del arrastre,
-                        // asegurando que el orden se guarde correctamente sin importar
-                        // si se arrastra un solo elemento o múltiples elementos.
-                        
-                        // 1. Obtener el nuevo orden de nombres desde los atributos 'data-croupier' de las filas de la tabla.
                         const newOrderNames = Array.from(DOM.tbody.children).map(tr => tr.dataset.croupier);
-                        
-                        // 2. Reordenar el array de datos 'croupiersData' para que coincida con el nuevo orden de nombres.
                         croupiersData.sort((a, b) => {
                             return newOrderNames.indexOf(a.nombreCompleto) - newOrderNames.indexOf(b.nombreCompleto);
                         });
-
-                        // 3. Guardar el array ya reordenado en el localStorage.
                         guardarDatos();
-                        // --- FIN DE LA CORRECCIÓN ---
                     }
                 });
             }
