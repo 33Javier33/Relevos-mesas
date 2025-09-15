@@ -401,7 +401,7 @@
 <body>
     <div class="reloj-y-controles-container">
         <h1>Horario de Relevos</h1>
-        <a href="viewer.html" class="header-nav-link">Ir al Visualizador</a>
+        <a href="/base/index.html" class="header-nav-link">Ir al Panel de Gestión</a>
         <div id="fecha-actual" class="fecha"></div>
         <div class="reloj-container">
             <div id="reloj-digital" class="reloj">00:00:00</div>
@@ -572,9 +572,11 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // --- URLs DE GOOGLE APPS SCRIPT ---
             const URL_DEL_SCRIPT_DE_CROUPIERS = 'https://script.google.com/macros/s/AKfycbzjaL7OKe1_doagry1eo0w15vXOJy_-oEtWreLTzj1GoQgxyE8cDI7jTgWm7qqThB7M/exec';
             const URL_DEL_SCRIPT_DE_HORARIOS = 'https://script.google.com/macros/s/AKfycbx6-N3shrPlqQ5rOV2xkDL2cNIIp1lOYVfytv8L5lXC2hw_jqgmeJaiKyK9nrusMwS9vg/exec';
 
+            // --- DATOS Y ESTADO ---
             let croupiersData = [];
             let croupiersEnEspera = [];
             let horarios = [];
@@ -589,8 +591,10 @@
             let celdaActiva = { croupier: null, horario: null };
             let croupierCronoActivo = null;
             let croupierSalidaActivo = null;
+            let tooltipElementoActivo = null;
             let quickAddCurrentFilter = 'todos';
 
+            // --- SELECTORES DEL DOM ---
             const DOM = {
                 tbody: document.getElementById('sortable-tbody'),
                 thead: document.getElementById('tabla-horario').querySelector('thead tr'),
@@ -598,6 +602,7 @@
                 fechaDisplay: document.getElementById('fecha-actual'),
                 colorPicker: document.getElementById('color-picker'),
                 btnAplicarColor: document.getElementById('btn-aplicar-color'),
+                croupierTooltip: document.getElementById('croupier-tooltip'),
                 relevoModal: document.getElementById('relevo-modal'),
                 agregarHorarioModal: document.getElementById('agregar-horario-modal'),
                 salidaModal: document.getElementById('salida-modal'),
@@ -627,18 +632,27 @@
                 btnAddSelectedToTable: document.getElementById('btn-add-selected-to-table'),
             };
 
+            // --- CONEXIÓN CON GOOGLE SHEETS Y DATOS ---
+
             async function cargarDatos() {
+                // 1. Cargar la lista maestra de croupiers y mesas (esto no cambia)
                 try {
                     const responseCroupiers = await fetch(`${URL_DEL_SCRIPT_DE_CROUPIERS}?dataType=horarios`);
                     if (!responseCroupiers.ok) throw new Error(`Error de red: ${responseCroupiers.statusText}`);
                     const dataCroupiers = await responseCroupiers.json();
-                    croupiersEnEspera = dataCroupiers.croupiers || [];
-                    mesasDeJuego = dataCroupiers.mesas || [];
+                    if (dataCroupiers.croupiers && dataCroupiers.mesas) {
+                        croupiersEnEspera = dataCroupiers.croupiers;
+                        mesasDeJuego = dataCroupiers.mesas;
+                    } else {
+                        throw new Error("La respuesta del script de croupiers no tiene el formato esperado.");
+                    }
                 } catch (error) {
                     console.error('Error al cargar datos de croupiers:', error);
-                    showModal('Error Crítico', 'No se pudo cargar la lista de croupiers y mesas.');
+                    showModal('Error Crítico', 'No se pudo cargar la lista de croupiers y mesas. La aplicación no puede continuar.');
+                    return; // Detener si no podemos cargar lo básico
                 }
 
+                // 2. Cargar datos del horario para la fecha visible desde Google Sheets
                 const fechaISO = fechaVisible.toISOString().split('T')[0];
                 try {
                     const responseHorarios = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=load&fecha=${fechaISO}`);
@@ -646,60 +660,106 @@
                     const dataHorarios = await responseHorarios.json();
 
                     if (dataHorarios && dataHorarios.found) {
-                        croupiersData = (dataHorarios.croupiersEnTabla || []).map(nombre => {
+                        // Si se encontraron datos para la fecha, los cargamos
+                        croupiersData = dataHorarios.croupiersEnTabla.map(nombre => {
                             return croupiersEnEspera.find(c => c.nombreCompleto === nombre);
-                        }).filter(Boolean);
+                        }).filter(Boolean); // Filtramos por si algún croupier ya no existe
+                        
                         datosRelevos = dataHorarios.datosRelevos || {};
                         croupierColors = dataHorarios.croupierColors || {};
                         croupierSalidas = dataHorarios.croupierSalidas || {};
                         horarioColors = dataHorarios.horarioColors || {};
                         horarios = dataHorarios.horarios || [];
-                        cronometroStartTime = dataHorarios.cronometroStartTime || {};
-                        Object.keys(cronometroStartTime).forEach(croupier => {
-                            iniciarCronometro(croupier, cronometroStartTime[croupier], false);
-                        });
+                         console.log("Datos de horario cargados desde Google Sheets.");
                     } else {
-                        croupiersData = []; datosRelevos = {}; croupierColors = {}; croupierSalidas = {}; horarioColors = {}; horarios = []; cronometroStartTime = {};
+                        // Si no hay datos para la fecha, iniciamos con valores por defecto
+                        croupiersData = [];
+                        datosRelevos = {};
+                        croupierColors = {};
+                        croupierSalidas = {};
+                        horarioColors = {};
+                        horarios = [];
+                        console.log("No se encontraron datos para esta fecha en Google Sheets. Iniciando un nuevo horario.");
                     }
+
                 } catch (error) {
-                    console.error('Error al cargar datos de horarios:', error);
+                    console.error('Error al cargar datos de horarios desde Google Sheets:', error);
                     showModal('Error de Conexión', 'No se pudieron cargar los datos del horario. Se usará un horario en blanco.');
-                    croupiersData = []; datosRelevos = {}; croupierColors = {}; croupierSalidas = {}; horarioColors = {}; horarios = []; cronometroStartTime = {};
+                    // Reseteamos por si acaso
+                    croupiersData = []; datosRelevos = {}; croupierColors = {}; croupierSalidas = {}; horarioColors = {}; horarios = [];
                 }
+                
+                // Cargar estado de cronómetros y tema desde localStorage (son locales)
+                const cronoState = JSON.parse(localStorage.getItem('cronometroState')) || {};
+                cronometroStartTime = {};
+                for (const [croupier, time] of Object.entries(cronoState)) {
+                    iniciarCronometro(croupier, time);
+                }
+                const savedTheme = localStorage.getItem('theme') || 'light';
+                document.body.classList.toggle('dark-mode', savedTheme === 'dark');
+            }
+
+            function guardarDatos() {
+                // Guarda una copia local como respaldo inmediato
+                localStorage.setItem('croupiersData', JSON.stringify(croupiersData));
+                localStorage.setItem('datosRelevos', JSON.stringify(datosRelevos));
+                localStorage.setItem('croupierColors', JSON.stringify(croupierColors));
+                localStorage.setItem('croupierSalidas', JSON.stringify(croupierSalidas));
+                localStorage.setItem('horarioColors', JSON.stringify(horarioColors));
+                localStorage.setItem('horarios', JSON.stringify(horarios));
+                localStorage.setItem('cronometroState', JSON.stringify(cronometroStartTime));
+                localStorage.setItem('fechaGuardada', fechaVisible.toISOString().split('T')[0]);
+
+                // Envía los datos a Google Sheets
+                enviarDatosSheets();
             }
 
             async function enviarDatosSheets() {
+                if (!URL_DEL_SCRIPT_DE_HORARIOS) {
+                    console.warn("URL del script de horarios no definida. Los datos no se enviarán a Google Sheets.");
+                    return;
+                }
+
                 try {
+                    // Preparamos un objeto completo con todos los datos a guardar
                     const datosAEnviar = {
-                        action: 'save',
+                        action: 'save', // Le decimos al script que queremos guardar
                         fecha: fechaVisible.toISOString().split('T')[0],
                         horarios: horarios,
                         datosRelevos: datosRelevos,
-                        croupiersEnTabla: croupiersData.map(c => c.nombreCompleto),
+                        croupiersEnTabla: croupiersData.map(c => c.nombreCompleto), // Solo guardamos los nombres
                         croupierColors: croupierColors,
                         croupierSalidas: croupierSalidas,
                         horarioColors: horarioColors,
-                        cronometroStartTime: cronometroStartTime, // <-- AÑADIDO
                     };
 
                     const response = await fetch(URL_DEL_SCRIPT_DE_HORARIOS, {
                         method: 'POST',
-                        redirect: 'follow',
+                        // Redirección manual necesaria para scripts de Google
+                        redirect: 'follow', 
                         body: JSON.stringify(datosAEnviar),
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                        headers: {
+                            'Content-Type': 'text/plain;charset=utf-8', // Requerido por Google
+                        }
                     });
 
-                    if (response.type === 'opaque' || response.ok) {
-                        console.log("Solicitud de guardado enviada a Google Sheets.");
+                    // Google Apps Script suele devolver una redirección, por lo que una respuesta exitosa
+                    // puede no ser 'ok'. Verificamos el tipo de respuesta.
+                    if (response.type === 'opaque' || response.ok || response.status === 200) {
+                         console.log("Solicitud de guardado enviada a Google Sheets.");
                     } else {
-                        throw new Error(`Error al enviar datos: ${response.statusText}`);
+                         const errorText = await response.text();
+                         throw new Error(`Error al enviar datos: ${response.statusText} - ${errorText}`);
                     }
+
                 } catch (error) {
                     console.error("Error al conectar con Google Sheets para guardar:", error);
-                    showModal('Error de Guardado', 'No se pudieron guardar los cambios en Google Sheets.');
+                    showModal('Error de Guardado', 'No se pudieron guardar los cambios en Google Sheets. Se guardaron localmente.');
                 }
             }
 
+
+            // --- FUNCIONES DE RENDERIZADO (Sin cambios) ---
             function renderizarHorario() {
                 renderizarCabecera();
                 renderizarCuerpo();
@@ -709,60 +769,97 @@
 
             function renderizarCabecera() {
                 DOM.thead.innerHTML = '';
-                DOM.thead.innerHTML = `
-                    <th class="croupier-header"><input type="checkbox" id="select-all-croupiers"> Nombre <span class="contador-badge">${croupiersData.length}</span></th>
-                    <th class="crono-header">Crono.</th>
-                    ${horarios.sort(sortHorarios).map(hora => `<th data-horario="${hora}">
-                        <div class="horario-header-content">
-                            <span>${hora}</span>
-                            <button class="delete-time" data-hora="${hora}">×</button>
-                        </div>
-                    </th>`).join('')}
-                    <th class="agregar-horario-th"><span>+</span></th>
-                `;
+                const thCroupier = document.createElement('th');
+                thCroupier.className = 'croupier-header';
+                thCroupier.innerHTML = `<input type="checkbox" id="select-all-croupiers"> Nombre <span class="contador-badge">${croupiersData.length}</span>`;
+                DOM.thead.appendChild(thCroupier);
+                
+                const thCrono = document.createElement('th');
+                thCrono.className = 'crono-header';
+                thCrono.textContent = 'Crono.';
+                DOM.thead.appendChild(thCrono);
+                
+                horarios.sort(sortHorarios).forEach(hora => {
+                    const th = document.createElement('th');
+                    th.dataset.horario = hora;
+                    const contentDiv = document.createElement('div');
+                    contentDiv.className = 'horario-header-content';
+                    
+                    const editSpan = document.createElement('span');
+                    editSpan.textContent = hora;
+                    editSpan.addEventListener('click', () => editarHorario(hora, th));
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-time';
+                    deleteBtn.textContent = '×';
+                    deleteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        borrarHorario(hora);
+                    });
+
+                    contentDiv.appendChild(editSpan);
+                    contentDiv.appendChild(deleteBtn);
+                    th.appendChild(contentDiv);
+
+                    if (horarioColors[hora]) th.style.backgroundColor = horarioColors[hora];
+                    DOM.thead.appendChild(th);
+                });
+
+                const thAgregar = document.createElement('th');
+                thAgregar.className = 'agregar-horario-th';
+                thAgregar.innerHTML = '<span>+</span>';
+                DOM.thead.appendChild(thAgregar);
+
                 DOM.thead.querySelector('#select-all-croupiers')?.addEventListener('change', seleccionarTodosCroupiers);
                 DOM.thead.querySelector('.agregar-horario-th')?.addEventListener('click', abrirAgregarHorarioModal);
-                DOM.thead.querySelectorAll('.delete-time').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); borrarHorario(e.target.dataset.hora); }));
-                DOM.thead.querySelectorAll('.horario-header-content span').forEach(span => {
-                    const hora = span.parentElement.parentElement.dataset.horario;
-                    span.addEventListener('click', () => editarHorario(hora, span.parentElement.parentElement));
-                });
             }
 
             function renderizarCuerpo() {
                 DOM.tbody.innerHTML = '';
                 croupiersData.forEach(croupierObj => {
-                    if (!croupierObj) return;
+                    if (!croupierObj) return; // Salvaguarda por si un croupier no se encontró
                     const tr = document.createElement('tr');
                     tr.className = 'croupier-row';
                     tr.dataset.croupier = croupierObj.nombreCompleto;
-                    
+
+                    const tdNombre = document.createElement('td');
                     const croupierColor = croupierColors[croupierObj.nombreCompleto];
+                    if (croupierColor) tdNombre.style.backgroundColor = croupierColor;
+                    tdNombre.innerHTML = `
+                        <div class="croupier-cell-content">
+                            <button class="delete-croupier">×</button>
+                            <div>
+                                <input type="checkbox" class="croupier-checkbox">
+                                <span class="croupier-name">${generarAlias(croupierObj.nombreCompleto)}</span>
+                            </div>
+                            <div class="salida-card" data-croupier-salida="${croupierObj.nombreCompleto}">
+                                <span>⏰</span>
+                                <span class="salida-time">${croupierSalidas[croupierObj.nombreCompleto] || '--:--'}</span>
+                            </div>
+                        </div>`;
+                    tr.appendChild(tdNombre);
+
+                    const tdCrono = document.createElement('td');
+                    tdCrono.className = 'cronometro-cell';
+                    tdCrono.dataset.croupierCrono = croupierObj.nombreCompleto;
+                    tdCrono.innerHTML = `<div class="cronometro-display"><span class="timer">00:00:00</span></div>`;
                     
-                    tr.innerHTML = `
-                        <td style="${croupierColor ? `background-color:${croupierColor};` : ''}">
-                            <div class="croupier-cell-content">
-                                <button class="delete-croupier">×</button>
-                                <div>
-                                    <input type="checkbox" class="croupier-checkbox">
-                                    <span class="croupier-name">${generarAlias(croupierObj.nombreCompleto)}</span>
-                                </div>
-                                <div class="salida-card">
-                                    <span>⏰</span>
-                                    <span class="salida-time">${croupierSalidas[croupierObj.nombreCompleto] || '--:--'}</span>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="cronometro-cell" data-croupier-crono="${croupierObj.nombreCompleto}">
-                            <div class="cronometro-display ${cronometroIntervals[croupierObj.nombreCompleto] ? 'running' : ''}">
-                                <span class="timer">00:00:00</span>
-                            </div>
-                        </td>
-                        ${horarios.map(hora => {
-                            const relevoData = datosRelevos[croupierObj.nombreCompleto]?.[hora];
-                            return `<td data-croupier="${croupierObj.nombreCompleto}" data-horario="${hora}">${relevoData ? crearTarjetaRelevo(relevoData).outerHTML : ''}</td>`;
-                        }).join('')}
-                    `;
+                    if (cronometroIntervals[croupierObj.nombreCompleto]) {
+                        tdCrono.querySelector('.cronometro-display').classList.add('running');
+                    }
+
+                    tr.appendChild(tdCrono);
+
+                    horarios.forEach(hora => {
+                        const td = document.createElement('td');
+                        td.dataset.croupier = croupierObj.nombreCompleto;
+                        td.dataset.horario = hora;
+                        const relevoData = datosRelevos[croupierObj.nombreCompleto]?.[hora];
+                        if (relevoData) {
+                            td.appendChild(crearTarjetaRelevo(relevoData));
+                        }
+                        tr.appendChild(td);
+                    });
                     DOM.tbody.appendChild(tr);
                 });
                 
@@ -772,7 +869,12 @@
                     tr.querySelector('.salida-card').addEventListener('click', (e) => { e.stopPropagation(); abrirSalidaModal(nombre); });
                     tr.querySelector('.cronometro-cell').addEventListener('click', (e) => { e.stopPropagation(); openCronoModal(nombre); });
                     tr.querySelector('.croupier-checkbox').addEventListener('change', (e) => tr.classList.toggle('row-selected', e.target.checked));
-                    tr.querySelectorAll('td[data-horario]').forEach(td => td.addEventListener('click', () => abrirRelevoModal(nombre, td.dataset.horario)));
+                    tr.querySelector('.croupier-name').addEventListener('mouseenter', (e) => mostrarTooltip(nombre, e.target));
+                    tr.querySelector('.croupier-name').addEventListener('mouseleave', ocultarTooltip);
+
+                    tr.querySelectorAll('td[data-horario]').forEach(td => {
+                        td.addEventListener('click', () => abrirRelevoModal(nombre, td.dataset.horario));
+                    });
                 });
             }
 
@@ -780,17 +882,28 @@
                 const div = document.createElement('div');
                 div.className = 'relevo-cell';
                 switch (relevoData.actividad) {
-                    case 'releva': div.style.backgroundColor = relevoData.color; div.textContent = relevoData.mesas.join(' - '); break;
-                    case 'ayudante-pagador': div.classList.add('ayudante-pagador'); div.textContent = 'AYUD. PAGADOR'; break;
-                    case 'descanso': div.style.backgroundColor = '#f39c12'; div.textContent = 'DESCANSO'; break;
-                    default: div.style.backgroundColor = '#95a5a6'; div.textContent = 'S/A';
+                    case 'releva':
+                        div.style.backgroundColor = relevoData.color;
+                        div.textContent = relevoData.mesas.join(' - ');
+                        break;
+                    case 'ayudante-pagador':
+                        div.classList.add('ayudante-pagador');
+                        div.textContent = 'AYUD. PAGADOR';
+                        break;
+                    case 'descanso':
+                        div.style.backgroundColor = '#f39c12';
+                        div.textContent = 'DESCANSO';
+                        break;
+                    default:
+                        div.style.backgroundColor = '#95a5a6';
+                        div.textContent = 'S/A';
                 }
                 return div;
             }
 
             function renderQuickAddSelector() {
                 const available = croupiersEnEspera.filter(c => !croupiersData.some(cd => cd.nombreCompleto === c.nombreCompleto));
-                DOM.quickAddSelector.textContent = available.length > 0 ? `Agregar Croupier... (${available.length} disp.)` : 'No hay Croupiers';
+                DOM.quickAddSelector.textContent = available.length > 0 ? `Agregar Croupier... (${available.length} disp.)` : 'No hay Croupiers para agregar';
                 DOM.quickAddSelector.disabled = available.length === 0;
             }
 
@@ -798,107 +911,359 @@
                 DOM.fechaDisplay.textContent = fechaVisible.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             }
             
+            // --- LÓGICA DE LA TABLA (Sin Cambios) ---
             function seleccionarTodosCroupiers(event) {
-                DOM.tbody.querySelectorAll('.croupier-checkbox').forEach(cb => { cb.checked = event.target.checked; cb.closest('.croupier-row').classList.toggle('row-selected', event.target.checked); });
+                const isChecked = event.target.checked;
+                DOM.tbody.querySelectorAll('.croupier-checkbox').forEach(cb => {
+                    cb.checked = isChecked;
+                    cb.closest('.croupier-row').classList.toggle('row-selected', isChecked);
+                });
             }
 
             function borrarCroupier(nombre) {
                 showModal('Confirmar', `¿Eliminar a ${nombre} de la tabla?`, 'confirm', () => {
                     croupiersData = croupiersData.filter(c => c.nombreCompleto !== nombre);
-                    delete datosRelevos[nombre]; delete croupierColors[nombre]; delete croupierSalidas[nombre];
+                    delete datosRelevos[nombre];
+                    delete croupierColors[nombre];
+                    delete croupierSalidas[nombre];
                     detenerCronometro(nombre, true);
-                    enviarDatosSheets(); renderizarHorario();
+                    guardarDatos();
+                    renderizarHorario();
                 });
             }
 
             function borrarHorario(hora) {
-                showModal('Confirmar', `¿Eliminar el horario ${hora} y sus asignaciones?`, 'confirm', () => {
+                showModal('Confirmar', `¿Eliminar el horario ${hora} y todas sus asignaciones?`, 'confirm', () => {
                     horarios = horarios.filter(h => h !== hora);
-                    Object.keys(datosRelevos).forEach(croupier => { delete datosRelevos[croupier]?.[hora]; });
+                    Object.keys(datosRelevos).forEach(croupier => {
+                        if (datosRelevos[croupier] && typeof datosRelevos[croupier] === 'object') {
+                            delete datosRelevos[croupier][hora];
+                        }
+                    });
                     delete horarioColors[hora];
-                    enviarDatosSheets(); renderizarHorario();
+                    guardarDatos();
+                    renderizarHorario();
                 });
             }
             
             function aplicarColor() {
                 const color = DOM.colorPicker.value;
                 const seleccionados = DOM.tbody.querySelectorAll('.croupier-checkbox:checked');
-                if (seleccionados.length === 0) return showModal('Info', 'Selecciona al menos un croupier.');
-                seleccionados.forEach(cb => { croupierColors[cb.closest('.croupier-row').dataset.croupier] = color; });
-                enviarDatosSheets(); renderizarHorario();
+                if (seleccionados.length === 0) {
+                    showModal('Info', 'Selecciona al menos un croupier.');
+                    return;
+                }
+                seleccionados.forEach(cb => {
+                    const nombre = cb.closest('.croupier-row').dataset.croupier;
+                    croupierColors[nombre] = color;
+                });
+                guardarDatos();
+                renderizarHorario();
             }
 
-            function editarHorario(oldTime, thElement) { /* ... Lógica sin cambios ... */ }
-            function abrirRelevoModal(croupier, horario) { /* ... Lógica sin cambios ... */ }
-            function guardarRelevo() { /* ... Lógica sin cambios ... */ enviarDatosSheets(); /* ... */ }
-            function borrarRelevo() { /* ... Lógica sin cambios ... */ enviarDatosSheets(); /* ... */ }
-            function abrirAgregarHorarioModal() { /* ... Lógica sin cambios ... */ }
-            function guardarNuevoHorario() { /* ... Lógica sin cambios ... */ enviarDatosSheets(); /* ... */ }
-            function abrirSalidaModal(croupier) { /* ... Lógica sin cambios ... */ }
-            function guardarSalida() { /* ... Lógica sin cambios ... */ enviarDatosSheets(); /* ... */ }
-            function borrarSalida() { /* ... Lógica sin cambios ... */ enviarDatosSheets(); /* ... */ }
-            function abrirFechaModal() { /* ... Lógica sin cambios ... */ }
+            // --- LÓGICA DE MODALES Y EDICIÓN (Sin cambios) ---
+            function editarHorario(oldTime, thElement) {
+                const contentDiv = thElement.querySelector('.horario-header-content');
+                const originalContent = contentDiv.innerHTML;
+                contentDiv.innerHTML = '';
+
+                const input = document.createElement('input');
+                input.type = 'time';
+                input.value = oldTime;
+                contentDiv.appendChild(input);
+                input.focus();
+
+                const guardarCambio = () => {
+                    const newTime = input.value;
+                    if (newTime && newTime !== oldTime && !horarios.includes(newTime)) {
+                        const oldIndex = horarios.indexOf(oldTime);
+                        horarios[oldIndex] = newTime;
+
+                        Object.values(datosRelevos).forEach(croupierRelevos => {
+                            if (croupierRelevos[oldTime]) {
+                                croupierRelevos[newTime] = croupierRelevos[oldTime];
+                                delete croupierRelevos[oldTime];
+                            }
+                        });
+                        
+                        if (horarioColors[oldTime]) {
+                            horarioColors[newTime] = horarioColors[oldTime];
+                            delete horarioColors[oldTime];
+                        }
+                        
+                        guardarDatos();
+                        renderizarHorario();
+                    } else {
+                        contentDiv.innerHTML = originalContent;
+                    }
+                };
+
+                input.addEventListener('blur', guardarCambio);
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') input.blur();
+                    else if (e.key === 'Escape') contentDiv.innerHTML = originalContent;
+                });
+            }
+
+            function abrirRelevoModal(croupier, horario) {
+                celdaActiva = { croupier, horario };
+                DOM.modalTitle.textContent = `Asignar actividad para ${generarAlias(croupier)}`;
+                DOM.croupierInfo.textContent = generarAlias(croupier);
+                DOM.horarioInfo.textContent = horario;
+
+                const relevoExistente = datosRelevos[croupier]?.[horario];
+                const actividadExistente = relevoExistente?.actividad || 'releva';
+                document.querySelector(`input[name="actividad"][value="${actividadExistente}"]`).checked = true;
+                toggleRelevoControls(actividadExistente);
+
+                const mesasRelevo = relevoExistente?.actividad === 'releva' ? relevoExistente.mesas : [];
+                const mesasDisponiblesDiv = document.getElementById('mesas-disponibles');
+                const mesasSeleccionadasDiv = document.getElementById('mesas-seleccionadas');
+                mesasDisponiblesDiv.innerHTML = '';
+                mesasSeleccionadasDiv.innerHTML = '';
+
+                mesasDeJuego.forEach(mesa => {
+                    const mesaItem = `<div class="mesa-item" data-mesa="${mesa}">${mesa}</div>`;
+                    if (mesasRelevo.includes(mesa)) {
+                        mesasSeleccionadasDiv.innerHTML += mesaItem;
+                    } else {
+                        mesasDisponiblesDiv.innerHTML += mesaItem;
+                    }
+                });
+
+                DOM.colorRelevoInput.value = relevoExistente?.color || '#3498db';
+                
+                llenarSelectorDescansoManual();
+                
+                DOM.relevoModal.style.display = 'flex';
+            }
+            
+            function toggleRelevoControls(actividad) {
+                DOM.relevoControlsContainer.style.display = actividad === 'releva' ? 'block' : 'none';
+            }
+
+            function llenarSelectorDescansoManual() {
+                DOM.selectCroupierDescanso.innerHTML = '';
+                const sortedHorarios = [...horarios].sort(sortHorarios);
+                const currentIndex = sortedHorarios.indexOf(celdaActiva.horario);
+                
+                croupiersData.forEach(c => {
+                    if (c.nombreCompleto === celdaActiva.croupier) return;
+
+                    let lastActivityInfo = ' (Sin Actividad Anterior)';
+                    for (let i = currentIndex - 1; i >= 0; i--) {
+                        const prevHorario = sortedHorarios[i];
+                        const relevoData = datosRelevos[c.nombreCompleto]?.[prevHorario];
+                        if (relevoData) {
+                            if (relevoData.actividad === 'releva' && relevoData.mesas.length > 0) {
+                                lastActivityInfo = ` (${relevoData.mesas.join(', ')})`;
+                            } else if (relevoData.actividad === 'descanso') {
+                                lastActivityInfo = ' (En Descanso)';
+                            } else if (relevoData.actividad === 'ayudante-pagador') {
+                                lastActivityInfo = ' (Ayud. Pagador)';
+                            }
+                            break;
+                        }
+                    }
+
+                    const option = document.createElement('option');
+                    option.value = c.nombreCompleto;
+                    option.textContent = generarAlias(c.nombreCompleto) + lastActivityInfo;
+                    DOM.selectCroupierDescanso.appendChild(option);
+                });
+            }
+
+            function guardarRelevo() {
+                const { croupier, horario } = celdaActiva;
+                const actividad = document.querySelector('input[name="actividad"]:checked').value;
+                if (!datosRelevos[croupier]) datosRelevos[croupier] = {};
+
+                if (actividad === 'releva') {
+                    const mesas = Array.from(document.getElementById('mesas-seleccionadas').children).map(item => item.dataset.mesa);
+                    if (mesas.length > 0) {
+                        datosRelevos[croupier][horario] = { actividad: 'releva', mesas, color: DOM.colorRelevoInput.value };
+                    } else {
+                        delete datosRelevos[croupier][horario];
+                    }
+                } else {
+                    datosRelevos[croupier][horario] = { actividad };
+                }
+
+                Array.from(DOM.selectCroupierDescanso.selectedOptions).forEach(opt => {
+                    const croupierDescanso = opt.value;
+                    if (!datosRelevos[croupierDescanso]) datosRelevos[croupierDescanso] = {};
+                    datosRelevos[croupierDescanso][horario] = { actividad: 'descanso' };
+                });
+
+                guardarDatos();
+                renderizarHorario();
+                cerrarModales();
+            }
+
+            function borrarRelevo() {
+                const { croupier, horario } = celdaActiva;
+                if (datosRelevos[croupier]?.[horario]) {
+                    delete datosRelevos[croupier][horario];
+                    guardarDatos();
+                    renderizarHorario();
+                }
+                cerrarModales();
+            }
+
+            function abrirAgregarHorarioModal() {
+                DOM.agregarHorarioModal.style.display = 'flex';
+            }
+
+            function guardarNuevoHorario() {
+                const nuevaHora = DOM.inputNuevoHorario.value;
+                if (nuevaHora && !horarios.includes(nuevaHora)) {
+                    horarios.push(nuevaHora);
+                    guardarDatos();
+                    renderizarHorario();
+                }
+                cerrarModales();
+            }
+
+            function abrirSalidaModal(croupier) {
+                croupierSalidaActivo = croupier;
+                DOM.salidaModalTitle.textContent = generarAlias(croupier);
+                DOM.inputSalidaTime.value = croupierSalidas[croupier] || '';
+                DOM.salidaModal.style.display = 'flex';
+            }
+
+            function guardarSalida() {
+                croupierSalidas[croupierSalidaActivo] = DOM.inputSalidaTime.value;
+                guardarDatos();
+                renderizarHorario();
+                cerrarModales();
+            }
+            
+            function borrarSalida() {
+                delete croupierSalidas[croupierSalidaActivo];
+                guardarDatos();
+                renderizarHorario();
+                cerrarModales();
+            }
+
+            function abrirFechaModal() {
+                DOM.inputNuevaFecha.value = fechaVisible.toISOString().split('T')[0];
+                DOM.fechaModal.style.display = 'flex';
+            }
+
             async function guardarNuevaFecha() {
                 const nuevaFechaStr = DOM.inputNuevaFecha.value;
                 if (nuevaFechaStr) {
                     fechaVisible = new Date(nuevaFechaStr + 'T00:00:00');
                     localStorage.setItem('fechaGuardada', fechaVisible.toISOString().split('T')[0]);
-                    await cargarDatos();
+                    await cargarDatos(); // Recargamos los datos para la nueva fecha
                     renderizarHorario();
                 }
                 cerrarModales();
             }
-            function openCronoModal(croupier) { /* ... Lógica sin cambios ... */ }
-            function ajustarTiempoManualCrono() { /* ... Lógica sin cambios ... */ }
             
+            function openCronoModal(croupier) {
+                croupierCronoActivo = croupier;
+                DOM.cronoModalTitle.textContent = generarAlias(croupier);
+                const startTime = cronometroStartTime[croupier];
+                const isRunning = !!startTime;
+                
+                document.getElementById('crono-btn-start').disabled = isRunning;
+                document.getElementById('crono-btn-stop').disabled = !isRunning;
+                document.getElementById('crono-modal-timer').parentElement.classList.toggle('running', isRunning);
+
+                const elapsed = isRunning ? new Date().getTime() - startTime : 0;
+                actualizarDisplayCrono(croupier, new Date(elapsed).toISOString().slice(11, 19));
+                
+                DOM.cronoModal.style.display = 'flex';
+            }
+
+            function ajustarTiempoManualCrono() {
+                if (!croupierCronoActivo) return;
+                const minutos = parseInt(DOM.cronoManualInput.value, 10);
+                if (isNaN(minutos) || minutos < 0) {
+                    showModal('Error', 'Introduce un número válido de minutos.');
+                    return;
+                }
+                const nuevoStartTime = new Date().getTime() - (minutos * 60 * 1000);
+                iniciarCronometro(croupierCronoActivo, nuevoStartTime);
+                openCronoModal(croupierCronoActivo);
+            }
+
+            // --- LÓGICA DE CRONÓMETRO Y RELOJ (Sin Cambios) ---
             function actualizarSistema() {
                 const now = new Date();
                 DOM.relojDigital.textContent = now.toTimeString().slice(0, 8);
                 let isAnyWarning = false;
 
-                const schedulePoints = horarios.sort(sortHorarios).map(hora => {
-                    const [h, m] = hora.split(':').map(Number);
-                    const scheduleDate = new Date(fechaVisible);
-                    scheduleDate.setHours(h, m, 0, 0);
-                    if (h < 6) scheduleDate.setDate(scheduleDate.getDate() + 1);
-                    return { date: scheduleDate, timeString: hora };
-                });
-
                 croupiersData.forEach(croupierObj => {
                     const croupier = croupierObj.nombreCompleto;
-                    let lastActionTimestamp = null;
+                    const isTimerRunning = cronometroIntervals.hasOwnProperty(croupier);
+
                     let lastAction = null;
+                    let lastActionTime = null;
+                    let lastActionTimestamp = null;
+
+                    const schedulePoints = horarios.sort(sortHorarios).map(hora => {
+                        const [h, m] = hora.split(':').map(Number);
+                        const scheduleDate = new Date(fechaVisible);
+                        scheduleDate.setHours(h, m, 0, 0);
+                        if (h < 6) {
+                            scheduleDate.setDate(scheduleDate.getDate() + 1);
+                        }
+                        return { date: scheduleDate, timeString: hora };
+                    });
 
                     for (const point of schedulePoints) {
-                        if (point.date <= now && datosRelevos[croupier]?.[point.timeString]) {
-                            lastActionTimestamp = point.date.getTime();
-                            lastAction = datosRelevos[croupier][point.timeString].actividad;
-                        } else { break; }
+                        if (point.date <= now) {
+                            if (datosRelevos[croupier] && datosRelevos[croupier][point.timeString]) {
+                                lastActionTime = point.timeString;
+                                lastActionTimestamp = point.date.getTime();
+                                lastAction = datosRelevos[croupier][lastActionTime].actividad;
+                            }
+                        } else {
+                            break;
+                        }
                     }
-                    
+
                     const isWorkAction = lastAction === 'releva' || lastAction === 'ayudante-pagador';
-                    if (isWorkAction && !cronometroIntervals[croupier]) {
+
+                    if (isWorkAction && !isTimerRunning) {
                         iniciarCronometro(croupier, lastActionTimestamp);
-                    } else if (!isWorkAction && cronometroIntervals[croupier]) {
+                    } else if (!isWorkAction && isTimerRunning) {
                         detenerCronometro(croupier, true);
                     }
                     
                     const salidaTime = croupierSalidas[croupier];
+                    const rowElement = document.querySelector(`tr[data-croupier="${croupier}"]`);
+                    const nameCell = rowElement ? rowElement.querySelector('td:first-child') : null;
+
+                    let shouldWarn = false;
                     if (salidaTime) {
                         const [h, m] = salidaTime.split(':').map(Number);
                         const salidaDate = new Date(fechaVisible);
                         salidaDate.setHours(h, m, 0, 0);
-                        if (h < 6) salidaDate.setDate(salidaDate.getDate() + 1);
+                        
+                        if (h < 6) {
+                           salidaDate.setDate(salidaDate.getDate() + 1);
+                        }
+
                         const diff = (salidaDate.getTime() - now.getTime()) / 60000;
-                        const shouldWarn = diff > 0 && diff <= 20;
-                        document.querySelector(`tr[data-croupier="${croupier}"] td:first-child`)?.classList.toggle('salida-warning', shouldWarn);
-                        if(shouldWarn) isAnyWarning = true;
+                        shouldWarn = diff > 0 && diff <= 20;
+                    }
+
+                    if (nameCell) {
+                        nameCell.classList.toggle('salida-warning', shouldWarn);
+                    }
+                    
+                    if (shouldWarn) {
+                        isAnyWarning = true;
                     }
                 });
+
                 DOM.relojDigital.classList.toggle('warning-pulse', isAnyWarning);
             }
 
-            function iniciarCronometro(croupier, startTime, doSave = true) {
+            function iniciarCronometro(croupier, startTime) {
                 if (!startTime) return;
                 if (cronometroIntervals[croupier]) clearInterval(cronometroIntervals[croupier]);
                 
@@ -907,17 +1272,19 @@
                 const update = () => {
                     const elapsed = new Date().getTime() - cronometroStartTime[croupier];
                     if (elapsed >= 0) {
-                       actualizarDisplayCrono(croupier, new Date(elapsed).toISOString().slice(11, 19));
+                       const formatted = new Date(elapsed).toISOString().slice(11, 19);
+                       actualizarDisplayCrono(croupier, formatted);
                     }
                 };
                 cronometroIntervals[croupier] = setInterval(update, 1000);
                 update();
 
-                document.querySelector(`[data-croupier-crono="${croupier}"] .cronometro-display`)?.classList.add('running');
-                if(doSave) enviarDatosSheets();
+                const display = document.querySelector(`[data-croupier-crono="${croupier}"] .cronometro-display`);
+                if(display) display.classList.add('running');
+                guardarDatos();
             }
 
-            function detenerCronometro(croupier, reset = false, doSave = true) {
+            function detenerCronometro(croupier, reset = false) {
                 if (cronometroIntervals[croupier]) {
                     clearInterval(cronometroIntervals[croupier]);
                     delete cronometroIntervals[croupier];
@@ -925,8 +1292,9 @@
                         delete cronometroStartTime[croupier];
                         actualizarDisplayCrono(croupier, '00:00:00');
                     }
-                    document.querySelector(`[data-croupier-crono="${croupier}"] .cronometro-display`)?.classList.remove('running');
-                    if(doSave) enviarDatosSheets();
+                    const display = document.querySelector(`[data-croupier-crono="${croupier}"] .cronometro-display`);
+                    if(display) display.classList.remove('running');
+                    guardarDatos();
                 }
             }
             
@@ -936,27 +1304,168 @@
                 if (croupierCronoActivo === croupier) DOM.cronoModalTimer.textContent = tiempo;
             }
 
-            function sortHorarios(a, b) { /* ... Lógica sin cambios ... */ }
-            function generarAlias(nombre) { /* ... Lógica sin cambios ... */ }
+            // --- QUICK ADD (Sin cambios) ---
+            function abrirQuickAddModal() {
+                DOM.quickAddModal.style.display = 'flex';
+                DOM.quickAddSearchInput.value = '';
+                renderCroupierListInModal();
+            }
+
+            function renderCroupierListInModal(searchTerm = '') {
+                DOM.quickAddCroupierList.innerHTML = '';
+                const available = croupiersEnEspera.filter(c => !croupiersData.some(cd => cd.nombreCompleto === c.nombreCompleto));
+                const filteredByContract = quickAddCurrentFilter === 'todos' ? available : available.filter(c => c.contrato === quickAddCurrentFilter);
+                const filteredBySearch = filteredByContract.filter(c => c.nombreCompleto.toLowerCase().includes(searchTerm.toLowerCase()));
+
+                filteredBySearch.forEach(croupier => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<input type="checkbox" value="${croupier.nombreCompleto}"> <span>${croupier.nombreCompleto}</span>`;
+                    DOM.quickAddCroupierList.appendChild(li);
+                });
+
+                DOM.quickAddCroupierList.querySelectorAll('input').forEach(cb => cb.addEventListener('change', () => {
+                    const anyChecked = DOM.quickAddCroupierList.querySelector('input:checked');
+                    DOM.btnAddSelectedToTable.disabled = !anyChecked;
+                }));
+            }
+
+            function agregarCroupiersSeleccionadosDelModal() {
+                const selected = DOM.quickAddCroupierList.querySelectorAll('input:checked');
+                selected.forEach(cb => {
+                    const nombre = cb.value;
+                    const croupierDb = croupiersEnEspera.find(c => c.nombreCompleto === nombre);
+                    if (croupierDb && !croupiersData.some(c => c.nombreCompleto === nombre)) {
+                        croupiersData.push(croupierDb);
+                    }
+                });
+                guardarDatos();
+                renderizarHorario();
+                cerrarModales();
+            }
+
+            // --- FUNCIONES UTILITARIAS (Sin Cambios) ---
+            function sortHorarios(a, b) {
+                let aHour = parseInt(a.split(':')[0], 10);
+                let bHour = parseInt(b.split(':')[0], 10);
+                if (aHour < 6) aHour += 24;
+                if (bHour < 6) bHour += 24;
+                if (aHour < bHour) return -1;
+                if (aHour > bHour) return 1;
+                let aMin = parseInt(a.split(':')[1], 10);
+                let bMin = parseInt(b.split(':')[1], 10);
+                return aMin - bMin;
+            }
+
+            function generarAlias(nombre) {
+                const partes = nombre.split(' ');
+                return partes.length > 1 ? `${partes[0]} ${partes[1][0]}.` : nombre;
+            }
+
+            function mostrarTooltip(nombre, elemento) {
+                const croupier = croupiersEnEspera.find(c => c.nombreCompleto === nombre);
+                if (!croupier || !croupier.juegosQuePaga) return;
+                DOM.croupierTooltip.innerHTML = `<h5>Juegos:</h5><ul>${croupier.juegosQuePaga.map(j => `<li>${j}</li>`).join('') || '<li>Ninguno</li>'}</ul>`;
+                const rect = elemento.getBoundingClientRect();
+                DOM.croupierTooltip.style.left = `${rect.left + window.scrollX}px`;
+                DOM.croupierTooltip.style.top = `${rect.bottom + window.scrollY + 5}px`;
+                DOM.croupierTooltip.style.display = 'block';
+            }
+            function ocultarTooltip() { DOM.croupierTooltip.style.display = 'none'; }
+            
             function cerrarModales() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
-            function showModal(title, message, type = 'info', onConfirm = null) { /* ... Lógica sin cambios ... */ }
+            
+            function showModal(title, message, type = 'info', onConfirm = null) {
+                document.getElementById('custom-alert-title').textContent = title;
+                document.getElementById('custom-alert-message').textContent = message;
+                const okBtn = document.getElementById('custom-alert-ok');
+                const cancelBtn = document.getElementById('custom-alert-cancel');
+                
+                cancelBtn.style.display = type === 'confirm' ? 'inline-block' : 'none';
+                
+                okBtn.onclick = () => {
+                    if (onConfirm) onConfirm();
+                    document.getElementById('custom-alert-modal').style.display = 'none';
+                };
+                cancelBtn.onclick = () => document.getElementById('custom-alert-modal').style.display = 'none';
+
+                document.getElementById('custom-alert-modal').style.display = 'flex';
+            }
+
+            // --- INICIALIZACIÓN Y EVENTOS ---
+            function setupEventListeners() {
+                DOM.btnAplicarColor.addEventListener('click', aplicarColor);
+                DOM.fechaDisplay.addEventListener('click', abrirFechaModal);
+                
+                document.querySelectorAll('.modal .close-btn').forEach(btn => btn.addEventListener('click', cerrarModales));
+                document.getElementById('btn-guardar-relevo').addEventListener('click', guardarRelevo);
+                document.getElementById('btn-borrar-relevo').addEventListener('click', borrarRelevo);
+                document.getElementById('btn-guardar-nuevo-horario').addEventListener('click', guardarNuevoHorario);
+                document.getElementById('btn-guardar-salida').addEventListener('click', guardarSalida);
+                document.getElementById('btn-borrar-salida').addEventListener('click', borrarSalida);
+                document.getElementById('btn-guardar-nueva-fecha').addEventListener('click', guardarNuevaFecha);
+                
+                DOM.opcionRelevo.addEventListener('change', () => toggleRelevoControls('releva'));
+                DOM.opcionAyudante.addEventListener('change', () => toggleRelevoControls('ayudante'));
+                DOM.opcionDescanso.addEventListener('change', () => toggleRelevoControls('descanso'));
+
+                document.getElementById('relevo-modal').addEventListener('click', (e) => {
+                    if (e.target.classList.contains('mesa-item')) {
+                        const targetList = e.target.parentElement.id === 'mesas-disponibles' ? 'mesas-seleccionadas' : 'mesas-disponibles';
+                        document.getElementById(targetList).appendChild(e.target);
+                    }
+                });
+
+                document.getElementById('crono-btn-start').addEventListener('click', () => {
+                    if (croupierCronoActivo) iniciarCronometro(croupierCronoActivo, new Date().getTime());
+                    openCronoModal(croupierCronoActivo);
+                });
+                document.getElementById('crono-btn-stop').addEventListener('click', () => {
+                    if (croupierCronoActivo) detenerCronometro(croupierCronoActivo, false);
+                    openCronoModal(croupierCronoActivo);
+                });
+                document.getElementById('btn-reset').addEventListener('click', () => {
+                    if (croupierCronoActivo) detenerCronometro(croupierCronoActivo, true);
+                    openCronoModal(croupierCronoActivo);
+                });
+                document.getElementById('btn-set-manual-time').addEventListener('click', ajustarTiempoManualCrono);
+
+                DOM.quickAddSelector.addEventListener('click', abrirQuickAddModal);
+                DOM.quickAddSearchInput.addEventListener('input', (e) => renderCroupierListInModal(e.target.value));
+                DOM.quickAddFilterButtons.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('filter-btn')) {
+                        DOM.quickAddFilterButtons.querySelector('.active').classList.remove('active');
+                        e.target.classList.add('active');
+                        quickAddCurrentFilter = e.target.dataset.filter;
+                        renderCroupierListInModal(DOM.quickAddSearchInput.value);
+                    }
+                });
+                DOM.btnAddSelectedToTable.addEventListener('click', agregarCroupiersSeleccionadosDelModal);
+            }
 
             async function inicializar() {
+                // Recuperamos la última fecha guardada para empezar ahí
                 const fechaGuardadaStr = localStorage.getItem('fechaGuardada');
                 fechaVisible = fechaGuardadaStr ? new Date(fechaGuardadaStr + 'T00:00:00') : new Date();
 
                 await cargarDatos();
                 renderizarHorario();
-                // setupEventListeners(); // Esta función se puede eliminar y su contenido ponerlo aquí o simplificar
+                setupEventListeners();
                 setInterval(actualizarSistema, 1000);
-                
+
                 new Sortable(DOM.tbody, {
                     animation: 150,
                     ghostClass: 'sortable-ghost',
+                    chosenClass: 'sortable-chosen',
+                    multiDrag: true,
+                    selectedClass: 'row-selected',
+                    filter: '.croupier-row:not(.row-selected)',
+                    preventOnFilter: false,
                     onEnd: (evt) => {
                         const newOrderNames = Array.from(DOM.tbody.children).map(tr => tr.dataset.croupier);
-                        croupiersData.sort((a, b) => newOrderNames.indexOf(a.nombreCompleto) - newOrderNames.indexOf(b.nombreCompleto));
-                        enviarDatosSheets();
+                        croupiersData.sort((a, b) => {
+                            return newOrderNames.indexOf(a.nombreCompleto) - newOrderNames.indexOf(b.nombreCompleto);
+                        });
+                        guardarDatos();
                     }
                 });
             }
