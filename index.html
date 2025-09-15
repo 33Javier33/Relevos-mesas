@@ -291,9 +291,8 @@
         
         .croupier-row td:first-child { cursor: grab; }
         
-        /* --- INICIO: ESTILOS DE ALERTA DE SALIDA RESTAURADOS --- */
         .croupier-row td.salida-warning {
-            background-color: var(--danger-color) !important; /* Usar !important para sobreescribir otros colores de fondo */
+            background-color: var(--danger-color) !important;
             animation: pulse 1.5s infinite;
         }
         .croupier-row td.salida-warning .croupier-name,
@@ -303,8 +302,6 @@
         .croupier-row td.salida-warning .salida-card {
             background-color: var(--danger-hover-color);
         }
-        /* --- FIN: ESTILOS DE ALERTA DE SALIDA RESTAURADOS --- */
-
 
         .relevo-cell {
             padding: 2px; border-radius: 4px; font-size: 0.65rem; font-weight: bold;
@@ -575,15 +572,19 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // --- URLs DE GOOGLE APPS SCRIPT ---
+            const URL_DEL_SCRIPT_DE_CROUPIERS = 'https://script.google.com/macros/s/AKfycbzjaL7OKe1_doagry1eo0w15vXOJy_-oEtWreLTzj1GoQgxyE8cDI7jTgWm7qqThB7M/exec';
+            const URL_DEL_SCRIPT_DE_HORARIOS = 'https://script.google.com/macros/s/AKfycbx6-N3shrPlqQ5rOV2xkDL2cNIIp1lOYVfytv8L5lXC2hw_jqgmeJaiKyK9nrusMwS9vg/exec';
+
             // --- DATOS Y ESTADO ---
             let croupiersData = [];
+            let croupiersEnEspera = [];
             let horarios = [];
             let mesasDeJuego = [];
             let datosRelevos = {};
             let croupierColors = {};
             let croupierSalidas = {};
             let horarioColors = {};
-            let croupiersEnEspera = [];
             let cronometroIntervals = {};
             let cronometroStartTime = {};
             let fechaVisible = new Date();
@@ -602,14 +603,12 @@
                 colorPicker: document.getElementById('color-picker'),
                 btnAplicarColor: document.getElementById('btn-aplicar-color'),
                 croupierTooltip: document.getElementById('croupier-tooltip'),
-                // Modales
                 relevoModal: document.getElementById('relevo-modal'),
                 agregarHorarioModal: document.getElementById('agregar-horario-modal'),
                 salidaModal: document.getElementById('salida-modal'),
                 fechaModal: document.getElementById('fecha-modal'),
                 cronoModal: document.getElementById('crono-modal'),
                 quickAddModal: document.getElementById('quick-add-modal'),
-                // Contenido de Modales
                 modalTitle: document.getElementById('modal-title'),
                 croupierInfo: document.getElementById('croupier-info'),
                 horarioInfo: document.getElementById('horario-info'),
@@ -626,7 +625,6 @@
                 cronoModalTitle: document.getElementById('crono-modal-title').querySelector('span'),
                 cronoModalTimer: document.getElementById('crono-modal-timer'),
                 cronoManualInput: document.getElementById('crono-manual-input'),
-                // Quick Add
                 quickAddSelector: document.getElementById('quick-add-selector'),
                 quickAddSearchInput: document.getElementById('quick-add-search-input'),
                 quickAddCroupierList: document.getElementById('quick-add-croupier-list'),
@@ -634,37 +632,134 @@
                 btnAddSelectedToTable: document.getElementById('btn-add-selected-to-table'),
             };
 
-            // --- FUNCIONES DE DATOS (localStorage) ---
-            function guardarDatos() {
-                localStorage.setItem('croupiersData', JSON.stringify(croupiersData));
-                localStorage.setItem('horarios', JSON.stringify(horarios));
-                localStorage.setItem('datosRelevos', JSON.stringify(datosRelevos));
-                localStorage.setItem('croupierColors', JSON.stringify(croupierColors));
-                localStorage.setItem('croupierSalidas', JSON.stringify(croupierSalidas));
-                localStorage.setItem('horarioColors', JSON.stringify(horarioColors));
-                localStorage.setItem('cronometroState', JSON.stringify(cronometroStartTime));
-                localStorage.setItem('fechaGuardada', fechaVisible.toISOString().split('T')[0]);
-            }
+            // --- CONEXIÓN CON GOOGLE SHEETS Y DATOS ---
 
-            function cargarDatos() {
-                croupiersData = JSON.parse(localStorage.getItem('croupiersData')) || [];
-                horarios = JSON.parse(localStorage.getItem('horarios')) || [];
-                mesasDeJuego = JSON.parse(localStorage.getItem('mesasDeJuego')) || [];
-                datosRelevos = JSON.parse(localStorage.getItem('datosRelevos')) || {};
-                croupierColors = JSON.parse(localStorage.getItem('croupierColors')) || {};
-                croupierSalidas = JSON.parse(localStorage.getItem('croupierSalidas')) || {};
-                horarioColors = JSON.parse(localStorage.getItem('horarioColors')) || {};
-                cronometroStartTime = JSON.parse(localStorage.getItem('cronometroState')) || {};
-                croupiersEnEspera = JSON.parse(localStorage.getItem('croupiersEnEspera')) || [];
+            async function cargarDatos() {
+                // 1. Cargar la lista maestra de croupiers y mesas (esto no cambia)
+                try {
+                    const responseCroupiers = await fetch(`${URL_DEL_SCRIPT_DE_CROUPIERS}?dataType=horarios`);
+                    if (!responseCroupiers.ok) throw new Error(`Error de red: ${responseCroupiers.statusText}`);
+                    const dataCroupiers = await responseCroupiers.json();
+                    if (dataCroupiers.croupiers && dataCroupiers.mesas) {
+                        croupiersEnEspera = dataCroupiers.croupiers;
+                        mesasDeJuego = dataCroupiers.mesas;
+                    } else {
+                        throw new Error("La respuesta del script de croupiers no tiene el formato esperado.");
+                    }
+                } catch (error) {
+                    console.error('Error al cargar datos de croupiers:', error);
+                    showModal('Error Crítico', 'No se pudo cargar la lista de croupiers y mesas. La aplicación no puede continuar.');
+                    return; // Detener si no podemos cargar lo básico
+                }
+
+                // 2. Cargar datos del horario para la fecha visible desde Google Sheets
+                const fechaISO = fechaVisible.toISOString().split('T')[0];
+                try {
+                    const responseHorarios = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=load&fecha=${fechaISO}`);
+                    if (!responseHorarios.ok) throw new Error(`Error de red: ${responseHorarios.statusText}`);
+                    const dataHorarios = await responseHorarios.json();
+
+                    if (dataHorarios && dataHorarios.found) {
+                        // Si se encontraron datos para la fecha, los cargamos
+                        croupiersData = dataHorarios.croupiersEnTabla.map(nombre => {
+                            return croupiersEnEspera.find(c => c.nombreCompleto === nombre);
+                        }).filter(Boolean); // Filtramos por si algún croupier ya no existe
+                        
+                        datosRelevos = dataHorarios.datosRelevos || {};
+                        croupierColors = dataHorarios.croupierColors || {};
+                        croupierSalidas = dataHorarios.croupierSalidas || {};
+                        horarioColors = dataHorarios.horarioColors || {};
+                        horarios = dataHorarios.horarios || [];
+                         console.log("Datos de horario cargados desde Google Sheets.");
+                    } else {
+                        // Si no hay datos para la fecha, iniciamos con valores por defecto
+                        croupiersData = [];
+                        datosRelevos = {};
+                        croupierColors = {};
+                        croupierSalidas = {};
+                        horarioColors = {};
+                        horarios = [];
+                        console.log("No se encontraron datos para esta fecha en Google Sheets. Iniciando un nuevo horario.");
+                    }
+
+                } catch (error) {
+                    console.error('Error al cargar datos de horarios desde Google Sheets:', error);
+                    showModal('Error de Conexión', 'No se pudieron cargar los datos del horario. Se usará un horario en blanco.');
+                    // Reseteamos por si acaso
+                    croupiersData = []; datosRelevos = {}; croupierColors = {}; croupierSalidas = {}; horarioColors = {}; horarios = [];
+                }
                 
-                const fechaGuardadaStr = localStorage.getItem('fechaGuardada');
-                fechaVisible = fechaGuardadaStr ? new Date(fechaGuardadaStr + 'T00:00:00') : new Date();
-
+                // Cargar estado de cronómetros y tema desde localStorage (son locales)
+                const cronoState = JSON.parse(localStorage.getItem('cronometroState')) || {};
+                cronometroStartTime = {};
+                for (const [croupier, time] of Object.entries(cronoState)) {
+                    iniciarCronometro(croupier, time);
+                }
                 const savedTheme = localStorage.getItem('theme') || 'light';
                 document.body.classList.toggle('dark-mode', savedTheme === 'dark');
             }
 
-            // --- FUNCIONES DE RENDERIZADO ---
+            function guardarDatos() {
+                // Guarda una copia local como respaldo inmediato
+                localStorage.setItem('croupiersData', JSON.stringify(croupiersData));
+                localStorage.setItem('datosRelevos', JSON.stringify(datosRelevos));
+                localStorage.setItem('croupierColors', JSON.stringify(croupierColors));
+                localStorage.setItem('croupierSalidas', JSON.stringify(croupierSalidas));
+                localStorage.setItem('horarioColors', JSON.stringify(horarioColors));
+                localStorage.setItem('horarios', JSON.stringify(horarios));
+                localStorage.setItem('cronometroState', JSON.stringify(cronometroStartTime));
+                localStorage.setItem('fechaGuardada', fechaVisible.toISOString().split('T')[0]);
+
+                // Envía los datos a Google Sheets
+                enviarDatosSheets();
+            }
+
+            async function enviarDatosSheets() {
+                if (!URL_DEL_SCRIPT_DE_HORARIOS) {
+                    console.warn("URL del script de horarios no definida. Los datos no se enviarán a Google Sheets.");
+                    return;
+                }
+
+                try {
+                    // Preparamos un objeto completo con todos los datos a guardar
+                    const datosAEnviar = {
+                        action: 'save', // Le decimos al script que queremos guardar
+                        fecha: fechaVisible.toISOString().split('T')[0],
+                        horarios: horarios,
+                        datosRelevos: datosRelevos,
+                        croupiersEnTabla: croupiersData.map(c => c.nombreCompleto), // Solo guardamos los nombres
+                        croupierColors: croupierColors,
+                        croupierSalidas: croupierSalidas,
+                        horarioColors: horarioColors,
+                    };
+
+                    const response = await fetch(URL_DEL_SCRIPT_DE_HORARIOS, {
+                        method: 'POST',
+                        // Redirección manual necesaria para scripts de Google
+                        redirect: 'follow', 
+                        body: JSON.stringify(datosAEnviar),
+                        headers: {
+                            'Content-Type': 'text/plain;charset=utf-8', // Requerido por Google
+                        }
+                    });
+
+                    // Google Apps Script suele devolver una redirección, por lo que una respuesta exitosa
+                    // puede no ser 'ok'. Verificamos el tipo de respuesta.
+                    if (response.type === 'opaque' || response.ok || response.status === 200) {
+                         console.log("Solicitud de guardado enviada a Google Sheets.");
+                    } else {
+                         const errorText = await response.text();
+                         throw new Error(`Error al enviar datos: ${response.statusText} - ${errorText}`);
+                    }
+
+                } catch (error) {
+                    console.error("Error al conectar con Google Sheets para guardar:", error);
+                    showModal('Error de Guardado', 'No se pudieron guardar los cambios en Google Sheets. Se guardaron localmente.');
+                }
+            }
+
+
+            // --- FUNCIONES DE RENDERIZADO (Sin cambios) ---
             function renderizarHorario() {
                 renderizarCabecera();
                 renderizarCuerpo();
@@ -722,6 +817,7 @@
             function renderizarCuerpo() {
                 DOM.tbody.innerHTML = '';
                 croupiersData.forEach(croupierObj => {
+                    if (!croupierObj) return; // Salvaguarda por si un croupier no se encontró
                     const tr = document.createElement('tr');
                     tr.className = 'croupier-row';
                     tr.dataset.croupier = croupierObj.nombreCompleto;
@@ -815,7 +911,7 @@
                 DOM.fechaDisplay.textContent = fechaVisible.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             }
             
-            // --- LÓGICA DE LA TABLA ---
+            // --- LÓGICA DE LA TABLA (Sin Cambios) ---
             function seleccionarTodosCroupiers(event) {
                 const isChecked = event.target.checked;
                 DOM.tbody.querySelectorAll('.croupier-checkbox').forEach(cb => {
@@ -865,7 +961,7 @@
                 renderizarHorario();
             }
 
-            // --- LÓGICA DE MODALES Y EDICIÓN ---
+            // --- LÓGICA DE MODALES Y EDICIÓN (Sin cambios) ---
             function editarHorario(oldTime, thElement) {
                 const contentDiv = thElement.querySelector('.horario-header-content');
                 const originalContent = contentDiv.innerHTML;
@@ -1054,12 +1150,13 @@
                 DOM.fechaModal.style.display = 'flex';
             }
 
-            function guardarNuevaFecha() {
+            async function guardarNuevaFecha() {
                 const nuevaFechaStr = DOM.inputNuevaFecha.value;
                 if (nuevaFechaStr) {
                     fechaVisible = new Date(nuevaFechaStr + 'T00:00:00');
-                    guardarDatos();
-                    actualizarFechaDisplay();
+                    localStorage.setItem('fechaGuardada', fechaVisible.toISOString().split('T')[0]);
+                    await cargarDatos(); // Recargamos los datos para la nueva fecha
+                    renderizarHorario();
                 }
                 cerrarModales();
             }
@@ -1092,7 +1189,7 @@
                 openCronoModal(croupierCronoActivo);
             }
 
-            // --- LÓGICA DE CRONÓMETRO Y RELOJ ---
+            // --- LÓGICA DE CRONÓMETRO Y RELOJ (Sin Cambios) ---
             function actualizarSistema() {
                 const now = new Date();
                 DOM.relojDigital.textContent = now.toTimeString().slice(0, 8);
@@ -1102,7 +1199,6 @@
                     const croupier = croupierObj.nombreCompleto;
                     const isTimerRunning = cronometroIntervals.hasOwnProperty(croupier);
 
-                    // Lógica de Cronómetro
                     let lastAction = null;
                     let lastActionTime = null;
                     let lastActionTimestamp = null;
@@ -1136,9 +1232,7 @@
                     } else if (!isWorkAction && isTimerRunning) {
                         detenerCronometro(croupier, true);
                     }
-
-
-                    // --- INICIO: LÓGICA DE ALERTA DE SALIDA RESTAURADA ---
+                    
                     const salidaTime = croupierSalidas[croupier];
                     const rowElement = document.querySelector(`tr[data-croupier="${croupier}"]`);
                     const nameCell = rowElement ? rowElement.querySelector('td:first-child') : null;
@@ -1149,12 +1243,11 @@
                         const salidaDate = new Date(fechaVisible);
                         salidaDate.setHours(h, m, 0, 0);
                         
-                        // Manejar cruce de medianoche para la hora de salida
                         if (h < 6) {
                            salidaDate.setDate(salidaDate.getDate() + 1);
                         }
 
-                        const diff = (salidaDate.getTime() - now.getTime()) / 60000; // Diferencia en minutos
+                        const diff = (salidaDate.getTime() - now.getTime()) / 60000;
                         shouldWarn = diff > 0 && diff <= 20;
                     }
 
@@ -1165,7 +1258,6 @@
                     if (shouldWarn) {
                         isAnyWarning = true;
                     }
-                    // --- FIN: LÓGICA DE ALERTA DE SALIDA RESTAURADA ---
                 });
 
                 DOM.relojDigital.classList.toggle('warning-pulse', isAnyWarning);
@@ -1212,7 +1304,7 @@
                 if (croupierCronoActivo === croupier) DOM.cronoModalTimer.textContent = tiempo;
             }
 
-            // --- QUICK ADD ---
+            // --- QUICK ADD (Sin cambios) ---
             function abrirQuickAddModal() {
                 DOM.quickAddModal.style.display = 'flex';
                 DOM.quickAddSearchInput.value = '';
@@ -1251,7 +1343,7 @@
                 cerrarModales();
             }
 
-            // --- FUNCIONES UTILITARIAS ---
+            // --- FUNCIONES UTILITARIAS (Sin Cambios) ---
             function sortHorarios(a, b) {
                 let aHour = parseInt(a.split(':')[0], 10);
                 let bHour = parseInt(b.split(':')[0], 10);
@@ -1323,7 +1415,6 @@
                     }
                 });
 
-                // Crono Modal
                 document.getElementById('crono-btn-start').addEventListener('click', () => {
                     if (croupierCronoActivo) iniciarCronometro(croupierCronoActivo, new Date().getTime());
                     openCronoModal(croupierCronoActivo);
@@ -1338,7 +1429,6 @@
                 });
                 document.getElementById('btn-set-manual-time').addEventListener('click', ajustarTiempoManualCrono);
 
-                // Quick Add
                 DOM.quickAddSelector.addEventListener('click', abrirQuickAddModal);
                 DOM.quickAddSearchInput.addEventListener('input', (e) => renderCroupierListInModal(e.target.value));
                 DOM.quickAddFilterButtons.addEventListener('click', (e) => {
@@ -1352,16 +1442,15 @@
                 DOM.btnAddSelectedToTable.addEventListener('click', agregarCroupiersSeleccionadosDelModal);
             }
 
-            function inicializar() {
-                cargarDatos();
+            async function inicializar() {
+                // Recuperamos la última fecha guardada para empezar ahí
+                const fechaGuardadaStr = localStorage.getItem('fechaGuardada');
+                fechaVisible = fechaGuardadaStr ? new Date(fechaGuardadaStr + 'T00:00:00') : new Date();
+
+                await cargarDatos();
                 renderizarHorario();
                 setupEventListeners();
                 setInterval(actualizarSistema, 1000);
-                
-                window.addEventListener('storage', () => {
-                    cargarDatos();
-                    renderizarHorario();
-                });
 
                 new Sortable(DOM.tbody, {
                     animation: 150,
@@ -1386,3 +1475,5 @@
     </script>
 </body>
 </html>
+
+
