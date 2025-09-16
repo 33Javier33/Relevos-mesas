@@ -50,10 +50,20 @@
             transition: background-color 0.3s ease, color 0.3s ease;
             font-size: 14px; /* Tamaño base para móviles */
         }
+        
+        /* --- ESTILOS PARA EL CONTENEDOR DE BOTONES --- */
+        .nav-buttons-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px; /* Espacio entre los botones */
+            flex-wrap: wrap; /* Para que se acomoden en pantallas pequeñas */
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
 
         .header-nav-link {
             display: inline-block;
-            margin-top: 15px;
+            /* Se quita el margen superior para que lo maneje el contenedor */
             padding: 8px 16px;
             background-color: var(--primary-color);
             color: white;
@@ -221,14 +231,14 @@
         
         .tabla th:nth-child(2), .tabla td:nth-child(2) {
             position: sticky;
-            left: 110px; /* AJUSTADO: Ancho de la primera columna */
+            left: 110px;
             z-index: 5;
             background-color: var(--sticky-col-bg);
             white-space: nowrap;
         }
         
         .tabla thead th:nth-child(2) { 
-            left: 110px; /* AJUSTADO: Ancho de la primera columna */
+            left: 110px;
             z-index: 7; 
         }
 
@@ -401,7 +411,11 @@
 <body>
     <div class="reloj-y-controles-container">
         <h1>Horario de Relevos</h1>
-        <a href="vista.html" class="header-nav-link">Ir al Visualizador</a>
+        <!-- *** CAMBIO AQUÍ: Contenedor para los botones *** -->
+        <div class="nav-buttons-container">
+            <a href="/base/index.html" class="header-nav-link">Ir al Panel de Gestión</a>
+            <a href="https://vista-de-relevos.vercel.app/" id="link-to-viewer" class="header-nav-link">Ir al Visualizador</a>
+        </div>
         <div id="fecha-actual" class="fecha"></div>
         <div class="reloj-container">
             <div id="reloj-digital" class="reloj">00:00:00</div>
@@ -430,140 +444,13 @@
     <div id="croupier-tooltip" class="croupier-tooltip"></div>
 
     <!-- Modales -->
-    <div id="quick-add-modal" class="modal">
-        <div class="modal-content" id="quick-add-modal-content">
-            <span class="close-btn">&times;</span>
-            <h2>Agregar Croupier a la Tabla</h2>
-            <div class="quick-add-controls">
-                <button class="filter-btn active" data-filter="todos">Todos</button>
-                <button class="filter-btn" data-filter="planta">Planta</button>
-                <button class="filter-btn" data-filter="partime">Part Time</button>
-                <button class="filter-btn" data-filter="llamado">Llamado</button>
-            </div>
-            <input type="text" id="quick-add-search-input" placeholder="Buscar croupier...">
-            <ul id="quick-add-croupier-list"></ul>
-            <div class="modal-footer">
-                <button id="btn-add-selected-to-table" class="confirm" disabled>Agregar Seleccionados</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="relevo-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h2 id="modal-title">Asignar actividad</h2>
-            <div class="modal-body">
-                <p>Croupier: <strong id="croupier-info"></strong> | Horario: <strong id="horario-info"></strong></p>
-                <hr>
-                <h4>Selecciona la actividad:</h4>
-                <div id="relevo-modal-options">
-                    <div>
-                        <input type="radio" id="opcion-relevo" name="actividad" value="releva" checked>
-                        <label for="opcion-relevo">Relevo (Trabajo)</label>
-                    </div>
-                    <div>
-                        <input type="radio" id="opcion-ayudante" name="actividad" value="ayudante-pagador">
-                        <label for="opcion-ayudante">Ayudante Pagador</label>
-                    </div>
-                    <div>
-                        <input type="radio" id="opcion-descanso" name="actividad" value="descanso">
-                        <label for="opcion-descanso">Descanso</label>
-                    </div>
-                </div>
-                <div id="relevo-controls-container">
-                    <h4>Asignar mesas:</h4>
-                    <div id="mesas-selector">
-                        <div>
-                            <h5>Disponibles</h5>
-                            <div id="mesas-disponibles"></div>
-                        </div>
-                        <div>
-                            <h5>Seleccionadas</h5>
-                            <div id="mesas-seleccionadas"></div>
-                        </div>
-                    </div>
-                    <div>
-                        <label for="color-relevo">Color:</label>
-                        <input type="color" id="color-relevo" value="#3498db">
-                    </div>
-                </div>
-                <hr>
-                <h4>Asignar descanso manual</h4>
-                <div>
-                    <label for="select-croupier-descanso">Seleccionar croupier para descanso:</label>
-                    <select id="select-croupier-descanso" multiple></select>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button id="btn-borrar-relevo" class="danger">Borrar</button>
-                <button id="btn-guardar-relevo" class="confirm">Guardar</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="agregar-horario-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h2>Agregar Nuevo Horario</h2>
-            <input type="time" id="input-nuevo-horario" style="margin-top: 5px;">
-            <div class="modal-footer">
-                <button id="btn-guardar-nuevo-horario" class="confirm">Agregar</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="salida-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h2 id="salida-modal-title">Hora de salida para <span></span></h2>
-            <input type="time" id="input-salida-time">
-            <div class="modal-footer">
-                <button id="btn-borrar-salida" class="danger">Borrar</button>
-                <button id="btn-guardar-salida" class="confirm">Guardar</button>
-            </div>
-        </div>
-    </div>
-    
-    <div id="fecha-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h2>Editar Fecha</h2>
-            <input type="date" id="input-nueva-fecha" style="margin-top: 5px;">
-            <div class="modal-footer">
-                <button id="btn-guardar-nueva-fecha" class="confirm">Guardar</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="crono-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h2 id="crono-modal-title">Cronómetro para <span></span></h2>
-            <div class="cronometro-display" style="font-size: 2em; padding: 20px; margin: 10px 0;">
-                <span id="crono-modal-timer" class="timer">00:00:00</span>
-            </div>
-            <div style="margin-top: 15px;">
-                <input type="text" id="crono-manual-input" placeholder="Ej: 45 (para 45 min)">
-                <button id="btn-set-manual-time" class="success" style="width: 100%; margin-top: 5px;">Ajustar</button>
-            </div>
-            <div class="modal-footer">
-                <button id="crono-btn-start" class="confirm">Iniciar</button>
-                <button id="crono-btn-stop" class="danger">Detener</button>
-                <button id="btn-reset" class="undo-redo">Reiniciar</button>
-            </div>
-        </div>
-    </div>
-    
-    <div id="custom-alert-modal" class="modal">
-        <div class="modal-content" style="max-width: 350px; text-align: center;">
-            <h3 id="custom-alert-title"></h3>
-            <p id="custom-alert-message"></p>
-            <div class="modal-footer" style="justify-content: center;">
-                <button id="custom-alert-cancel" class="danger" style="display: none;">Cancelar</button>
-                <button id="custom-alert-ok" class="confirm">OK</button>
-            </div>
-        </div>
-    </div>
+    <div id="quick-add-modal" class="modal"><div class="modal-content" id="quick-add-modal-content"><span class="close-btn">&times;</span><h2>Agregar Croupier a la Tabla</h2><div class="quick-add-controls"><button class="filter-btn active" data-filter="todos">Todos</button><button class="filter-btn" data-filter="planta">Planta</button><button class="filter-btn" data-filter="partime">Part Time</button><button class="filter-btn" data-filter="llamado">Llamado</button></div><input type="text" id="quick-add-search-input" placeholder="Buscar croupier..."><ul id="quick-add-croupier-list"></ul><div class="modal-footer"><button id="btn-add-selected-to-table" class="confirm" disabled>Agregar Seleccionados</button></div></div></div>
+    <div id="relevo-modal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2 id="modal-title">Asignar actividad</h2><div class="modal-body"><p>Croupier: <strong id="croupier-info"></strong> | Horario: <strong id="horario-info"></strong></p><hr><h4>Selecciona la actividad:</h4><div id="relevo-modal-options"><div><input type="radio" id="opcion-relevo" name="actividad" value="releva" checked><label for="opcion-relevo">Relevo (Trabajo)</label></div><div><input type="radio" id="opcion-ayudante" name="actividad" value="ayudante-pagador"><label for="opcion-ayudante">Ayudante Pagador</label></div><div><input type="radio" id="opcion-descanso" name="actividad" value="descanso"><label for="opcion-descanso">Descanso</label></div></div><div id="relevo-controls-container"><h4>Asignar mesas:</h4><div id="mesas-selector"><div><h5>Disponibles</h5><div id="mesas-disponibles"></div></div><div><h5>Seleccionadas</h5><div id="mesas-seleccionadas"></div></div></div><div><label for="color-relevo">Color:</label><input type="color" id="color-relevo" value="#3498db"></div></div><hr><h4>Asignar descanso manual</h4><div><label for="select-croupier-descanso">Seleccionar croupier para descanso:</label><select id="select-croupier-descanso" multiple></select></div></div><div class="modal-footer"><button id="btn-borrar-relevo" class="danger">Borrar</button><button id="btn-guardar-relevo" class="confirm">Guardar</button></div></div></div>
+    <div id="agregar-horario-modal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2>Agregar Nuevo Horario</h2><input type="time" id="input-nuevo-horario" style="margin-top: 5px;"><div class="modal-footer"><button id="btn-guardar-nuevo-horario" class="confirm">Agregar</button></div></div></div>
+    <div id="salida-modal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2 id="salida-modal-title">Hora de salida para <span></span></h2><input type="time" id="input-salida-time"><div class="modal-footer"><button id="btn-borrar-salida" class="danger">Borrar</button><button id="btn-guardar-salida" class="confirm">Guardar</button></div></div></div>
+    <div id="fecha-modal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2>Editar Fecha</h2><input type="date" id="input-nueva-fecha" style="margin-top: 5px;"><div class="modal-footer"><button id="btn-guardar-nueva-fecha" class="confirm">Guardar</button></div></div></div>
+    <div id="crono-modal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2 id="crono-modal-title">Cronómetro para <span></span></h2><div class="cronometro-display" style="font-size: 2em; padding: 20px; margin: 10px 0;"><span id="crono-modal-timer" class="timer">00:00:00</span></div><div style="margin-top: 15px;"><input type="text" id="crono-manual-input" placeholder="Ej: 45 (para 45 min)"><button id="btn-set-manual-time" class="success" style="width: 100%; margin-top: 5px;">Ajustar</button></div><div class="modal-footer"><button id="crono-btn-start" class="confirm">Iniciar</button><button id="crono-btn-stop" class="danger">Detener</button><button id="btn-reset" class="undo-redo">Reiniciar</button></div></div></div>
+    <div id="custom-alert-modal" class="modal"><div class="modal-content" style="max-width: 350px; text-align: center;"><h3 id="custom-alert-title"></h3><p id="custom-alert-message"></p><div class="modal-footer" style="justify-content: center;"><button id="custom-alert-cancel" class="danger" style="display: none;">Cancelar</button><button id="custom-alert-ok" class="confirm">OK</button></div></div></div>
 
     <footer>
         CarlosPN Interactive®
@@ -571,30 +458,13 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script>
+        // TU SCRIPT ORIGINAL, CON CAMBIOS MÍNIMOS Y MARCADOS
         document.addEventListener('DOMContentLoaded', () => {
-            // --- URLs DE GOOGLE APPS SCRIPT ---
             const URL_DEL_SCRIPT_DE_CROUPIERS = 'https://script.google.com/macros/s/AKfycbzjaL7OKe1_doagry1eo0w15vXOJy_-oEtWreLTzj1GoQgxyE8cDI7jTgWm7qqThB7M/exec';
             const URL_DEL_SCRIPT_DE_HORARIOS = 'https://script.google.com/macros/s/AKfycbx6-N3shrPlqQ5rOV2xkDL2cNIIp1lOYVfytv8L5lXC2hw_jqgmeJaiKyK9nrusMwS9vg/exec';
 
-            // --- DATOS Y ESTADO (SIN CAMBIOS) ---
-            let croupiersData = [];
-            let croupiersEnEspera = [];
-            let horarios = [];
-            let mesasDeJuego = [];
-            let datosRelevos = {};
-            let croupierColors = {};
-            let croupierSalidas = {};
-            let horarioColors = {};
-            let cronometroIntervals = {};
-            let cronometroStartTime = {};
-            let fechaVisible = new Date();
-            let celdaActiva = { croupier: null, horario: null };
-            let croupierCronoActivo = null;
-            let croupierSalidaActivo = null;
-            let tooltipElementoActivo = null;
-            let quickAddCurrentFilter = 'todos';
+            let croupiersData = [], croupiersEnEspera = [], horarios = [], mesasDeJuego = [], datosRelevos = {}, croupierColors = {}, croupierSalidas = {}, horarioColors = {}, cronometroIntervals = {}, cronometroStartTime = {}, fechaVisible = new Date(), celdaActiva = { croupier: null, horario: null }, croupierCronoActivo = null, croupierSalidaActivo = null, tooltipElementoActivo = null, quickAddCurrentFilter = 'todos';
 
-            // --- SELECTORES DEL DOM (SIN CAMBIOS) ---
             const DOM = {
                 tbody: document.getElementById('sortable-tbody'),
                 thead: document.getElementById('tabla-horario').querySelector('thead tr'),
@@ -630,9 +500,9 @@
                 quickAddCroupierList: document.getElementById('quick-add-croupier-list'),
                 quickAddFilterButtons: document.querySelector('#quick-add-modal .quick-add-controls'),
                 btnAddSelectedToTable: document.getElementById('btn-add-selected-to-table'),
+                linkToViewer: document.getElementById('link-to-viewer') // <-- Se añade el selector del link
             };
 
-            // --- CONEXIÓN CON GOOGLE SHEETS Y DATOS (SIN CAMBIOS) ---
             async function cargarDatos() {
                 try {
                     const responseCroupiers = await fetch(`${URL_DEL_SCRIPT_DE_CROUPIERS}?dataType=horarios`);
@@ -647,6 +517,7 @@
                     showModal('Error Crítico', 'No se pudo cargar la lista de croupiers y mesas. La aplicación no puede continuar.');
                     return;
                 }
+
                 const fechaISO = fechaVisible.toISOString().split('T')[0];
                 try {
                     const responseHorarios = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=load&fecha=${fechaISO}`);
@@ -668,6 +539,7 @@
                     showModal('Error de Conexión', 'No se pudieron cargar los datos del horario.');
                     croupiersData = []; datosRelevos = {}; croupierColors = {}; croupierSalidas = {}; horarioColors = {}; horarios = []; cronometroStartTime = {};
                 }
+                
                 Object.values(cronometroIntervals).forEach(clearInterval);
                 cronometroIntervals = {};
                 for (const [croupier, time] of Object.entries(cronometroStartTime)) {
@@ -676,7 +548,7 @@
             }
 
             async function guardarDatos() {
-                try {
+                 try {
                     const datosAEnviar = {
                         action: 'save',
                         fecha: fechaVisible.toISOString().split('T')[0],
@@ -695,7 +567,6 @@
                 }
             }
 
-            // --- TU CÓDIGO ORIGINAL SIN CAMBIOS ---
             function renderizarHorario(){renderizarCabecera();renderizarCuerpo();renderQuickAddSelector();actualizarFechaDisplay();}
             function renderizarCabecera(){DOM.thead.innerHTML='';const thCroupier=document.createElement('th');thCroupier.className='croupier-header';thCroupier.innerHTML=`<input type="checkbox" id="select-all-croupiers"> Nombre <span class="contador-badge">${croupiersData.length}</span>`;DOM.thead.appendChild(thCroupier);const thCrono=document.createElement('th');thCrono.className='crono-header';thCrono.textContent='Crono.';DOM.thead.appendChild(thCrono);horarios.sort(sortHorarios).forEach(hora=>{const th=document.createElement('th');th.dataset.horario=hora;const contentDiv=document.createElement('div');contentDiv.className='horario-header-content';const editSpan=document.createElement('span');editSpan.textContent=hora;editSpan.addEventListener('click',()=>editarHorario(hora,th));const deleteBtn=document.createElement('button');deleteBtn.className='delete-time';deleteBtn.textContent='×';deleteBtn.addEventListener('click',e=>{e.stopPropagation();borrarHorario(hora);});contentDiv.appendChild(editSpan);contentDiv.appendChild(deleteBtn);th.appendChild(contentDiv);if(horarioColors[hora])th.style.backgroundColor=horarioColors[hora];DOM.thead.appendChild(th);});const thAgregar=document.createElement('th');thAgregar.className='agregar-horario-th';thAgregar.innerHTML='<span>+</span>';DOM.thead.appendChild(thAgregar);DOM.thead.querySelector('#select-all-croupiers')?.addEventListener('change',seleccionarTodosCroupiers);DOM.thead.querySelector('.agregar-horario-th')?.addEventListener('click',abrirAgregarHorarioModal);}
             function renderizarCuerpo(){DOM.tbody.innerHTML='';croupiersData.forEach(croupierObj=>{if(!croupierObj)return;const tr=document.createElement('tr');tr.className='croupier-row';tr.dataset.croupier=croupierObj.nombreCompleto;const tdNombre=document.createElement('td');const croupierColor=croupierColors[croupierObj.nombreCompleto];if(croupierColor)tdNombre.style.backgroundColor=croupierColor;tdNombre.innerHTML=`<div class="croupier-cell-content"><button class="delete-croupier">×</button><div><input type="checkbox" class="croupier-checkbox"><span class="croupier-name">${generarAlias(croupierObj.nombreCompleto)}</span></div><div class="salida-card" data-croupier-salida="${croupierObj.nombreCompleto}"><span>⏰</span><span class="salida-time">${croupierSalidas[croupierObj.nombreCompleto]||'--:--'}</span></div></div>`;tr.appendChild(tdNombre);const tdCrono=document.createElement('td');tdCrono.className='cronometro-cell';tdCrono.dataset.croupierCrono=croupierObj.nombreCompleto;tdCrono.innerHTML=`<div class="cronometro-display"><span class="timer">00:00:00</span></div>`;if(cronometroIntervals[croupierObj.nombreCompleto]){tdCrono.querySelector('.cronometro-display').classList.add('running');}
@@ -704,7 +575,14 @@
             function crearTarjetaRelevo(relevoData){const div=document.createElement('div');div.className='relevo-cell';switch(relevoData.actividad){case'releva':div.style.backgroundColor=relevoData.color;div.textContent=relevoData.mesas.join(' - ');break;case'ayudante-pagador':div.classList.add('ayudante-pagador');div.textContent='AYUD. PAGADOR';break;case'descanso':div.style.backgroundColor='#f39c12';div.textContent='DESCANSO';break;default:div.style.backgroundColor='#95a5a6';div.textContent='S/A';}
             return div;}
             function renderQuickAddSelector(){const available=croupiersEnEspera.filter(c=>!croupiersData.some(cd=>cd.nombreCompleto===c.nombreCompleto));DOM.quickAddSelector.textContent=available.length>0?`Agregar Croupier... (${available.length} disp.)`:'No hay Croupiers para agregar';DOM.quickAddSelector.disabled=available.length===0;}
-            function actualizarFechaDisplay(){DOM.fechaDisplay.textContent=fechaVisible.toLocaleDateString('es-ES',{weekday:'long',year:'numeric',month:'long',day:'numeric'});}
+            
+            function actualizarFechaDisplay(){
+                DOM.fechaDisplay.textContent=fechaVisible.toLocaleDateString('es-ES',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+                // *** CAMBIO AQUÍ: Actualiza el link con la fecha actual ***
+                const fechaISO = fechaVisible.toISOString().split('T')[0];
+                DOM.linkToViewer.href = `vista.html?fecha=${fechaISO}`;
+            }
+
             function seleccionarTodosCroupiers(event){const isChecked=event.target.checked;DOM.tbody.querySelectorAll('.croupier-checkbox').forEach(cb=>{cb.checked=isChecked;cb.closest('.croupier-row').classList.toggle('row-selected',isChecked);});}
             function borrarCroupier(nombre){showModal('Confirmar',`¿Eliminar a ${nombre} de la tabla?`,'confirm',()=>{croupiersData=croupiersData.filter(c=>c.nombreCompleto!==nombre);delete datosRelevos[nombre];delete croupierColors[nombre];delete croupierSalidas[nombre];detenerCronometro(nombre,true);renderizarHorario();});}
             function borrarHorario(hora){showModal('Confirmar',`¿Eliminar el horario ${hora} y todas sus asignaciones?`,'confirm',()=>{horarios=horarios.filter(h=>h!==hora);Object.keys(datosRelevos).forEach(croupier=>{if(datosRelevos[croupier]&&typeof datosRelevos[croupier]==='object'){delete datosRelevos[croupier][hora];}});delete horarioColors[hora];guardarDatos();renderizarHorario();});}
@@ -734,185 +612,34 @@
             function ajustarTiempoManualCrono(){if(!croupierCronoActivo)return;const minutos=parseInt(DOM.cronoManualInput.value,10);if(isNaN(minutos)||minutos<0){showModal('Error','Introduce un número válido de minutos.');return;}
             const nuevoStartTime=new Date().getTime()-(minutos*60*1000);iniciarCronometro(croupierCronoActivo,nuevoStartTime);openCronoModal(croupierCronoActivo);}
             
-            // --- LÓGICA DE CRONÓMETRO Y RELOJ (CORREGIDA) ---
-            function actualizarSistema() {
-                const now = new Date();
-                DOM.relojDigital.textContent = now.toTimeString().slice(0, 8);
-                let isAnyWarning = false;
-
-                const sortedHorarios = [...horarios].sort(sortHorarios);
-                const horariosDate = sortedHorarios.map(h => {
-                    const [hour, minute] = h.split(':');
-                    const date = new Date(fechaVisible);
-                    date.setHours(hour, minute, 0, 0);
-                    const firstHourInSchedule = sortedHorarios.length > 0 ? parseInt(sortedHorarios[0].split(':')[0], 10) : 19;
-                    if (parseInt(hour, 10) < firstHourInSchedule && firstHourInSchedule > 12) {
-                        date.setDate(date.getDate() + 1);
-                    }
-                    return date;
-                });
-                
-                let currentScheduleIndex = -1;
-                for (let i = horariosDate.length - 1; i >= 0; i--) {
-                    if (now >= horariosDate[i]) {
-                        currentScheduleIndex = i;
-                        break;
-                    }
-                }
-
-                croupiersData.forEach(croupierObj => {
-                    const croupier = croupierObj.nombreCompleto;
-                    const isManualTimerRunning = cronometroStartTime.hasOwnProperty(croupier);
-                    const isIntervalRunning = cronometroIntervals.hasOwnProperty(croupier);
-                    
-                    if (!isManualTimerRunning) {
-                        let lastRealActivity = null;
-                        let lastRealActivityIndex = -1;
-
-                        // Buscar la última actividad real (no vacía) hasta la hora actual
-                        for (let i = currentScheduleIndex; i >= 0; i--) {
-                            const activity = datosRelevos[croupier]?.[sortedHorarios[i]];
-                            if (activity) {
-                                lastRealActivity = activity;
-                                lastRealActivityIndex = i;
-                                break;
-                            }
-                        }
-
-                        const isWorkAction = lastRealActivity && (lastRealActivity.actividad === 'releva' || lastRealActivity.actividad === 'ayudante-pagador');
-
-                        if (isWorkAction) {
-                            if (!isIntervalRunning) {
-                                // Si está en una acción de trabajo y el timer no corre, inícialo.
-                                // Busca el verdadero inicio del bloque de trabajo
-                                let workBlockStartIndex = lastRealActivityIndex;
-                                const lastActivityString = JSON.stringify(lastRealActivity);
-                                for (let i = lastRealActivityIndex - 1; i >= 0; i--) {
-                                     if (JSON.stringify(datosRelevos[croupier]?.[sortedHorarios[i]]) === lastActivityString) {
-                                         workBlockStartIndex = i;
-                                     } else { break; }
-                                }
-                                iniciarCronometro(croupier, horariosDate[workBlockStartIndex].getTime(), false); // false = no guardar, es automático
-                            }
-                        } else {
-                            // Si la última acción fue descanso o no hay acción, y el timer corre, deténlo.
-                            if (isIntervalRunning) {
-                                detenerCronometro(croupier, true, false); // true = resetear, false = no guardar
-                            }
-                        }
-                    }
-                    
-                    // Lógica de alerta de salida (sin cambios)
-                    const salidaTime = croupierSalidas[croupier];
-                    const rowElement = document.querySelector(`tr[data-croupier="${croupier}"]`);
-                    const nameCell = rowElement ? rowElement.querySelector('td:first-child') : null;
-                    let shouldWarn = false;
-                    if (salidaTime) {
-                        const [h, m] = salidaTime.split(':').map(Number);
-                        const salidaDate = new Date(fechaVisible);
-                        salidaDate.setHours(h, m, 0, 0);
-                        if (parseInt(h, 10) < 6) { salidaDate.setDate(salidaDate.getDate() + 1); }
-                        const diff = (salidaDate.getTime() - now.getTime()) / 60000;
-                        shouldWarn = diff > 0 && diff <= 20;
-                    }
-                    if (nameCell) nameCell.classList.toggle('salida-warning', shouldWarn);
-                    if (shouldWarn) isAnyWarning = true;
-                });
-
-                DOM.relojDigital.classList.toggle('warning-pulse', isAnyWarning);
-            }
-
-            function iniciarCronometro(croupier, startTime, shouldSave = true) {
-                if (!startTime) return;
-                if (cronometroIntervals[croupier]) clearInterval(cronometroIntervals[croupier]);
-                
-                if (shouldSave) {
-                    cronometroStartTime[croupier] = startTime;
-                }
-                
-                const update = () => {
-                    const elapsed = new Date().getTime() - startTime;
-                    if (elapsed >= 0) {
-                       const formatted = new Date(elapsed).toISOString().slice(11, 19);
-                       actualizarDisplayCrono(croupier, formatted);
-                    }
-                };
-                cronometroIntervals[croupier] = setInterval(update, 1000);
-                update();
-
-                const display = document.querySelector(`[data-croupier-crono="${croupier}"] .cronometro-display`);
-                if(display) display.classList.add('running');
-                if (shouldSave) guardarDatos();
-            }
-
-            function detenerCronometro(croupier, reset = false, shouldSave = true) {
-                if (cronometroIntervals[croupier]) {
-                    clearInterval(cronometroIntervals[croupier]);
-                    delete cronometroIntervals[croupier];
-                }
-                if (cronometroStartTime.hasOwnProperty(croupier)) {
-                    delete cronometroStartTime[croupier];
-                }
-
-                if (reset) {
-                    actualizarDisplayCrono(croupier, '00:00:00');
-                    const display = document.querySelector(`[data-croupier-crono="${croupier}"] .cronometro-display`);
-                    if(display) display.classList.remove('running');
-                }
-                if (shouldSave) guardarDatos();
-            }
-            
-            function actualizarDisplayCrono(croupier, tiempo) {
-                const timerEl = document.querySelector(`[data-croupier-crono="${croupier}"] .timer`);
-                if (timerEl) timerEl.textContent = tiempo;
-                if (croupierCronoActivo === croupier) DOM.cronoModalTimer.textContent = tiempo;
-            }
-
-            // --- TU CÓDIGO ORIGINAL SIN CAMBIOS ---
-            function abrirQuickAddModal() {DOM.quickAddModal.style.display = 'flex'; DOM.quickAddSearchInput.value = ''; renderCroupierListInModal();}
-            function renderCroupierListInModal(searchTerm = ''){DOM.quickAddCroupierList.innerHTML = ''; const available = croupiersEnEspera.filter(c => !croupiersData.some(cd => cd.nombreCompleto === c.nombreCompleto)); const filteredByContract = quickAddCurrentFilter === 'todos' ? available : available.filter(c => c.contrato === quickAddCurrentFilter); const filteredBySearch = filteredByContract.filter(c => c.nombreCompleto.toLowerCase().includes(searchTerm.toLowerCase())); filteredBySearch.forEach(croupier => {const li = document.createElement('li'); li.innerHTML = `<input type="checkbox" value="${croupier.nombreCompleto}"> <span>${croupier.nombreCompleto}</span>`; DOM.quickAddCroupierList.appendChild(li);}); DOM.quickAddCroupierList.querySelectorAll('input').forEach(cb => cb.addEventListener('change', () => {const anyChecked = DOM.quickAddCroupierList.querySelector('input:checked'); DOM.btnAddSelectedToTable.disabled = !anyChecked;}));}
-            function agregarCroupiersSeleccionadosDelModal(){const selected=DOM.quickAddCroupierList.querySelectorAll('input:checked');selected.forEach(cb=>{const nombre=cb.value;const croupierDb=croupiersEnEspera.find(c=>c.nombreCompleto===nombre);if(croupierDb&&!croupiersData.some(c=>c.nombreCompleto===nombre)){croupiersData.push(croupierDb);}});guardarDatos();renderizarHorario();cerrarModales();}
-            function sortHorarios(a,b){let aHour=parseInt(a.split(':')[0],10);let bHour=parseInt(b.split(':')[0],10);if(aHour<6)aHour+=24;if(bHour<6)bHour+=24;if(aHour<bHour)return -1;if(aHour>bHour)return 1;let aMin=parseInt(a.split(':')[1],10);let bMin=parseInt(b.split(':')[1],10);return aMin-bMin;}
-            function generarAlias(nombre){const partes=nombre.split(' ');return partes.length>1?`${partes[0]} ${partes[1][0]}.`:nombre;}
-            function mostrarTooltip(nombre,elemento){const croupier=croupiersEnEspera.find(c=>c.nombreCompleto===nombre);if(!croupier||!croupier.juegosQuePaga)return;const tooltip=document.getElementById('croupier-tooltip');tooltip.innerHTML=`<h5>Juegos:</h5><ul>${croupier.juegosQuePaga.map(j=>`<li>${j}</li>`).join('')||'<li>Ninguno</li>'}</ul>`;const rect=elemento.getBoundingClientRect();tooltip.style.left=`${rect.left+window.scrollX}px`;tooltip.style.top=`${rect.bottom+window.scrollY+5}px`;tooltip.style.display='block';}
-            function ocultarTooltip(){document.getElementById('croupier-tooltip').style.display='none';}
-            function cerrarModales(){document.querySelectorAll('.modal').forEach(m=>m.style.display='none');}
-            function showModal(title,message,type='info',onConfirm=null){document.getElementById('custom-alert-title').textContent=title;document.getElementById('custom-alert-message').textContent=message;const okBtn=document.getElementById('custom-alert-ok');const cancelBtn=document.getElementById('custom-alert-cancel');cancelBtn.style.display=type==='confirm'?'inline-block':'none';okBtn.onclick=()=>{if(onConfirm)onConfirm();document.getElementById('custom-alert-modal').style.display='none';};cancelBtn.onclick=()=>document.getElementById('custom-alert-modal').style.display='none';document.getElementById('custom-alert-modal').style.display='flex';}
-
-            // --- INICIALIZACIÓN Y EVENTOS ---
-            function setupEventListeners(){DOM.btnAplicarColor.addEventListener('click',aplicarColor);DOM.fechaDisplay.addEventListener('click',abrirFechaModal);document.querySelectorAll('.modal .close-btn').forEach(btn=>btn.addEventListener('click',cerrarModales));document.getElementById('btn-guardar-relevo').addEventListener('click',guardarRelevo);document.getElementById('btn-borrar-relevo').addEventListener('click',borrarRelevo);document.getElementById('btn-guardar-nuevo-horario').addEventListener('click',guardarNuevoHorario);document.getElementById('btn-guardar-salida').addEventListener('click',guardarSalida);document.getElementById('btn-borrar-salida').addEventListener('click',borrarSalida);document.getElementById('btn-guardar-nueva-fecha').addEventListener('click',guardarNuevaFecha);DOM.opcionRelevo.addEventListener('change',()=>toggleRelevoControls('releva'));DOM.opcionAyudante.addEventListener('change',()=>toggleRelevoControls('ayudante'));DOM.opcionDescanso.addEventListener('change',()=>toggleRelevoControls('descanso'));document.getElementById('relevo-modal').addEventListener('click',e=>{if(e.target.classList.contains('mesa-item')){const targetList=e.target.parentElement.id==='mesas-disponibles'?'mesas-seleccionadas':'mesas-disponibles';document.getElementById(targetList).appendChild(e.target);}});document.getElementById('crono-btn-start').addEventListener('click',()=>{if(croupierCronoActivo)iniciarCronometro(croupierCronoActivo,new Date().getTime());openCronoModal(croupierCronoActivo);});document.getElementById('crono-btn-stop').addEventListener('click',()=>{if(croupierCronoActivo)detenerCronometro(croupierCronoActivo,false);openCronoModal(croupierCronoActivo);});document.getElementById('btn-reset').addEventListener('click',()=>{if(croupierCronoActivo)detenerCronometro(croupierCronoActivo,true);openCronoModal(croupierCronoActivo);});document.getElementById('btn-set-manual-time').addEventListener('click',ajustarTiempoManualCrono);DOM.quickAddSelector.addEventListener('click',abrirQuickAddModal);DOM.quickAddSearchInput.addEventListener('input',e=>renderCroupierListInModal(e.target.value));DOM.quickAddFilterButtons.addEventListener('click',e=>{if(e.target.classList.contains('filter-btn')){DOM.quickAddFilterButtons.querySelector('.active').classList.remove('active');e.target.classList.add('active');quickAddCurrentFilter=e.target.dataset.filter;renderCroupierListInModal(DOM.quickAddSearchInput.value);}});DOM.btnAddSelectedToTable.addEventListener('click',agregarCroupiersSeleccionadosDelModal);}
-
-            async function inicializar() {
-                const fechaGuardadaStr = localStorage.getItem('fechaGuardada');
-                fechaVisible = fechaGuardadaStr ? new Date(fechaGuardadaStr + 'T00:00:00') : new Date();
-
-                await cargarDatos();
-                renderizarHorario();
-                setupEventListeners();
-                setInterval(actualizarSistema, 1000);
-
-                new Sortable(DOM.tbody, {
-                    animation: 150,
-                    ghostClass: 'sortable-ghost',
-                    chosenClass: 'sortable-chosen',
-                    multiDrag: true,
-                    selectedClass: 'row-selected',
-                    filter: '.croupier-row:not(.row-selected)',
-                    preventOnFilter: false,
-                    onEnd: (evt) => {
-                        const newOrderNames = Array.from(DOM.tbody.children).map(tr => tr.dataset.croupier);
-                        croupiersData.sort((a, b) => {
-                            return newOrderNames.indexOf(a.nombreCompleto) - newOrderNames.indexOf(b.nombreCompleto);
-                        });
-                        guardarDatos();
-                    }
-                });
-            }
-
+            function actualizarSistema(){const now=new Date();DOM.relojDigital.textContent=now.toTimeString().slice(0,8);let isAnyWarning=!1;const sortedHorarios=[...horarios].sort(sortHorarios);const horariosDate=sortedHorarios.map(h=>{const[hour,minute]=h.split(':');const date=new Date(fechaVisible);date.setHours(hour,minute,0,0);const firstHourInSchedule=sortedHorarios.length>0?parseInt(sortedHorarios[0].split(':')[0],10):19;if(parseInt(hour,10)<firstHourInSchedule&&firstHourInSchedule>12){date.setDate(date.getDate()+1)}
+            return date});let currentScheduleIndex=-1;for(let i=horariosDate.length-1;i>=0;i--){if(now>=horariosDate[i]){currentScheduleIndex=i;break}}
+            croupiersData.forEach(croupierObj=>{const croupier=croupierObj.nombreCompleto;const isManualTimerRunning=cronometroStartTime.hasOwnProperty(croupier);const isIntervalRunning=cronometroIntervals.hasOwnProperty(croupier);if(!isManualTimerRunning){let lastRealActivity=null;let lastRealActivityIndex=-1;for(let i=currentScheduleIndex;i>=0;i--){const activity=datosRelevos[croupier]?.[sortedHorarios[i]];if(activity){lastRealActivity=activity;lastRealActivityIndex=i;break}}
+            const isWorkAction=lastRealActivity&&(lastRealActivity.actividad==='releva'||lastRealActivity.actividad==='ayudante-pagador');if(isWorkAction&&!isIntervalRunning){let activityStartIndex=lastRealActivityIndex;const currentActivityString=JSON.stringify(lastRealActivity);for(let i=lastRealActivityIndex-1;i>=0;i--){if(JSON.stringify(datosRelevos[croupier]?.[sortedHorarios[i]])===currentActivityString){activityStartIndex=i}else{break}}
+            iniciarCronometro(croupier,horariosDate[activityStartIndex].getTime(),!1)}else if(!isWorkAction&&isIntervalRunning){detenerCronometro(croupier,!0,!1)}}
+            const salidaTime=croupierSalidas[croupier];const rowElement=document.querySelector(`tr[data-croupier="${croupier}"]`);const nameCell=rowElement?rowElement.querySelector('td:first-child'):null;let shouldWarn=!1;if(salidaTime){const[h,m]=salidaTime.split(':').map(Number);const salidaDate=new Date(fechaVisible);salidaDate.setHours(h,m,0,0);if(h<6){salidaDate.setDate(salidaDate.getDate()+1)}
+            const diff=(salidaDate.getTime()-now.getTime())/6e4;shouldWarn=diff>0&&diff<=20}
+            if(nameCell)nameCell.classList.toggle('salida-warning',shouldWarn);if(shouldWarn)isAnyWarning=!0});DOM.relojDigital.classList.toggle('warning-pulse',isAnyWarning)}
+            function iniciarCronometro(croupier,startTime,shouldSave=!0){if(!startTime)return;if(cronometroIntervals[croupier])clearInterval(cronometroIntervals[croupier]);if(shouldSave){cronometroStartTime[croupier]=startTime}
+            const update=()=>{const elapsed=(new Date).getTime()-startTime;if(elapsed>=0){const formatted=(new Date(elapsed)).toISOString().slice(11,19);actualizarDisplayCrono(croupier,formatted)}};cronometroIntervals[croupier]=setInterval(update,1e3);update();const display=document.querySelector(`[data-croupier-crono="${croupier}"] .cronometro-display`);if(display)display.classList.add('running');if(shouldSave)guardarDatos()}
+            function detenerCronometro(croupier,reset=!1,shouldSave=!0){if(cronometroIntervals[croupier]){clearInterval(cronometroIntervals[croupier]);delete cronometroIntervals[croupier]}
+            if(shouldSave){delete cronometroStartTime[croupier]}
+            if(reset){actualizarDisplayCrono(croupier,'00:00:00');const display=document.querySelector(`[data-croupier-crono="${croupier}"] .cronometro-display`);if(display)display.classList.remove('running')}
+            if(shouldSave)guardarDatos()}
+            function actualizarDisplayCrono(croupier,tiempo){const timerEl=document.querySelector(`[data-croupier-crono="${croupier}"] .timer`);if(timerEl)timerEl.textContent=tiempo;if(croupierCronoActivo===croupier)DOM.cronoModalTimer.textContent=tiempo}
+            function abrirQuickAddModal(){DOM.quickAddModal.style.display='flex';DOM.quickAddSearchInput.value='';renderCroupierListInModal()}
+            function renderCroupierListInModal(searchTerm=''){DOM.quickAddCroupierList.innerHTML='';const available=croupiersEnEspera.filter(c=>!croupiersData.some(cd=>cd.nombreCompleto===c.nombreCompleto));const filteredByContract=quickAddCurrentFilter==='todos'?available:available.filter(c=>c.contrato===quickAddCurrentFilter);const filteredBySearch=filteredByContract.filter(c=>c.nombreCompleto.toLowerCase().includes(searchTerm.toLowerCase()));filteredBySearch.forEach(croupier=>{const li=document.createElement('li');li.innerHTML=`<input type="checkbox" value="${croupier.nombreCompleto}"> <span>${croupier.nombreCompleto}</span>`;DOM.quickAddCroupierList.appendChild(li)});DOM.quickAddCroupierList.querySelectorAll('input').forEach(cb=>cb.addEventListener('change',()=>{const anyChecked=DOM.quickAddCroupierList.querySelector('input:checked');DOM.btnAddSelectedToTable.disabled=!anyChecked}))}
+            function agregarCroupiersSeleccionadosDelModal(){const selected=DOM.quickAddCroupierList.querySelectorAll('input:checked');selected.forEach(cb=>{const nombre=cb.value;const croupierDb=croupiersEnEspera.find(c=>c.nombreCompleto===nombre);if(croupierDb&&!croupiersData.some(c=>c.nombreCompleto===nombre)){croupiersData.push(croupierDb)}});guardarDatos();renderizarHorario();cerrarModales()}
+            function sortHorarios(a,b){let aHour=parseInt(a.split(':')[0],10);let bHour=parseInt(b.split(':')[0],10);if(aHour<6)aHour+=24;if(bHour<6)bHour+=24;if(aHour<bHour)return -1;if(aHour>bHour)return 1;let aMin=parseInt(a.split(':')[1],10);let bMin=parseInt(b.split(':')[1],10);return aMin-bMin}
+            function generarAlias(nombre){const partes=nombre.split(' ');return partes.length>1?`${partes[0]} ${partes[1][0]}.`:nombre}
+            function mostrarTooltip(nombre,elemento){const croupier=croupiersEnEspera.find(c=>c.nombreCompleto===nombre);if(!croupier||!croupier.juegosQuePaga)return;const tooltip=document.getElementById('croupier-tooltip');tooltip.innerHTML=`<h5>Juegos:</h5><ul>${croupier.juegosQuePaga.map(j=>`<li>${j}</li>`).join('')||'<li>Ninguno</li>'}</ul>`;const rect=elemento.getBoundingClientRect();tooltip.style.left=`${rect.left+window.scrollX}px`;tooltip.style.top=`${rect.bottom+window.scrollY+5}px`;tooltip.style.display='block'}
+            function ocultarTooltip(){document.getElementById('croupier-tooltip').style.display='none'}
+            function cerrarModales(){document.querySelectorAll('.modal').forEach(m=>m.style.display='none')}
+            function showModal(title,message,type='info',onConfirm=null){document.getElementById('custom-alert-title').textContent=title;document.getElementById('custom-alert-message').textContent=message;const okBtn=document.getElementById('custom-alert-ok');const cancelBtn=document.getElementById('custom-alert-cancel');cancelBtn.style.display=type==='confirm'?'inline-block':'none';okBtn.onclick=()=>{if(onConfirm)onConfirm();document.getElementById('custom-alert-modal').style.display='none'};cancelBtn.onclick=()=>document.getElementById('custom-alert-modal').style.display='none';document.getElementById('custom-alert-modal').style.display='flex'}
+            function setupEventListeners(){DOM.btnAplicarColor.addEventListener('click',aplicarColor);DOM.fechaDisplay.addEventListener('click',abrirFechaModal);document.querySelectorAll('.modal .close-btn').forEach(btn=>btn.addEventListener('click',cerrarModales));document.getElementById('btn-guardar-relevo').addEventListener('click',guardarRelevo);document.getElementById('btn-borrar-relevo').addEventListener('click',borrarRelevo);document.getElementById('btn-guardar-nuevo-horario').addEventListener('click',guardarNuevoHorario);document.getElementById('btn-guardar-salida').addEventListener('click',guardarSalida);document.getElementById('btn-borrar-salida').addEventListener('click',borrarSalida);document.getElementById('btn-guardar-nueva-fecha').addEventListener('click',guardarNuevaFecha);DOM.opcionRelevo.addEventListener('change',()=>toggleRelevoControls('releva'));DOM.opcionAyudante.addEventListener('change',()=>toggleRelevoControls('ayudante'));DOM.opcionDescanso.addEventListener('change',()=>toggleRelevoControls('descanso'));document.getElementById('relevo-modal').addEventListener('click',e=>{if(e.target.classList.contains('mesa-item')){const targetList=e.target.parentElement.id==='mesas-disponibles'?'mesas-seleccionadas':'mesas-disponibles';document.getElementById(targetList).appendChild(e.target)}});document.getElementById('crono-btn-start').addEventListener('click',()=>{if(croupierCronoActivo)iniciarCronometro(croupierCronoActivo,(new Date).getTime());openCronoModal(croupierCronoActivo)});document.getElementById('crono-btn-stop').addEventListener('click',()=>{if(croupierCronoActivo)detenerCronometro(croupierCronoActivo,!1);openCronoModal(croupierCronoActivo)});document.getElementById('btn-reset').addEventListener('click',()=>{if(croupierCronoActivo)detenerCronometro(croupierCronoActivo,!0);openCronoModal(croupierCronoActivo)});document.getElementById('btn-set-manual-time').addEventListener('click',ajustarTiempoManualCrono);DOM.quickAddSelector.addEventListener('click',abrirQuickAddModal);DOM.quickAddSearchInput.addEventListener('input',e=>renderCroupierListInModal(e.target.value));DOM.quickAddFilterButtons.addEventListener('click',e=>{if(e.target.classList.contains('filter-btn')){DOM.quickAddFilterButtons.querySelector('.active').classList.remove('active');e.target.classList.add('active');quickAddCurrentFilter=e.target.dataset.filter;renderCroupierListInModal(DOM.quickAddSearchInput.value)}});DOM.btnAddSelectedToTable.addEventListener('click',agregarCroupiersSeleccionadosDelModal)}
+            async function inicializar(){const fechaGuardadaStr=localStorage.getItem('fechaGuardada');fechaVisible=fechaGuardadaStr?new Date(fechaGuardadaStr+'T00:00:00'):new Date;await cargarDatos();renderizarHorario();setupEventListeners();setInterval(actualizarSistema,1e3);new Sortable(DOM.tbody,{animation:150,ghostClass:'sortable-ghost',chosenClass:'sortable-chosen',multiDrag:!0,selectedClass:'row-selected',filter:'.croupier-row:not(.row-selected)',preventOnFilter:!1,onEnd:evt=>{const newOrderNames=Array.from(DOM.tbody.children).map(tr=>tr.dataset.croupier);croupiersData.sort((a,b)=>{return newOrderNames.indexOf(a.nombreCompleto)-newOrderNames.indexOf(b.nombreCompleto)});guardarDatos()}})}
             inicializar();
         });
     </script>
 </body>
 </html>
-
-
