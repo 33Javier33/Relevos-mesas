@@ -410,8 +410,8 @@
     <div class="reloj-y-controles-container">
         <h1>Horario de Relevos</h1>
         <div class="nav-buttons-container">
-            <a href="./base/index.html" class="header-nav-link">Ir al Panel de Gestión</a>
-            <a href="https://vista-de-relevos.vercel.app/" id="link-to-viewer" class="header-nav-link">Ir al Visualizador</a>
+            <a href="./base.html" class="header-nav-link">Ir al Panel de Gestión</a>
+            <a href="./viewer.html" id="link-to-viewer" class="header-nav-link">Ir al Visualizador</a>
         </div>
         <div id="fecha-actual" class="fecha"></div>
         <div class="reloj-container">
@@ -504,15 +504,12 @@
             
             async function cargarDatosMaestros() {
                 try {
-                    // Carga Croupiers y Mesas en paralelo desde el script de base.html, evitando el caché
                     const [croupiersResponse, mesasResponse] = await Promise.all([
                         fetch(`${URL_DEL_SCRIPT_DE_MAESTROS}?t=${new Date().getTime()}`),
                         fetch(`${URL_DEL_SCRIPT_DE_MAESTROS}?dataType=mesas&t=${new Date().getTime()}`)
                     ]);
 
-                    if (!croupiersResponse.ok || !mesasResponse.ok) {
-                        throw new Error('La respuesta de la red no fue OK para los datos maestros.');
-                    }
+                    if (!croupiersResponse.ok || !mesasResponse.ok) throw new Error('Network response was not ok.');
 
                     const croupiersJson = await croupiersResponse.json();
                     const mesasJson = await mesasResponse.json();
@@ -520,21 +517,18 @@
                     croupiersEnEspera = croupiersJson || [];
                     mesasDeJuego = mesasJson || [];
 
-                    // Si la conexión fue exitosa, guarda una copia de seguridad fresca
                     localStorage.setItem('croupiersEnEspera', JSON.stringify(croupiersEnEspera));
                     localStorage.setItem('mesasDeJuego', JSON.stringify(mesasDeJuego));
-                    console.log("Datos maestros cargados desde la red y copia de seguridad actualizada.");
+                    console.log("Master data fetched from network and backup saved.");
 
                 } catch (error) {
-                    console.error("Fallo de red al cargar datos maestros. Intentando usar la copia de seguridad.", error);
-                    // Si la red falla, intenta usar la copia de seguridad
+                    console.error("Could not fetch from network, attempting to load from backup.", error);
                     croupiersEnEspera = JSON.parse(localStorage.getItem('croupiersEnEspera')) || [];
                     mesasDeJuego = JSON.parse(localStorage.getItem('mesasDeJuego')) || [];
                     
                     if (croupiersEnEspera.length > 0 || mesasDeJuego.length > 0) {
                         showModal('Advertencia', 'No se pudo conectar a la red. Se está usando la última lista guardada de croupiers y mesas.');
                     } else {
-                        // Si la red falla Y NO HAY COPIA DE SEGURIDAD, es un error crítico
                         showModal('ERROR CRÍTICO', 'No se pudo cargar la base de datos. Revisa la conexión a internet y los permisos del script de base de datos.');
                         DOM.quickAddSelector.textContent = 'ERROR DE CONEXIÓN';
                         DOM.quickAddSelector.disabled = true;
@@ -837,10 +831,16 @@
                 setupEventListeners();
                 setInterval(actualizarSistema, 1000); 
 
+                // THE FIX IS HERE: Added multiDrag, selectedClass, filter, and preventOnFilter
+                // to ensure only selected rows can be moved.
                 new Sortable(DOM.tbody, {
                     animation: 150,
                     ghostClass: 'sortable-ghost',
                     chosenClass: 'sortable-chosen',
+                    multiDrag: true, // Allows selecting and dragging multiple items
+                    selectedClass: 'row-selected', // The class for selected items
+                    filter: '.croupier-row:not(.row-selected)', // Prevents dragging on rows that are NOT selected
+                    preventOnFilter: false, // Important for multiDrag to work correctly
                     onEnd: () => {
                         const newOrderNames = Array.from(DOM.tbody.children).map(tr => tr.dataset.croupier);
                         croupiersData.sort((a, b) => newOrderNames.indexOf(a.nombreCompleto) - newOrderNames.indexOf(b.nombreCompleto));
@@ -853,11 +853,10 @@
                     if (event.key === 'croupiersEnEspera' || event.key === 'mesasDeJuego') {
                         console.log('Database change detected, reloading master data...');
                         cargarDatosMaestros().then(() => {
-                           // Re-filter the current croupiers in the table in case one was deleted from base.html
                            const croupierNamesInTable = croupiersData.map(c => c.nombreCompleto);
                            croupiersData = croupierNamesInTable
                                .map(nombre => croupiersEnEspera.find(ce => ce.nombreCompleto === nombre))
-                               .filter(Boolean); // filter out any that were deleted
+                               .filter(Boolean);
                            renderizarHorario(); 
                         });
                     }
