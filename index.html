@@ -831,14 +831,16 @@
                 setupEventListeners();
                 setInterval(actualizarSistema, 1000); 
 
+                // THE FIX IS HERE: Added multiDrag, selectedClass, filter, and preventOnFilter
+                // to ensure only selected rows can be moved.
                 new Sortable(DOM.tbody, {
                     animation: 150,
                     ghostClass: 'sortable-ghost',
                     chosenClass: 'sortable-chosen',
-                    multiDrag: true,
-                    selectedClass: 'row-selected',
-                    filter: '.croupier-row:not(.row-selected)',
-                    preventOnFilter: false,
+                    multiDrag: true, // Allows selecting and dragging multiple items
+                    selectedClass: 'row-selected', // The class for selected items
+                    filter: '.croupier-row:not(.row-selected)', // Prevents dragging on rows that are NOT selected
+                    preventOnFilter: false, // Important for multiDrag to work correctly
                     onEnd: () => {
                         const newOrderNames = Array.from(DOM.tbody.children).map(tr => tr.dataset.croupier);
                         croupiersData.sort((a, b) => newOrderNames.indexOf(a.nombreCompleto) - newOrderNames.indexOf(b.nombreCompleto));
@@ -846,12 +848,18 @@
                     }
                 });
 
-                 // THE FIX: The listener now reloads the page to get a fresh state
+                 // Listen for changes from base.html
                 window.addEventListener('storage', (event) => {
-                    // This event fires when ANY localStorage item is changed in another tab.
-                    // We reload the page to make sure all data (masters and daily schedule) is fresh.
-                    // This is the simplest and most robust way to sync.
-                    location.reload();
+                    if (event.key === 'croupiersEnEspera' || event.key === 'mesasDeJuego') {
+                        console.log('Database change detected, reloading master data...');
+                        cargarDatosMaestros().then(() => {
+                           const croupierNamesInTable = croupiersData.map(c => c.nombreCompleto);
+                           croupiersData = croupierNamesInTable
+                               .map(nombre => croupiersEnEspera.find(ce => ce.nombreCompleto === nombre))
+                               .filter(Boolean);
+                           renderizarHorario(); 
+                        });
+                    }
                 });
             }
             
