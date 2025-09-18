@@ -399,10 +399,8 @@
             function borrarSoloHorarios() {
                 showModal('Borrar TODOS los Horarios', 'Esto borrará TODOS los datos de horarios guardados en este navegador para TODAS las fechas. ¿Continuar?', 'confirm', () => {
                     let itemsBorrados = 0;
-                    // Itera sobre todas las claves en localStorage
                     for (let i = localStorage.length - 1; i >= 0; i--) {
                         const key = localStorage.key(i);
-                        // Si la clave corresponde a un horario guardado, la elimina
                         if (key.startsWith('horario_')) {
                             localStorage.removeItem(key);
                             itemsBorrados++;
@@ -414,7 +412,7 @@
             }
 
             function borrarSoloCroupiersDeTabla() {
-                 showModal('Limpiar Croupiers de TODAS las Tablas', 'Esto quitará a TODOS los croupiers de TODAS las tablas de horarios guardadas en este navegador. Las asignaciones de horarios se mantendrán. ¿Continuar?', 'confirm', () => {
+                 showModal('Limpiar Croupiers de TODAS las Tablas', 'Esto quitará a TODOS los croupiers de TODAS las tablas de horarios guardadas en este navegador. Las asignaciones se mantendrán. ¿Continuar?', 'confirm', () => {
                     let itemsModificados = 0;
                     for (let i = 0; i < localStorage.length; i++) {
                         const key = localStorage.key(i);
