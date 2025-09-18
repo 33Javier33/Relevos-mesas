@@ -49,7 +49,7 @@
             font-size: 14px;
         }
         
-        .nav-buttons-container {
+        .nav-buttons-container, .management-buttons-container {
             display: flex;
             justify-content: center;
             gap: 10px; 
@@ -68,6 +68,12 @@
             font-weight: bold;
             transition: background-color 0.3s ease;
             font-size: 0.9em;
+        }
+        .header-nav-link.danger-btn {
+            background-color: var(--danger-color);
+        }
+        .header-nav-link.danger-btn:hover {
+            background-color: var(--danger-hover-color);
         }
 
         .contador-badge {
@@ -413,6 +419,11 @@
             <a href="./base/index.html" class="header-nav-link">Ir al Panel de Gestión</a>
             <a href="https://vista-de-relevos.vercel.app/" id="link-to-viewer" class="header-nav-link">Ir al Visualizador</a>
         </div>
+        <!-- BOTONES NUEVOS PARA BORRAR DATOS -->
+        <div class="management-buttons-container">
+            <button id="btn-limpiar-croupiers" class="header-nav-link danger-btn">Limpiar Croupiers</button>
+            <button id="btn-limpiar-horarios" class="header-nav-link danger-btn">Limpiar Horarios</button>
+        </div>
         <div id="fecha-actual" class="fecha"></div>
         <div class="reloj-container">
             <div id="reloj-digital" class="reloj">00:00:00</div>
@@ -540,8 +551,7 @@
             
             function actualizarFechaDisplay() {
                 DOM.fechaDisplay.textContent = fechaVisible.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-                const fechaParaURL = getLocalDateString(fechaVisible);
-                DOM.linkToViewer.href = `./viewer.html?fecha=${fechaParaURL}`;
+                
             }
             
             let saveTimeout;
@@ -831,16 +841,14 @@
                 setupEventListeners();
                 setInterval(actualizarSistema, 1000); 
 
-                // THE FIX IS HERE: Added multiDrag, selectedClass, filter, and preventOnFilter
-                // to ensure only selected rows can be moved.
                 new Sortable(DOM.tbody, {
                     animation: 150,
                     ghostClass: 'sortable-ghost',
                     chosenClass: 'sortable-chosen',
-                    multiDrag: true, // Allows selecting and dragging multiple items
-                    selectedClass: 'row-selected', // The class for selected items
-                    filter: '.croupier-row:not(.row-selected)', // Prevents dragging on rows that are NOT selected
-                    preventOnFilter: false, // Important for multiDrag to work correctly
+                    multiDrag: true, 
+                    selectedClass: 'row-selected', 
+                    filter: '.croupier-row:not(.row-selected)', 
+                    preventOnFilter: false, 
                     onEnd: () => {
                         const newOrderNames = Array.from(DOM.tbody.children).map(tr => tr.dataset.croupier);
                         croupiersData.sort((a, b) => newOrderNames.indexOf(a.nombreCompleto) - newOrderNames.indexOf(b.nombreCompleto));
@@ -848,7 +856,6 @@
                     }
                 });
 
-                 // Listen for changes from base.html
                 window.addEventListener('storage', (event) => {
                     if (event.key === 'croupiersEnEspera' || event.key === 'mesasDeJuego') {
                         console.log('Database change detected, reloading master data...');
@@ -875,6 +882,31 @@
             function seleccionarTodosCroupiers(event){const isChecked=event.target.checked;document.querySelectorAll('.croupier-checkbox').forEach(cb=>{cb.checked=isChecked;cb.closest('.croupier-row').classList.toggle('row-selected',isChecked);});}
             function borrarCroupier(nombre){showModal('Confirmar',`¿Eliminar a ${nombre} de la tabla?`,'confirm',()=>{croupiersData=croupiersData.filter(c=>c.nombreCompleto!==nombre);delete datosRelevos[nombre];delete croupierColors[nombre];delete croupierSalidas[nombre];detenerCronometro(nombre,true,true);guardarDatosEnLocalStorage();renderizarHorario();});}
             function borrarHorario(hora){showModal('Confirmar',`¿Eliminar el horario ${hora} y todas sus asignaciones?`,'confirm',()=>{horarios=horarios.filter(h=>h!==hora);Object.keys(datosRelevos).forEach(croupier=>{if(datosRelevos[croupier]&&typeof datosRelevos[croupier]==='object'){delete datosRelevos[croupier][hora];}});delete horarioColors[hora];guardarDatosEnLocalStorage();renderizarHorario();});}
+            // --- NUEVAS FUNCIONES PARA LIMPIAR DATOS ---
+            function limpiarCroupiers() {
+                showModal('Confirmar Acción', '¿Está seguro de que desea eliminar a TODOS los croupiers de la tabla? Esta acción no se puede deshacer.', 'confirm', () => {
+                    Object.keys(cronometroIntervals).forEach(croupier => {
+                        detenerCronometro(croupier, true, false); 
+                    });
+                    croupiersData = []; datosRelevos = {}; croupierColors = {};
+                    croupierSalidas = {}; cronometroStartTime = {};
+                    cronometroCurrentStartTime = {}; cronometroIntervals = {};
+                    console.log("Todos los croupiers han sido eliminados.");
+                    guardarDatosEnLocalStorage();
+                    renderizarHorario();
+                });
+            }
+            function limpiarHorarios() {
+                showModal('Confirmar Acción', '¿Está seguro de que desea eliminar TODOS los horarios? Se perderán todas las asignaciones. Esta acción no se puede deshacer.', 'confirm', () => {
+                    horarios = [];
+                    horarioColors = {};
+                    Object.keys(datosRelevos).forEach(croupier => { datosRelevos[croupier] = {}; });
+                    console.log("Todos los horarios han sido eliminados.");
+                    guardarDatosEnLocalStorage();
+                    renderizarHorario();
+                });
+            }
+            // --- FIN DE NUEVAS FUNCIONES ---
             function aplicarColor(){const color=DOM.colorPicker.value;const seleccionados=document.querySelectorAll('.croupier-checkbox:checked');if(seleccionados.length===0){showModal('Info','Selecciona al menos un croupier.');return;}
             seleccionados.forEach(cb=>{const nombre=cb.closest('.croupier-row').dataset.croupier;croupierColors[nombre]=color;});guardarDatosEnLocalStorage();renderizarHorario();}
             function editarHorario(oldTime,thElement){const contentDiv=thElement.querySelector('.horario-header-content');const originalHTML=contentDiv.innerHTML;contentDiv.innerHTML=`<input type="time" value="${oldTime}" style="width: 80px;">`;const input=contentDiv.querySelector('input');input.focus();const save=()=>{const newTime=input.value;if(newTime&&newTime!==oldTime&&!horarios.includes(newTime)){const oldIndex=horarios.indexOf(oldTime);horarios[oldIndex]=newTime;Object.values(datosRelevos).forEach(cRelevos=>{if(cRelevos[oldTime]){cRelevos[newTime]=cRelevos[oldTime];delete cRelevos[oldTime];}});if(horarioColors[oldTime]){horarioColors[newTime]=horarioColors[oldTime];delete horarioColors[oldTime];}
@@ -896,7 +928,11 @@
             function ocultarTooltip(){DOM.croupierTooltip.style.display='none'}
             function cerrarModales(){document.querySelectorAll('.modal').forEach(m=>m.style.display='none')}
             function showModal(title,message,type='info',onConfirm=null){document.getElementById('custom-alert-title').textContent=title;document.getElementById('custom-alert-message').textContent=message;const okBtn=document.getElementById('custom-alert-ok');const cancelBtn=document.getElementById('custom-alert-cancel');cancelBtn.style.display=type==='confirm'?'inline-block':'none';okBtn.onclick=()=>{if(onConfirm)onConfirm();document.getElementById('custom-alert-modal').style.display='none'};cancelBtn.onclick=()=>document.getElementById('custom-alert-modal').style.display='none';document.getElementById('custom-alert-modal').style.display='flex'}
-            function setupEventListeners(){DOM.btnAplicarColor.addEventListener('click',aplicarColor);DOM.fechaDisplay.addEventListener('click',abrirFechaModal);document.querySelectorAll('.modal .close-btn').forEach(btn=>btn.addEventListener('click',cerrarModales));document.getElementById('btn-guardar-relevo').addEventListener('click',guardarRelevo);document.getElementById('btn-borrar-relevo').addEventListener('click',borrarRelevo);document.getElementById('btn-guardar-nuevo-horario').addEventListener('click',guardarNuevoHorario);document.getElementById('btn-guardar-salida').addEventListener('click',guardarSalida);document.getElementById('btn-borrar-salida').addEventListener('click',borrarSalida);document.getElementById('btn-guardar-nueva-fecha').addEventListener('click',guardarNuevaFecha);DOM.opcionRelevo.addEventListener('change',()=>toggleRelevoControls('releva'));DOM.opcionAyudante.addEventListener('change',()=>toggleRelevoControls('ayudante'));DOM.opcionDescanso.addEventListener('change',()=>toggleRelevoControls('descanso'));document.getElementById('relevo-modal').addEventListener('click',e=>{if(e.target.classList.contains('mesa-item')){const targetList=e.target.parentElement.id==='mesas-disponibles'?'mesas-seleccionadas':'mesas-disponibles';document.getElementById(targetList).appendChild(e.target)}});document.getElementById('crono-btn-start').addEventListener('click',()=>{if(croupierCronoActivo)iniciarCronometro(croupierCronoActivo,(new Date).getTime(), true);openCronoModal(croupierCronoActivo)});document.getElementById('crono-btn-stop').addEventListener('click',()=>{if(croupierCronoActivo)detenerCronometro(croupierCronoActivo,false, true);openCronoModal(croupierCronoActivo)});document.getElementById('btn-reset').addEventListener('click',()=>{if(croupierCronoActivo)detenerCronometro(croupierCronoActivo,true, true);openCronoModal(croupierCronoActivo)});document.getElementById('btn-set-manual-time').addEventListener('click',ajustarTiempoManualCrono);DOM.quickAddSelector.addEventListener('click',abrirQuickAddModal);DOM.quickAddSearchInput.addEventListener('input',e=>renderCroupierListInModal(e.target.value));DOM.quickAddFilterButtons.addEventListener('click',e=>{if(e.target.classList.contains('filter-btn')){DOM.quickAddFilterButtons.querySelector('.active').classList.remove('active');e.target.classList.add('active');quickAddCurrentFilter=e.target.dataset.filter;renderCroupierListInModal(DOM.quickAddSearchInput.value)}});DOM.btnAddSelectedToTable.addEventListener('click',agregarCroupiersSeleccionadosDelModal)}
+            function setupEventListeners(){DOM.btnAplicarColor.addEventListener('click',aplicarColor);DOM.fechaDisplay.addEventListener('click',abrirFechaModal);document.querySelectorAll('.modal .close-btn').forEach(btn=>btn.addEventListener('click',cerrarModales));document.getElementById('btn-guardar-relevo').addEventListener('click',guardarRelevo);document.getElementById('btn-borrar-relevo').addEventListener('click',borrarRelevo);document.getElementById('btn-guardar-nuevo-horario').addEventListener('click',guardarNuevoHorario);document.getElementById('btn-guardar-salida').addEventListener('click',guardarSalida);document.getElementById('btn-borrar-salida').addEventListener('click',borrarSalida);document.getElementById('btn-guardar-nueva-fecha').addEventListener('click',guardarNuevaFecha);DOM.opcionRelevo.addEventListener('change',()=>toggleRelevoControls('releva'));DOM.opcionAyudante.addEventListener('change',()=>toggleRelevoControls('ayudante'));DOM.opcionDescanso.addEventListener('change',()=>toggleRelevoControls('descanso'));document.getElementById('relevo-modal').addEventListener('click',e=>{if(e.target.classList.contains('mesa-item')){const targetList=e.target.parentElement.id==='mesas-disponibles'?'mesas-seleccionadas':'mesas-disponibles';document.getElementById(targetList).appendChild(e.target)}});document.getElementById('crono-btn-start').addEventListener('click',()=>{if(croupierCronoActivo)iniciarCronometro(croupierCronoActivo,(new Date).getTime(), true);openCronoModal(croupierCronoActivo)});document.getElementById('crono-btn-stop').addEventListener('click',()=>{if(croupierCronoActivo)detenerCronometro(croupierCronoActivo,false, true);openCronoModal(croupierCronoActivo)});document.getElementById('btn-reset').addEventListener('click',()=>{if(croupierCronoActivo)detenerCronometro(croupierCronoActivo,true, true);openCronoModal(croupierCronoActivo)});document.getElementById('btn-set-manual-time').addEventListener('click',ajustarTiempoManualCrono);DOM.quickAddSelector.addEventListener('click',abrirQuickAddModal);DOM.quickAddSearchInput.addEventListener('input',e=>renderCroupierListInModal(e.target.value));DOM.quickAddFilterButtons.addEventListener('click',e=>{if(e.target.classList.contains('filter-btn')){DOM.quickAddFilterButtons.querySelector('.active').classList.remove('active');e.target.classList.add('active');quickAddCurrentFilter=e.target.dataset.filter;renderCroupierListInModal(DOM.quickAddSearchInput.value)}});DOM.btnAddSelectedToTable.addEventListener('click',agregarCroupiersSeleccionadosDelModal);
+                // --- EVENT LISTENERS PARA NUEVOS BOTONES ---
+                document.getElementById('btn-limpiar-croupiers').addEventListener('click', limpiarCroupiers);
+                document.getElementById('btn-limpiar-horarios').addEventListener('click', limpiarHorarios);
+            }
             
             inicializar();
         });
