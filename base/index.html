@@ -129,8 +129,8 @@
                 <hr>
                 <div class="form-group">
                     <h4>Opciones de Borrado (Datos Locales)</h4>
-                    <button id="btn-clear-horario-only" class="danger">Borrar Horario del Día</button>
-                    <button id="btn-clear-croupiers-only" class="danger">Limpiar Croupiers de la Tabla</button>
+                    <button id="btn-clear-horario-only" class="danger">Borrar TODOS los Horarios</button>
+                    <button id="btn-clear-croupiers-only" class="danger">Limpiar Croupiers de TODAS las Tablas</button>
                 </div>
                 <hr>
                 <div class="form-group">
@@ -246,7 +246,7 @@
 
                     localStorage.setItem('croupiersEnEspera', JSON.stringify(croupiersEnEspera));
                     localStorage.setItem('mesasDeJuego', JSON.stringify(mesasDeJuego));
-                    window.dispatchEvent(new Event('storage')); // Notifica a otras pestañas
+                    window.dispatchEvent(new Event('storage')); 
                     renderizarCroupiersPreTable(currentContratoFilter);
                     renderizarMesasList();
                 } catch (error) {
@@ -270,7 +270,7 @@
                     DOM.nuevoCroupierInput.value = '';
                     DOM.dropdownJuegos.querySelectorAll('input:checked').forEach(cb => cb.checked = false);
                     showModal('Éxito', `${nuevoCroupier.nombreCompleto} fue agregado. Actualizando...`, 'info');
-                    setTimeout(fetchMasterData, 2000); // Espera a que la BD se actualice
+                    setTimeout(fetchMasterData, 2000);
                 } catch (error) {
                     showModal('Error al Guardar', error.message, 'info');
                 } finally {
@@ -327,7 +327,7 @@
                     const payload = { action: 'saveMesas', mesas: mesasDeJuego };
                     await fetch(SCRIPT_URL, {
                         method: 'POST',
-                        mode: 'no-cors', // Use no-cors for simple "fire and forget" requests
+                        mode: 'no-cors',
                         body: JSON.stringify(payload)
                     });
                 } catch (error) {
@@ -335,7 +335,6 @@
                    showModal('Advertencia', 'No se pudo sincronizar la lista de mesas con la nube, pero se guardó localmente.');
                 }
             }
-
 
             function restaurarBackup(event) {
                 const file = event.target.files[0];
@@ -396,47 +395,44 @@
                 });
             }
 
-            // --- LÓGICA DE BORRADO CORREGIDA ---
-            function getLocalDateString(date) {
-                return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-            }
-
+            // --- LÓGICA DE BORRADO CORREGIDA Y MEJORADA ---
             function borrarSoloHorarios() {
-                showModal('Borrar Horario del Día', 'Se borrarán los datos del horario del día actual guardado en este navegador. ¿Continuar?', 'confirm', () => {
-                    // Busca la fecha actual que usa el editor de horarios
-                    const today = new Date();
-                    const fechaKey = getLocalDateString(today);
-                    localStorage.removeItem(`horario_${fechaKey}`);
-
-                    // Intenta borrar también la fecha guardada por si acaso
-                    localStorage.removeItem('fechaGuardada');
-
+                showModal('Borrar TODOS los Horarios', 'Esto borrará TODOS los datos de horarios guardados en este navegador para TODAS las fechas. ¿Continuar?', 'confirm', () => {
+                    let itemsBorrados = 0;
+                    // Itera sobre todas las claves en localStorage
+                    for (let i = localStorage.length - 1; i >= 0; i--) {
+                        const key = localStorage.key(i);
+                        // Si la clave corresponde a un horario guardado, la elimina
+                        if (key.startsWith('horario_')) {
+                            localStorage.removeItem(key);
+                            itemsBorrados++;
+                        }
+                    }
                     window.dispatchEvent(new Event('storage'));
-                    showModal('Éxito', 'Los datos del horario local para hoy han sido borrados.', 'info');
+                    showModal('Éxito', `Se han borrado los datos de ${itemsBorrados} día(s).`, 'info');
                 });
             }
 
             function borrarSoloCroupiersDeTabla() {
-                 showModal('Limpiar Croupiers de Tabla', 'Esto quitará a todos los croupiers de la tabla del horario actual en este navegador, pero no sus asignaciones. ¿Continuar?', 'confirm', () => {
-                    const today = new Date();
-                    const fechaKey = getLocalDateString(today);
-                    const key = `horario_${fechaKey}`;
-                    const dataGuardada = localStorage.getItem(key);
-
-                    if (dataGuardada) {
-                        let datos = JSON.parse(dataGuardada);
-                        // Borra solo la lista de croupiers en la tabla
-                        datos.croupiersEnTabla = [];
-                        datos.croupierColors = {};
-                        datos.croupierSalidas = {};
-                        datos.cronometroState = {};
-                        // Vuelve a guardar el objeto modificado
-                        localStorage.setItem(key, JSON.stringify(datos));
-                        window.dispatchEvent(new Event('storage'));
-                        showModal('Éxito', 'Los croupiers de la tabla local han sido limpiados.', 'info');
-                    } else {
-                        showModal('Info', 'No se encontraron datos de horario para hoy para limpiar.', 'info');
+                 showModal('Limpiar Croupiers de TODAS las Tablas', 'Esto quitará a TODOS los croupiers de TODAS las tablas de horarios guardadas en este navegador. Las asignaciones de horarios se mantendrán. ¿Continuar?', 'confirm', () => {
+                    let itemsModificados = 0;
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key.startsWith('horario_')) {
+                            const dataGuardada = localStorage.getItem(key);
+                            if (dataGuardada) {
+                                let datos = JSON.parse(dataGuardada);
+                                datos.croupiersEnTabla = [];
+                                datos.croupierColors = {};
+                                datos.croupierSalidas = {};
+                                datos.cronometroState = {};
+                                localStorage.setItem(key, JSON.stringify(datos));
+                                itemsModificados++;
+                            }
+                        }
                     }
+                    window.dispatchEvent(new Event('storage'));
+                    showModal('Éxito', `Se han limpiado los croupiers de ${itemsModificados} tabla(s) de horario.`, 'info');
                 });
             }
 
