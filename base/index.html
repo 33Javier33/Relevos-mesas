@@ -73,7 +73,7 @@
         <div class="header">
             <h1>Panel de Gestión del Sistema de Horarios</h1>
             <p>Administra la base de datos de croupiers en Google Sheets y las mesas de juego locales.</p>
-            <a href="https://relevos-mesas.vercel.app/" class="open-horario-btn">Abrir Vista de Horarios</a>
+            <a href="./index.html" class="open-horario-btn">Abrir Vista de Horarios</a>
         </div>
         <div class="controles-container">
             <div class="control-panel" id="panel-croupiers">
@@ -110,7 +110,7 @@
             </div>
 
             <div class="control-panel">
-                <h3>Mesas de Juego (Datos Locales)</h3>
+                <h3>Mesas de Juego</h3>
                 <div class="form-group">
                     <input type="text" id="nueva-mesa-input" placeholder="ID de Mesa">
                     <button id="btn-agregar-mesa">Agregar Mesa</button>
@@ -129,8 +129,8 @@
                 <hr>
                 <div class="form-group">
                     <h4>Opciones de Borrado (Datos Locales)</h4>
-                    <button id="btn-clear-horario-only" class="danger">Borrar SOLO tabla de Horarios</button>
-                    <button id="btn-clear-croupiers-only" class="danger">Borrar SOLO Croupiers de la tabla</button>
+                    <button id="btn-clear-horario-only" class="danger">Borrar Horario del Día</button>
+                    <button id="btn-clear-croupiers-only" class="danger">Limpiar Croupiers de la Tabla</button>
                 </div>
                 <hr>
                 <div class="form-group">
@@ -212,8 +212,8 @@
                 customAlertOkBtn: document.getElementById('custom-alert-ok'),
                 customAlertCancelBtn: document.getElementById('custom-alert-cancel'),
                 editCroupierModal: document.getElementById('edit-croupier-modal'),
-                editCroupierOriginalName: document.getElementById('edit-croupier-original-name'), // Nuevo elemento para el nombre original
-                editCroupierNameInput: document.getElementById('edit-croupier-name-input'), // Nuevo input para el nombre
+                editCroupierOriginalName: document.getElementById('edit-croupier-original-name'),
+                editCroupierNameInput: document.getElementById('edit-croupier-name-input'),
                 editCroupierContrato: document.getElementById('edit-croupier-contrato'),
                 editJuegosSelector: document.getElementById('edit-juegos-selector'),
                 editDropdownJuegos: document.getElementById('edit-dropdown-juegos'),
@@ -232,58 +232,30 @@
                 DOM.customAlertModal.style.display = 'flex';
             }
             
-            async function cargarDatosLocales() {
-                const savedTheme = localStorage.getItem('theme') || 'light';
-                document.body.classList.toggle('dark-mode', savedTheme === 'dark');
-                await fetchMesasFromSheet();
-            }
-
-            async function saveMesasToSheet() {
-                try {
-                    showLoading(true);
-                    const payload = { action: 'saveMesas', mesas: mesasDeJuego };
-                    await fetch(SCRIPT_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        body: JSON.stringify(payload)
-                    });
-                } catch (error) {
-                    showModal('Error', `No se pudo guardar las mesas. Error: ${error.message}`, 'info');
-                } finally {
-                    showLoading(false);
-                }
-            }
-
-            async function fetchMesasFromSheet() {
+            async function fetchMasterData() {
                 showLoading(true);
                 try {
-                    const response = await fetch(`${SCRIPT_URL}?dataType=mesas`);
-                    if (!response.ok) throw new Error('Failed to fetch mesas.');
-                    mesasDeJuego = await response.json() || [];
+                    const [croupiersResponse, mesasResponse] = await Promise.all([
+                        fetch(`${SCRIPT_URL}?t=${new Date().getTime()}`),
+                        fetch(`${SCRIPT_URL}?dataType=mesas&t=${new Date().getTime()}`)
+                    ]);
+                    if (!croupiersResponse.ok || !mesasResponse.ok) throw new Error('Failed to fetch from Google Sheets.');
+                    
+                    croupiersEnEspera = await croupiersResponse.json();
+                    mesasDeJuego = await mesasResponse.json() || [];
+
+                    localStorage.setItem('croupiersEnEspera', JSON.stringify(croupiersEnEspera));
+                    localStorage.setItem('mesasDeJuego', JSON.stringify(mesasDeJuego));
+                    window.dispatchEvent(new Event('storage')); // Notifica a otras pestañas
+                    renderizarCroupiersPreTable(currentContratoFilter);
                     renderizarMesasList();
                 } catch (error) {
-                    showModal('Error', `No se pudo cargar las mesas desde Google Sheets. Error: ${error.message}`, 'info');
+                    showModal('Error de Conexión', `No se pudo cargar la base de datos desde Google Sheets. Error: ${error.message}`, 'info');
                 } finally {
                     showLoading(false);
                 }
             }
-
-            async function fetchCroupiersFromSheet() {
-                showLoading(true);
-                try {
-                    const response = await fetch(SCRIPT_URL);
-                    if (!response.ok) throw new Error('Failed to fetch. Revisa la URL y los permisos del script.');
-                    croupiersEnEspera = await response.json();
-                    localStorage.setItem('croupiersEnEspera', JSON.stringify(croupiersEnEspera));
-                    window.dispatchEvent(new Event('storage'));
-                    renderizarCroupiersPreTable(currentContratoFilter);
-                } catch (error) {
-                    showModal('Error de Conexión', error.message, 'info');
-                } finally {
-                    showLoading(false);
-                }
-            }
-
+            
             async function addCroupierToSheet() {
                 const nombreCompleto = DOM.nuevoCroupierInput.value.trim();
                 if (!nombreCompleto) { showModal('Error', 'El nombre es obligatorio.', 'info'); return; }
@@ -293,11 +265,12 @@
                 const nuevoCroupier = { nombreCompleto, contrato: DOM.nuevoCroupierContrato.value, juegosQuePaga: Array.from(DOM.dropdownJuegos.querySelectorAll('input:checked')).map(cb => cb.value) };
                 showLoading(true);
                 try {
-                    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(nuevoCroupier) });
+                    const payload = { action: 'addCroupier', data: nuevoCroupier };
+                    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
                     DOM.nuevoCroupierInput.value = '';
                     DOM.dropdownJuegos.querySelectorAll('input:checked').forEach(cb => cb.checked = false);
                     showModal('Éxito', `${nuevoCroupier.nombreCompleto} fue agregado. Actualizando...`, 'info');
-                    setTimeout(fetchCroupiersFromSheet, 2000);
+                    setTimeout(fetchMasterData, 2000); // Espera a que la BD se actualice
                 } catch (error) {
                     showModal('Error al Guardar', error.message, 'info');
                 } finally {
@@ -307,28 +280,23 @@
             
             async function updateCroupierInSheet() {
                 const nuevoNombre = DOM.editCroupierNameInput.value.trim();
-                const nuevoContrato = DOM.editCroupierContrato.value;
-                const nuevosJuegos = Array.from(DOM.editDropdownJuegos.querySelectorAll('input:checked')).map(cb => cb.value);
+                if (!nuevoNombre) { showModal('Error', 'El nombre no puede estar vacío.', 'info'); return; }
 
-                if (!nuevoNombre) {
-                    showModal('Error', 'El nombre no puede estar vacío.', 'info');
-                    return;
-                }
-
-                // El backend necesitará el nombre original para encontrar el registro
                 const payload = {
                     action: 'updateCroupier',
-                    nombreCompleto: croupierToEdit.nombreCompleto, // Nombre original para identificar el registro
-                    nuevoNombre: nuevoNombre, // Nuevo nombre para actualizar
-                    contrato: nuevoContrato,
-                    juegosQuePaga: nuevosJuegos
+                    nombreOriginal: croupierToEdit.nombreCompleto,
+                    data: {
+                        nombreCompleto: nuevoNombre,
+                        contrato: DOM.editCroupierContrato.value,
+                        juegosQuePaga: Array.from(DOM.editDropdownJuegos.querySelectorAll('input:checked')).map(cb => cb.value)
+                    }
                 };
                 showLoading(true);
                 try {
                     await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-                    showModal('Éxito', `Croupier actualizado.`, 'info');
+                    showModal('Éxito', `Croupier actualizado. Actualizando...`, 'info');
                     DOM.editCroupierModal.style.display = 'none';
-                    setTimeout(fetchCroupiersFromSheet, 2000);
+                    setTimeout(fetchMasterData, 2000);
                 } catch (error) {
                     showModal('Error al Actualizar', `No se pudo actualizar. Error: ${error.message}`, 'info');
                 } finally {
@@ -342,8 +310,8 @@
                     try {
                         const payload = { action: 'deleteCroupier', nombreCompleto: nombre };
                         await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-                        showModal('Éxito', `Croupier "${nombre}" eliminado.`, 'info');
-                        setTimeout(fetchCroupiersFromSheet, 2000);
+                        showModal('Éxito', `Croupier "${nombre}" eliminado. Actualizando...`, 'info');
+                        setTimeout(fetchMasterData, 2000);
                     } catch (error) {
                         showModal('Error al Borrar', `No se pudo eliminar. Error: ${error.message}`, 'info');
                     } finally {
@@ -352,6 +320,23 @@
                 });
             }
 
+             async function saveMesasToSheet() {
+                localStorage.setItem('mesasDeJuego', JSON.stringify(mesasDeJuego));
+                window.dispatchEvent(new Event('storage'));
+                try {
+                    const payload = { action: 'saveMesas', mesas: mesasDeJuego };
+                    await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        mode: 'no-cors', // Use no-cors for simple "fire and forget" requests
+                        body: JSON.stringify(payload)
+                    });
+                } catch (error) {
+                   console.error("No se pudo guardar las mesas en Google Sheets:", error);
+                   showModal('Advertencia', 'No se pudo sincronizar la lista de mesas con la nube, pero se guardó localmente.');
+                }
+            }
+
+
             function restaurarBackup(event) {
                 const file = event.target.files[0];
                 if (!file) return;
@@ -359,15 +344,12 @@
                 reader.onload = async (e) => {
                     try {
                         const backupData = JSON.parse(e.target.result);
-                        if (!backupData.croupiersEnEspera) { showModal('Error', 'El archivo de respaldo no es válido.', 'info'); return; }
-                        const payload = { action: 'restoreBackup', data: backupData };
+                        if (!backupData.croupiers || !Array.isArray(backupData.croupiers)) { showModal('Error', 'El archivo de respaldo no es válido o no contiene croupiers.', 'info'); return; }
+                        const payload = { action: 'restoreBackup', data: backupData.croupiers };
                         showLoading(true);
-                        const response = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload), redirect: 'follow' });
-                        const result = await response.json();
-                        if (result.status === 'success') {
-                            showModal('Restauración Completa', result.message, 'info');
-                            setTimeout(fetchCroupiersFromSheet, 1000);
-                        } else { throw new Error(result.message); }
+                        await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+                        showModal('Restauración Iniciada', 'El proceso de restauración ha comenzado. La lista se actualizará en breve.', 'info');
+                        setTimeout(fetchMasterData, 3000);
                     } catch (error) {
                         showModal('Error al Restaurar', `No se pudo procesar. Error: ${error.message}`, 'info');
                     } finally {
@@ -377,7 +359,7 @@
                 };
                 reader.readAsText(file);
             }
-
+            
             function renderizarMesasList() {
                 DOM.mesasListDiv.innerHTML = '';
                 mesasDeJuego.forEach(mesa => {
@@ -395,12 +377,12 @@
             }
 
             function agregarMesa() {
-                const nuevaMesa = DOM.nuevaMesaInput.value.trim();
+                const nuevaMesa = DOM.nuevaMesaInput.value.trim().toUpperCase();
                 if (nuevaMesa && !mesasDeJuego.some(m => m.toLowerCase() === nuevaMesa.toLowerCase())) {
                     mesasDeJuego.push(nuevaMesa);
                     DOM.nuevaMesaInput.value = '';
-                    saveMesasToSheet();
                     renderizarMesasList();
+                    saveMesasToSheet();
                 } else {
                     showModal('Error', 'La mesa no puede estar vacía o ya existe.', 'info');
                 }
@@ -409,14 +391,55 @@
             function borrarMesa(mesaABorrar) {
                 showModal('Eliminar Mesa', `¿Estás seguro de que quieres eliminar la mesa "${mesaABorrar}"?`, 'confirm', () => {
                     mesasDeJuego = mesasDeJuego.filter(m => m !== mesaABorrar);
-                    saveMesasToSheet();
                     renderizarMesasList();
+                    saveMesasToSheet();
                 });
             }
 
-            function borrarSoloHorarios() { showModal('Borrar Horarios', 'Se borrarán todas las columnas de horarios y las asignaciones guardadas en este navegador. ¿Continuar?', 'confirm', () => { localStorage.removeItem('horarios'); localStorage.removeItem('datosRelevos'); localStorage.removeItem('horarioColors'); localStorage.removeItem('fechaGuardada'); window.dispatchEvent(new Event('storage')); showModal('Éxito', 'Los datos del horario local han sido borrados.', 'info'); }); }
-            function borrarSoloCroupiersDeTabla() { showModal('Borrar Croupiers de Tabla', 'Se eliminarán todos los croupiers de la tabla de horarios local. No se borrarán de Google Sheets. ¿Continuar?', 'confirm', () => { localStorage.removeItem('croupiersData'); localStorage.removeItem('datosRelevos'); localStorage.removeItem('croupierColors'); localStorage.removeItem('croupierSalidas'); localStorage.removeItem('cronometroState'); window.dispatchEvent(new Event('storage')); showModal('Éxito', 'Los croupiers de la tabla local han sido borrados.', 'info'); }); }
-            
+            // --- LÓGICA DE BORRADO CORREGIDA ---
+            function getLocalDateString(date) {
+                return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            }
+
+            function borrarSoloHorarios() {
+                showModal('Borrar Horario del Día', 'Se borrarán los datos del horario del día actual guardado en este navegador. ¿Continuar?', 'confirm', () => {
+                    // Busca la fecha actual que usa el editor de horarios
+                    const today = new Date();
+                    const fechaKey = getLocalDateString(today);
+                    localStorage.removeItem(`horario_${fechaKey}`);
+
+                    // Intenta borrar también la fecha guardada por si acaso
+                    localStorage.removeItem('fechaGuardada');
+
+                    window.dispatchEvent(new Event('storage'));
+                    showModal('Éxito', 'Los datos del horario local para hoy han sido borrados.', 'info');
+                });
+            }
+
+            function borrarSoloCroupiersDeTabla() {
+                 showModal('Limpiar Croupiers de Tabla', 'Esto quitará a todos los croupiers de la tabla del horario actual en este navegador, pero no sus asignaciones. ¿Continuar?', 'confirm', () => {
+                    const today = new Date();
+                    const fechaKey = getLocalDateString(today);
+                    const key = `horario_${fechaKey}`;
+                    const dataGuardada = localStorage.getItem(key);
+
+                    if (dataGuardada) {
+                        let datos = JSON.parse(dataGuardada);
+                        // Borra solo la lista de croupiers en la tabla
+                        datos.croupiersEnTabla = [];
+                        datos.croupierColors = {};
+                        datos.croupierSalidas = {};
+                        datos.cronometroState = {};
+                        // Vuelve a guardar el objeto modificado
+                        localStorage.setItem(key, JSON.stringify(datos));
+                        window.dispatchEvent(new Event('storage'));
+                        showModal('Éxito', 'Los croupiers de la tabla local han sido limpiados.', 'info');
+                    } else {
+                        showModal('Info', 'No se encontraron datos de horario para hoy para limpiar.', 'info');
+                    }
+                });
+            }
+
             function renderizarCroupiersPreTable(contratoFilter = 'todos') {
                 DOM.croupierPreTableBody.innerHTML = '';
                 const filteredCroupiers = croupiersEnEspera.filter(c => contratoFilter === 'todos' || c.contrato === contratoFilter);
@@ -454,7 +477,7 @@
             function showEditModal(croupier) {
                 croupierToEdit = croupier;
                 DOM.editCroupierOriginalName.textContent = `(Original: ${croupier.nombreCompleto})`;
-                DOM.editCroupierNameInput.value = croupier.nombreCompleto; // Cargar el nombre actual en el input
+                DOM.editCroupierNameInput.value = croupier.nombreCompleto;
                 DOM.editCroupierContrato.value = croupier.contrato;
                 
                 DOM.editDropdownJuegos.innerHTML = '';
@@ -462,7 +485,7 @@
                     const label = document.createElement('label'), checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
                     checkbox.value = juego;
-                    if (croupier.juegosQuePaga.includes(juego)) {
+                    if (croupier.juegosQuePaga && croupier.juegosQuePaga.includes(juego)) {
                         checkbox.checked = true;
                     }
                     label.appendChild(checkbox);
@@ -471,9 +494,6 @@
                 });
 
                 DOM.editCroupierModal.style.display = 'flex';
-
-                DOM.btnSaveEdit.onclick = updateCroupierInSheet;
-                DOM.btnCancelEdit.onclick = () => { DOM.editCroupierModal.style.display = 'none'; };
             }
 
             function renderizarJuegosDropdown() { 
@@ -487,8 +507,11 @@
             }
             
             async function inicializar() {
-                await cargarDatosLocales();
-                await fetchCroupiersFromSheet();
+                const savedTheme = localStorage.getItem('theme') || 'light';
+                document.body.classList.toggle('dark-mode', savedTheme === 'dark');
+
+                renderizarJuegosDropdown();
+                await fetchMasterData();
 
                 DOM.btnAgregarMesa.addEventListener('click', agregarMesa);
                 new Sortable(DOM.mesasListDiv, {
@@ -496,7 +519,6 @@
                     onEnd: () => {
                         mesasDeJuego = Array.from(DOM.mesasListDiv.children).map(tag => tag.dataset.id);
                         saveMesasToSheet();
-                        renderizarMesasList();
                     }
                 });
 
@@ -512,14 +534,14 @@
                     DOM.juegosSelectorCroupier.classList.remove('active'); 
                     DOM.editJuegosSelector.classList.remove('active');
                 });
+
+                DOM.btnSaveEdit.onclick = updateCroupierInSheet;
+                DOM.btnCancelEdit.onclick = () => { DOM.editCroupierModal.style.display = 'none'; };
                 
                 DOM.btnToggleTheme.addEventListener('click', () => { const isDark = document.body.classList.toggle('dark-mode'); localStorage.setItem('theme', isDark ? 'dark' : 'light'); window.dispatchEvent(new Event('storage')); });
-                DOM.customAlertOkBtn.addEventListener('click', () => { DOM.customAlertModal.style.display = 'none'; });
-                DOM.customAlertCancelBtn.addEventListener('click', () => { DOM.customAlertModal.style.display = 'none'; });
             }
             inicializar();
         });
     </script>
 </body>
 </html>
-
