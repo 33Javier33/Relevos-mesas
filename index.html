@@ -432,6 +432,7 @@
                 <button id="btn-aplicar-color" title="Aplicar color a seleccionados">🎨</button>
             </div>
         </div>
+        <p id="sincro-status" style="font-size: 0.8em; color: var(--text-secondary-color); margin: 0;">Sincronización automática activa.</p>
     </div>
     
     <div class="quick-add-container">
@@ -474,6 +475,9 @@
             let croupiersData = [], croupiersEnEspera = [], horarios = [], mesasDeJuego = [], datosRelevos = {}, croupierColors = {}, croupierSalidas = {}, horarioColors = {};
             let cronometroIntervals = {}, cronometroStartTime = {}, cronometroCurrentStartTime = {};
             let fechaVisible = new Date(), celdaActiva = { croupier: null, horario: null }, croupierCronoActivo = null, croupierSalidaActivo = null, quickAddCurrentFilter = 'todos';
+            
+            let saveTimeout; // Se utiliza para el debounce de guardado (sincronización a Sheets)
+            let syncInterval; // NUEVO: Para la sincronización automática (polling desde Sheets)
 
             const DOM = {
                 tbody: document.getElementById('sortable-tbody'),
@@ -510,7 +514,8 @@
                 quickAddCroupierList: document.getElementById('quick-add-croupier-list'),
                 quickAddFilterButtons: document.querySelector('#quick-add-modal .quick-add-controls'),
                 btnAddSelectedToTable: document.getElementById('btn-add-selected-to-table'),
-                linkToViewer: document.getElementById('link-to-viewer')
+                linkToViewer: document.getElementById('link-to-viewer'),
+                sincroStatus: document.getElementById('sincro-status')
             };
             
             async function cargarDatosMaestros() {
@@ -554,9 +559,11 @@
                 
             }
             
-            let saveTimeout;
             function sincronizarConSheets() {
                 clearTimeout(saveTimeout);
+                // Indicador visual de que estamos guardando
+                DOM.sincroStatus.textContent = 'Guardando cambios en Sheets...';
+                
                 saveTimeout = setTimeout(() => {
                     const datosAEnviar = {
                         action: 'save',
@@ -574,12 +581,21 @@
                         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     })
                     .then(res => res.json().catch(() => ({})))
-                    .then(data => console.log('Sincronización completa:', data.message || 'OK'))
-                    .catch(err => console.error("Error en la sincronización:", err));
+                    .then(data => {
+                        console.log('Sincronización de guardado completa:', data.message || 'OK');
+                        DOM.sincroStatus.textContent = 'Sincronización automática activa.';
+                        saveTimeout = null; // Liberar el timeout
+                    })
+                    .catch(err => {
+                        console.error("Error en la sincronización de guardado:", err);
+                        DOM.sincroStatus.textContent = 'ERROR de sincronización. Revisa la conexión.';
+                        saveTimeout = null; // Liberar el timeout
+                    });
                 }, 1500);
             }
 
-            function guardarDatosEnLocalStorage() {
+            // ACEPTA UN PARÁMETRO PARA EVITAR LA SINCRONIZACIÓN CON SHEETS DURANTE EL POLLING
+            function guardarDatosEnLocalStorage(skipSheetsSync = false) {
                 const dataToStore = {
                     croupiersEnTabla: croupiersData.map(c => c.nombreCompleto),
                     horarios,
@@ -590,7 +606,11 @@
                     cronometroState: cronometroStartTime,
                 };
                 localStorage.setItem(`horario_${getLocalDateString(fechaVisible)}`, JSON.stringify(dataToStore));
-                sincronizarConSheets();
+                
+                // Solo sincronizar con Sheets si no se le indica lo contrario
+                if (!skipSheetsSync) {
+                    sincronizarConSheets();
+                }
             }
 
             function cargarHorarioDesdeLocalStorage() {
@@ -609,35 +629,82 @@
                 return true;
             }
 
-            async function cargarDatosDesdeSheets() {
+            // NUEVA FUNCIÓN DE SINCRONIZACIÓN/POLLING DESDE SHEETS
+            async function sincronizarDesdeSheets(forceRender = true) {
                 const fechaISO = getLocalDateString(fechaVisible);
                 try {
+                    // Evitar el polling si el usuario está realizando un guardado activo
+                    if (saveTimeout && !forceRender) return;
+
                     const response = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=load&fecha=${fechaISO}&t=${new Date().getTime()}`);
                     const data = await response.json();
+                    
                     if (data.found) {
-                        horarios = data.horarios || [];
-                        datosRelevos = data.datosRelevos || {};
-                        const croupiersNombres = data.croupiersEnTabla || [];
-                        croupiersData = croupiersNombres.map(nombre => croupiersEnEspera.find(ce => ce.nombreCompleto === nombre)).filter(Boolean);
-                        croupierColors = data.croupierColors || {};
-                        horarioColors = data.horarioColors || {};
-                        croupierSalidas = data.horasSalida || {};
-                        cronometroStartTime = data.cronometros || {};
-                        guardarDatosEnLocalStorage();
+                        // Creamos un string de las partes de la data que nos importan para comparar si hubo cambios remotos
+                        const currentDataString = JSON.stringify({ horarios, datosRelevos, croupierColors, horarioColors, croupierSalidas, cronometroStartTime });
+                        const newDataString = JSON.stringify({
+                            horarios: data.horarios || [],
+                            datosRelevos: data.datosRelevos || {},
+                            croupierColors: data.croupierColors || {},
+                            horarioColors: data.horarioColors || {},
+                            croupierSalidas: data.horasSalida || {},
+                            cronometroStartTime: data.cronometros || {},
+                        });
+
+                        if (forceRender || currentDataString !== newDataString) {
+                            if (!forceRender) {
+                                console.log('Sincronización automática: Nuevos datos detectados en Sheets. Actualizando estado...');
+                                DOM.sincroStatus.textContent = 'Actualizando desde Sheets...';
+                                setTimeout(() => { DOM.sincroStatus.textContent = 'Sincronización automática activa.'; }, 1000);
+                            }
+
+                            // 1. Actualizar los datos maestros de la tabla
+                            const croupiersNombres = data.croupiersEnTabla || [];
+                            croupiersData = croupiersNombres.map(nombre => croupiersEnEspera.find(ce => ce.nombreCompleto === nombre)).filter(Boolean);
+
+                            // 2. Actualizar el estado del horario
+                            horarios = data.horarios || [];
+                            datosRelevos = data.datosRelevos || {};
+                            croupierColors = data.croupierColors || {};
+                            horarioColors = data.horarioColors || {};
+                            croupierSalidas = data.horasSalida || {};
+                            cronometroStartTime = data.cronometros || {};
+
+                            // 3. Guardar localmente para backup (saltamos la sincronización de vuelta a Sheets)
+                            guardarDatosEnLocalStorage(true); 
+
+                            // 4. Renderizar UI
+                            renderizarHorario();
+                            reiniciarCronometrosActivos();
+                        } else {
+                             // console.log('Sincronización automática: No se detectaron cambios.');
+                        }
                         return true;
                     }
                 } catch (error) {
-                    showModal('Error', 'No se pudo conectar para cargar los datos. Se usará la última versión guardada localmente.', 'error');
+                    console.error("Error al sincronizar desde Sheets:", error);
+                    if (forceRender) {
+                        showModal('Error', 'No se pudo conectar para cargar los datos. Se usará la última versión guardada localmente.', 'error');
+                    }
                 }
                 return false;
+            }
+            
+            // FUNCIÓN PARA INICIAR EL POLLING (Sincronización Automática)
+            function iniciarSincronizacionAutomatica() {
+                // Sincronizar cada 30 segundos
+                syncInterval = setInterval(async () => {
+                    await sincronizarDesdeSheets(false);
+                }, 30000);
             }
             
             async function cambiarFecha(nuevaFecha) {
                 fechaVisible = nuevaFecha;
                 actualizarFechaDisplay();
 
+                // Intentamos cargar desde localStorage, si falla, sincronizamos desde Sheets
                 if (!cargarHorarioDesdeLocalStorage()) {
-                    await cargarDatosDesdeSheets();
+                    await sincronizarDesdeSheets(true);
                 }
                 
                 renderizarHorario();
@@ -840,6 +907,7 @@
                 
                 setupEventListeners();
                 setInterval(actualizarSistema, 1000); 
+                iniciarSincronizacionAutomatica(); // INICIAMOS EL POLLING AUTOMÁTICO
 
                 new Sortable(DOM.tbody, {
                     animation: 150,
