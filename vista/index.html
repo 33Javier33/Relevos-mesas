@@ -546,6 +546,14 @@
                 if (indiceActual > 0) { indiceActual = Math.max(0, indiceActual - COLUMNAS_VISIBLES); renderCurrentView(); }
             });
         });
+
+        /* Desregistra SWs viejos y registra el nuevo */
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(regs => {
+                regs.forEach(reg => reg.unregister());
+            });
+            navigator.serviceWorker.register('./sw.js');
+        }
     </script>
 </body>
 </html>

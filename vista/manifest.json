@@ -1,0 +1,9 @@
+{
+  "name": "Horarios Real-Time",
+  "short_name": "Horarios",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": []
+}
