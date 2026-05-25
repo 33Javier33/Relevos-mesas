@@ -1,0 +1,59 @@
+/* Estilos específicos de vista/index.html (Visualizador de Turno) */
+
+body { padding: 15px; }
+
+.header-container {
+    text-align: center; margin-bottom: 20px; padding: 15px;
+    background-color: var(--surface-color); border-radius: 8px;
+    box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.reloj { font-size: 2rem; font-weight: bold; }
+.fecha { font-size: 1rem; color: var(--text-secondary-color); margin-top: 5px; }
+
+.nav-links {
+    margin-top: 15px; display: flex; justify-content: center; gap: 10px;
+}
+.nav-link {
+    padding: 8px 16px; background-color: var(--primary-color);
+    color: white; text-decoration: none; border-radius: 5px;
+    font-weight: bold; transition: background-color 0.3s ease; font-size: 0.9em;
+}
+
+.horario-container {
+    max-width: 100%; margin: 0 auto; border-radius: 8px;
+    overflow: hidden; box-shadow: 0 4px 6px var(--shadow-color);
+    background-color: var(--surface-color);
+}
+.horario-tabla-wrapper { overflow-x: auto; }
+
+.tabla { width: 100%; border-collapse: collapse; }
+.tabla th, .tabla td {
+    border: 1px solid var(--border-color);
+    padding: 8px; text-align: center; font-size: 0.9rem;
+}
+.tabla thead th {
+    background-color: var(--surface-color); font-weight: bold;
+    position: sticky; top: 0; z-index: 2;
+}
+.tabla th:first-child, .tabla td:first-child {
+    position: sticky; left: 0;
+    background-color: var(--sticky-col-bg);
+    text-align: left; font-weight: bold; min-width: 180px; z-index: 1;
+}
+.tabla thead th:first-child { z-index: 3; }
+
+.croupier-cell-content { display: flex; flex-direction: column; }
+
+.crono-display-vista {
+    font-size: 0.8em; font-weight: bold; color: var(--text-color);
+    margin-top: 4px; display: flex; align-items: center; gap: 5px;
+}
+.crono-display-vista.running { color: var(--success-color); }
+
+.tabla th.current-time, .tabla td.current-time {
+    background-color: var(--current-time-bg);
+}
+
+/* Tamaño específico del relevo-cell en esta vista */
+.relevo-cell { padding: 4px; font-size: 0.8rem; }
