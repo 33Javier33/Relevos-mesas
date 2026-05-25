@@ -2,28 +2,6 @@
 
 body { padding: 10px; font-size: 14px; }
 
-.nav-buttons-container, .management-buttons-container {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-top: 10px;
-    margin-bottom: 5px;
-}
-
-.header-nav-link {
-    display: inline-block;
-    padding: 8px 16px;
-    background-color: var(--primary-color);
-    color: white;
-    text-decoration: none;
-    border-radius: 5px;
-    font-weight: bold;
-    transition: background-color 0.3s ease;
-    font-size: 0.9em;
-}
-.header-nav-link.danger-btn { background-color: var(--danger-color); }
-.header-nav-link.danger-btn:hover { background-color: var(--danger-hover-color); }
 
 .reloj-y-controles-container {
     text-align: center;
@@ -37,7 +15,67 @@ body { padding: 10px; font-size: 14px; }
     background-color: var(--surface-color);
     border-radius: 8px;
     box-shadow: 0 2px 4px var(--shadow-color);
+    position: relative;
 }
+
+.config-menu-container {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+.config-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-color);
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+.config-btn:hover { border-color: var(--primary-color); background-color: var(--hover-bg-color); }
+
+.config-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px var(--shadow-color);
+    min-width: 210px;
+    z-index: 500;
+    overflow: hidden;
+}
+.config-dropdown.open { display: block; }
+
+.config-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 16px;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-size: 0.9rem;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    box-sizing: border-box;
+    transition: background-color 0.15s;
+}
+.config-item:hover { background-color: var(--hover-bg-color); }
+.config-item-danger { color: var(--danger-color); }
+.config-item-danger:hover { background-color: rgba(231, 76, 60, 0.08); }
+
+.config-divider { border: none; border-top: 1px solid var(--border-color); margin: 3px 0; }
 
 .reloj-container {
     display: flex;

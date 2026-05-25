@@ -10,13 +10,15 @@
 <body>
     <div class="reloj-y-controles-container">
         <h1>Horario de Relevos</h1>
-        <div class="nav-buttons-container">
-            <a href="./base/index.html" class="header-nav-link">Ir al Panel de Gestión</a>
-            <a href="https://vista-de-relevos.vercel.app/" id="link-to-viewer" class="header-nav-link">Ir al Visualizador</a>
-        </div>
-        <div class="management-buttons-container">
-            <button id="btn-limpiar-croupiers" class="header-nav-link danger-btn">Limpiar Croupiers</button>
-            <button id="btn-limpiar-horarios" class="header-nav-link danger-btn">Limpiar Horarios</button>
+        <div class="config-menu-container">
+            <button id="btn-config" class="config-btn" title="Configuración">⚙️</button>
+            <div id="config-dropdown" class="config-dropdown">
+                <a href="./base/index.html" class="config-item">📋 Panel de Gestión</a>
+                <a href="https://vista-de-relevos.vercel.app/" id="link-to-viewer" class="config-item">👁️ Visualizador</a>
+                <hr class="config-divider">
+                <button id="btn-limpiar-croupiers" class="config-item config-item-danger">🗑️ Limpiar Croupiers</button>
+                <button id="btn-limpiar-horarios" class="config-item config-item-danger">🗑️ Limpiar Horarios</button>
+            </div>
         </div>
         <div id="fecha-actual" class="fecha"></div>
         <div class="reloj-container">
@@ -173,5 +175,11 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="js/shared.js"></script>
     <script src="js/horario.js"></script>
+    <script>
+        const _cfgBtn = document.getElementById('btn-config');
+        const _cfgDrop = document.getElementById('config-dropdown');
+        _cfgBtn.addEventListener('click', (e) => { e.stopPropagation(); _cfgDrop.classList.toggle('open'); });
+        document.addEventListener('click', () => _cfgDrop.classList.remove('open'));
+    </script>
 </body>
 </html>
