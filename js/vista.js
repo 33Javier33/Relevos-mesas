@@ -1,169 +1,265 @@
-/* Lógica del Visualizador de Turno (vista/index.html) */
-/* Depende de: js/shared.js (sortHorarios, crearTarjetaRelevo) */
+/* Lógica del Visualizador de Turno — Mobile (vista/index.html) */
+/* Depende de: js/shared.js (sortHorarios, getLocalDateString) */
 
 document.addEventListener('DOMContentLoaded', () => {
-    const SCRIPT_URL_HORARIOS = 'https://script.google.com/macros/s/AKfycbzPFN3DsRlqRg7kFlug6NGK7X7ufMbLZzn8XCUR7GCCr4Ft3UTcUhs11fYlkWTld83N/exec';
+    const URL_DEL_SCRIPT_DE_HORARIOS = 'https://script.google.com/macros/s/AKfycbw1kBHYt37_X5K7UdBZlJNTgNT2B2P0t4F6uVrCKK_hDgZ7j09cwSzNx5l9CvHwFCTDQg/exec';
 
-    const DOM = {
-        thead: document.getElementById('tabla-horario-actual').querySelector('thead'),
-        tbody: document.getElementById('tabla-horario-actual').querySelector('tbody'),
-        relojDigital: document.getElementById('reloj-digital'),
-        fechaDisplay: document.getElementById('fecha-actual'),
+    let datosCompletosDelHorario = null;
+    let indiceActual = 0;
+    let filtroBusqueda = '';
+    const COLUMNAS_VISIBLES = 2;
+    let timerInterval = null;
+    let refreshInterval = null;
+    let cronometroIntervals = {};
+    let isAutoScrolling = true;
+
+    const fechaSelector = document.getElementById('fecha-selector');
+    const busquedaInput = document.getElementById('busqueda-personal');
+
+    /* Reloj */
+    const updateClock = () => {
+        document.getElementById('current-time').textContent = new Date().toLocaleTimeString('es-ES', {
+            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+        });
     };
+    setInterval(updateClock, 1000);
+    updateClock();
 
-    let cronosCongelados = {};
+    /* Tarjeta de relevo — usa clase .relevo-cell-view (diseño mobile) */
+    function crearTarjetaRelevoVista(data) {
+        const div = document.createElement('div');
+        div.className = 'relevo-cell-view';
+        switch (data.actividad) {
+            case 'releva':
+                div.style.background = `linear-gradient(135deg, ${data.color}dd, ${data.color})`;
+                div.textContent = data.mesas.join('\n');
+                break;
+            case 'ayudante-pagador':
+                div.classList.add('ayudante-pagador');
+                div.textContent = 'A. PAG';
+                break;
+            case 'descanso':
+                div.classList.add('descanso');
+                div.textContent = 'DESC.';
+                break;
+            default:
+                div.style.backgroundColor = '#475569';
+                div.textContent = 'S/A';
+        }
+        return div;
+    }
 
-    async function fetchHorarioFromSheets() {
-        DOM.tbody.innerHTML = '<tr><td colspan="4">Cargando datos desde la nube... ☁️</td></tr>';
-        const diaString = new Date().toISOString().split('T')[0];
-        const url = `${SCRIPT_URL_HORARIOS}?action=getHorario&dia=${diaString}`;
+    /* Carga inicial o recarga forzada */
+    const loadSchedule = async (fecha, isInitialLoad = true) => {
+        if (isInitialLoad) {
+            document.getElementById('status-message').textContent = 'Consultando...';
+            document.getElementById('status-message').style.display = 'block';
+            document.getElementById('horario-wrapper').style.display = 'none';
+            if (timerInterval) clearInterval(timerInterval);
+            if (refreshInterval) clearInterval(refreshInterval);
+            Object.values(cronometroIntervals).forEach(clearInterval);
+            cronometroIntervals = {};
+            isAutoScrolling = true;
+        }
         try {
-            const response = await fetch(url);
-            if (!response.ok) throw new Error(`Error de red: ${response.statusText}`);
-            const result = await response.json();
-            if (result.status === 'success') {
-                if (result.message === 'No data') {
-                    localStorage.removeItem('croupiersData');
-                    localStorage.removeItem('horarios');
-                    localStorage.removeItem('datosRelevos');
+            const response = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=load&fecha=${fecha}&t=${new Date().getTime()}`);
+            const newData = await response.json();
+            if (isInitialLoad) {
+                datosCompletosDelHorario = newData;
+                if (newData && newData.found) {
+                    document.getElementById('status-message').style.display = 'none';
+                    document.getElementById('horario-wrapper').style.display = 'block';
+                    newData.horarios.sort(sortHorarios);
+                    renderCurrentView();
+                    actualizarSistema();
+                    timerInterval = setInterval(actualizarSistema, 1000);
+                    refreshInterval = setInterval(() => loadSchedule(fechaSelector.value, false), 15000);
                 } else {
-                    localStorage.setItem('datosRelevos', JSON.stringify(result.data.relevos || {}));
-                    localStorage.setItem('croupiersData', JSON.stringify(result.data.croupiers || []));
-                    localStorage.setItem('horarios', JSON.stringify(result.data.horarios || []));
+                    handleNoSchedule();
                 }
-            } else {
-                throw new Error(result.message || 'Error desconocido al obtener los datos.');
+            } else if (newData && newData.found) {
+                updateScheduleSilently(newData);
             }
         } catch (error) {
-            console.error('Error al obtener horario:', error);
-            DOM.tbody.innerHTML = `<tr><td colspan="4">Error al cargar: ${error.message}</td></tr>`;
-        } finally {
-            renderizarVistaActual();
+            document.getElementById('status-message').textContent = 'Error de red.';
         }
-    }
+    };
 
-    function actualizarRelojYFecha() {
-        const now = new Date();
-        DOM.relojDigital.textContent = now.toTimeString().slice(0, 8);
-        DOM.fechaDisplay.textContent = now.toLocaleString('es-ES', {
-            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-        });
-    }
+    const handleNoSchedule = () => {
+        document.getElementById('status-message').textContent = 'Sin datos para hoy.';
+        document.getElementById('status-message').style.display = 'block';
+        document.getElementById('horario-wrapper').style.display = 'none';
+    };
 
-    function actualizarCronometrosVisibles() {
-        const cronometroState = JSON.parse(localStorage.getItem('cronometroState')) || {};
-        const displays = document.querySelectorAll('.crono-display-vista');
-        const TIEMPO_GRACIA_MS = 2 * 60 * 1000;
+    const updateScheduleSilently = (newData) => {
+        datosCompletosDelHorario = newData;
+        datosCompletosDelHorario.horarios.sort(sortHorarios);
+        renderCurrentView();
+    };
 
-        displays.forEach(display => {
-            const croupierNombre = display.dataset.cronoCroupier;
-            const startTime = cronometroState[croupierNombre];
+    const renderCurrentView = () => {
+        if (!datosCompletosDelHorario?.found) return;
+        const { croupiersEnTabla, horarios, datosRelevos, croupierColors } = datosCompletosDelHorario;
+        const container = document.getElementById('horario-container');
+        container.innerHTML = '';
 
-            if (startTime) {
-                const elapsed = new Date().getTime() - startTime;
-                const formattedTime = new Date(elapsed).toISOString().slice(11, 19);
-                display.innerHTML = `⏳ <span class="crono-timer">${formattedTime}</span>`;
-                display.classList.add('running');
-                display.style.display = 'flex';
-                cronosCongelados[croupierNombre] = { tiempo: formattedTime, timestamp: Date.now() };
-            } else if (cronosCongelados[croupierNombre]) {
-                const ahora = Date.now();
-                const tiempoGuardado = cronosCongelados[croupierNombre];
-                if (ahora - tiempoGuardado.timestamp < TIEMPO_GRACIA_MS) {
-                    display.innerHTML = `⏸️ <span class="crono-timer">${tiempoGuardado.tiempo}</span>`;
-                    display.classList.remove('running');
-                    display.style.display = 'flex';
-                } else {
-                    delete cronosCongelados[croupierNombre];
-                    display.style.display = 'none';
-                }
-            } else {
-                display.style.display = 'none';
-            }
-        });
-    }
+        const croupiersFiltrados = croupiersEnTabla.filter(c =>
+            c.toLowerCase().includes(filtroBusqueda.toLowerCase())
+        );
 
-    function determinarHorariosVisibles(horarios) {
-        const ahora = new Date();
-        const retrasoEnMs = 2 * 60 * 1000;
-        const tiempoDeComparacion = ahora.getTime() - retrasoEnMs;
-        const horariosOrdenados = [...horarios].sort(sortHorarios);
-        let indiceActual = -1;
+        const horariosVisibles = horarios.slice(indiceActual, indiceActual + COLUMNAS_VISIBLES);
+        const table = document.createElement('table');
+        table.className = 'tabla';
 
-        for (let i = 0; i < horariosOrdenados.length; i++) {
-            const [h, m] = horariosOrdenados[i].split(':').map(Number);
-            const fechaHorario = new Date();
-            fechaHorario.setHours(h, m, 0, 0);
-            if (h < 6 && ahora.getHours() > 18) {
-                fechaHorario.setDate(fechaHorario.getDate() + 1);
-            }
-            if (fechaHorario.getTime() <= tiempoDeComparacion) {
-                indiceActual = i;
-            }
-        }
+        let headerContent = '<thead><tr><th>Nombre</th>';
+        horariosVisibles.forEach(hora => { headerContent += `<th>${hora}</th>`; });
+        headerContent += '</tr></thead>';
+        table.innerHTML = headerContent;
 
-        if (indiceActual === -1 && horariosOrdenados.length > 0) indiceActual = 0;
-        return indiceActual !== -1 ? horariosOrdenados.slice(indiceActual, indiceActual + 3) : [];
-    }
-
-    function renderizarVistaActual() {
-        const croupiersData = JSON.parse(localStorage.getItem('croupiersData')) || [];
-        const horarios = JSON.parse(localStorage.getItem('horarios')) || [];
-        const datosRelevos = JSON.parse(localStorage.getItem('datosRelevos')) || {};
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        document.body.classList.toggle('dark-mode', savedTheme === 'dark');
-
-        if (croupiersData.length === 0 || horarios.length === 0) {
-            DOM.tbody.innerHTML = '<tr><td colspan="4">No hay datos de horario para el día de hoy.</td></tr>';
-            DOM.thead.innerHTML = '';
-            return;
-        }
-
-        const horariosVisibles = determinarHorariosVisibles(horarios);
-
-        DOM.thead.innerHTML = '';
-        const headerRow = document.createElement('tr');
-        headerRow.innerHTML = '<th>Croupier</th>';
-        horariosVisibles.forEach((hora, index) => {
-            const th = document.createElement('th');
-            th.textContent = hora;
-            if (index === 0) th.classList.add('current-time');
-            headerRow.appendChild(th);
-        });
-        DOM.thead.appendChild(headerRow);
-
-        DOM.tbody.innerHTML = '';
-        croupiersData.forEach(croupier => {
+        const tbody = document.createElement('tbody');
+        croupiersFiltrados.forEach(croupier => {
             const tr = document.createElement('tr');
-            const tdNombre = document.createElement('td');
-            tdNombre.innerHTML = `
-                <div class="croupier-cell-content">
-                    <span>${croupier.nombreCompleto}</span>
-                    <div class="crono-display-vista" data-crono-croupier="${croupier.nombreCompleto}" style="display: none;"></div>
-                </div>`;
-            tr.appendChild(tdNombre);
+            const croupierId = croupier.replace(/\s+/g, '-');
+            tr.id = `row-${croupierId}`;
 
-            horariosVisibles.forEach((hora, index) => {
-                const td = document.createElement('td');
-                if (index === 0) td.classList.add('current-time');
-                const relevoData = datosRelevos[croupier.nombreCompleto]?.[hora];
-                td.appendChild(crearTarjetaRelevo(relevoData));
-                tr.appendChild(td);
+            const td = document.createElement('td');
+            td.innerHTML = `<div class="croupier-name-cell">${croupier}</div><span class="croupier-timer" id="timer-${croupierId}">00:00:00</span>`;
+            if (croupierColors?.[croupier]) td.style.borderLeft = `4px solid ${croupierColors[croupier]}`;
+            tr.appendChild(td);
+
+            horariosVisibles.forEach(hora => {
+                const cell = document.createElement('td');
+                const data = datosRelevos[croupier]?.[hora];
+                if (data) cell.appendChild(crearTarjetaRelevoVista(data));
+                tr.appendChild(cell);
             });
-            DOM.tbody.appendChild(tr);
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        container.appendChild(table);
+        actualizarNavegacion();
+    };
+
+    const actualizarNavegacion = () => {
+        const total = datosCompletosDelHorario.horarios.length;
+        const fin = Math.min(indiceActual + COLUMNAS_VISIBLES, total);
+        document.getElementById('btn-prev').disabled = indiceActual === 0;
+        document.getElementById('btn-next').disabled = fin >= total;
+        document.getElementById('info-horarios').textContent = `${indiceActual + 1}-${fin} de ${total}`;
+    };
+
+    function actualizarSistema() {
+        if (!datosCompletosDelHorario?.found) return;
+        const now = new Date();
+        const { croupiersEnTabla, horarios, datosRelevos, cronometroStartTime, horasSalida } = datosCompletosDelHorario;
+        const fechaVisible = new Date(fechaSelector.value + 'T00:00:00');
+        const sortedHorarios = [...horarios].sort(sortHorarios);
+
+        const horariosDate = sortedHorarios.map(h => {
+            const [hour, minute] = h.split(':');
+            const date = new Date(fechaVisible);
+            date.setHours(hour, minute, 0, 0);
+            if (parseInt(hour, 10) < 6) date.setDate(date.getDate() + 1);
+            return date;
         });
 
-        actualizarCronometrosVisibles();
+        let currentScheduleIndex = -1;
+        for (let i = horariosDate.length - 1; i >= 0; i--) {
+            if (now >= horariosDate[i]) { currentScheduleIndex = i; break; }
+        }
+
+        if (isAutoScrolling && currentScheduleIndex > 0) {
+            const newIndice = Math.max(0, currentScheduleIndex - 1);
+            if (newIndice !== indiceActual) { indiceActual = newIndice; renderCurrentView(); }
+        }
+
+        croupiersEnTabla.forEach(croupier => {
+            const croupierId = croupier.replace(/\s+/g, '-');
+            const tdElement = document.querySelector(`#timer-${croupierId}`)?.closest('td');
+            const rowElement = document.getElementById(`row-${croupierId}`);
+            const isManual = cronometroStartTime?.hasOwnProperty(croupier);
+            const isRunning = cronometroIntervals.hasOwnProperty(croupier);
+
+            if (isManual) {
+                if (!isRunning) iniciarCronometro(croupier, cronometroStartTime[croupier]);
+                if (tdElement) tdElement.classList.add('timer-active');
+            } else {
+                let lastActivity = null, lastActivityTime = null;
+                for (let i = currentScheduleIndex; i >= 0; i--) {
+                    const activity = datosRelevos[croupier]?.[sortedHorarios[i]];
+                    if (activity) { lastActivity = activity; lastActivityTime = horariosDate[i].getTime(); break; }
+                }
+                if (lastActivity && (lastActivity.actividad === 'releva' || lastActivity.actividad === 'ayudante-pagador')) {
+                    if (!isRunning) iniciarCronometro(croupier, lastActivityTime);
+                    if (tdElement) tdElement.classList.add('timer-active');
+                } else {
+                    detenerCronometro(croupier, true);
+                    if (tdElement) tdElement.classList.remove('timer-active');
+                }
+            }
+
+            const salidaTime = horasSalida?.[croupier];
+            if (salidaTime && rowElement) {
+                const [h, m] = salidaTime.split(':').map(Number);
+                const sDate = new Date(fechaVisible);
+                sDate.setHours(h, m, 0, 0);
+                if (h < 6) sDate.setDate(sDate.getDate() + 1);
+                const diff = (sDate.getTime() - now.getTime()) / 60000;
+                rowElement.classList.toggle('salida-warning', diff > 0 && diff <= 20);
+            }
+        });
     }
 
-    function inicializar() {
-        actualizarRelojYFecha();
-        fetchHorarioFromSheets();
-        setInterval(actualizarRelojYFecha, 1000);
-        setInterval(actualizarCronometrosVisibles, 1000);
-        setInterval(fetchHorarioFromSheets, 30000);
-        window.addEventListener('storage', renderizarVistaActual);
+    function iniciarCronometro(croupier, startTime) {
+        if (cronometroIntervals[croupier]) return;
+        cronometroIntervals[croupier] = setInterval(() => {
+            const elapsed = new Date().getTime() - startTime;
+            actualizarDisplayCrono(croupier, new Date(elapsed).toISOString().slice(11, 19));
+        }, 1000);
     }
 
-    inicializar();
+    function detenerCronometro(croupier, reset = false) {
+        if (cronometroIntervals[croupier]) {
+            clearInterval(cronometroIntervals[croupier]);
+            delete cronometroIntervals[croupier];
+        }
+        if (reset) actualizarDisplayCrono(croupier, '00:00:00');
+    }
+
+    function actualizarDisplayCrono(croupier, tiempo) {
+        const timerEl = document.getElementById(`timer-${croupier.replace(/\s+/g, '-')}`);
+        if (timerEl) timerEl.textContent = tiempo;
+    }
+
+    /* Inicialización */
+    const savedDate = localStorage.getItem('lastDate');
+    const defaultDate = new URLSearchParams(window.location.search).get('fecha') || savedDate || getLocalDateString(new Date());
+    fechaSelector.value = defaultDate;
+    loadSchedule(defaultDate, true);
+
+    fechaSelector.addEventListener('change', () => {
+        localStorage.setItem('lastDate', fechaSelector.value);
+        loadSchedule(fechaSelector.value, true);
+    });
+
+    busquedaInput.addEventListener('input', (e) => {
+        filtroBusqueda = e.target.value;
+        renderCurrentView();
+    });
+
+    document.getElementById('btn-next').addEventListener('click', () => {
+        isAutoScrolling = false;
+        if (indiceActual + COLUMNAS_VISIBLES < datosCompletosDelHorario.horarios.length) {
+            indiceActual += COLUMNAS_VISIBLES;
+            renderCurrentView();
+        }
+    });
+
+    document.getElementById('btn-prev').addEventListener('click', () => {
+        isAutoScrolling = false;
+        if (indiceActual > 0) {
+            indiceActual = Math.max(0, indiceActual - COLUMNAS_VISIBLES);
+            renderCurrentView();
+        }
+    });
 });
