@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "BRANCH=$(git -C \"$CLAUDE_PROJECT_DIR\" rev-parse --abbrev-ref HEAD 2>/dev/null); if ! git -C \"$CLAUDE_PROJECT_DIR\" diff --quiet || ! git -C \"$CLAUDE_PROJECT_DIR\" diff --cached --quiet || [ -n \"$(git -C \"$CLAUDE_PROJECT_DIR\" ls-files --others --exclude-standard)\" ]; then git -C \"$CLAUDE_PROJECT_DIR\" add -A && git -C \"$CLAUDE_PROJECT_DIR\" commit -m \"Auto-save: cambios al cerrar sesión\" && git -C \"$CLAUDE_PROJECT_DIR\" push -u origin \"$BRANCH\"; fi 2>/dev/null || true",
+            "statusMessage": "Guardando y subiendo cambios al repositorio..."
+          }
+        ]
+      }
+    ]
+  }
+}

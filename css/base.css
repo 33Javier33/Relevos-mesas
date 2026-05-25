@@ -1,0 +1,134 @@
+/* Estilos específicos de base/index.html (Panel de Gestión) */
+
+body { padding: 20px; }
+h1, h3, h4 { color: var(--text-color); }
+
+.container { max-width: 1200px; margin: 0 auto; }
+
+.header {
+    text-align: center; margin-bottom: 20px; padding: 20px;
+    background-color: var(--surface-color); border-radius: 8px;
+    box-shadow: 0 4px 6px var(--shadow-color);
+}
+.header h1 { margin: 0; }
+.header p { margin: 10px 0 0; color: var(--text-secondary-color); }
+.header .open-horario-btn {
+    display: inline-block; margin-top: 15px; padding: 10px 20px;
+    background-color: var(--success-color); color: white;
+    text-decoration: none; border-radius: 5px; font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+.header .open-horario-btn:hover { background-color: var(--success-hover-color); }
+
+.controles-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 20px;
+}
+.control-panel {
+    background-color: var(--surface-color); padding: 20px;
+    border-radius: 8px; box-shadow: 0 4px 6px var(--shadow-color); position: relative;
+}
+.control-panel h3 {
+    margin-top: 0; border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px; margin-bottom: 15px;
+}
+
+.loading-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(255,255,255,0.7);
+    display: flex; justify-content: center; align-items: center;
+    border-radius: 8px; z-index: 10;
+}
+body.dark-mode .loading-overlay { background-color: rgba(0,0,0,0.7); }
+
+.form-group { margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px; }
+
+.control-panel input[type="text"],
+.control-panel select,
+.control-panel button,
+.control-panel .button-label {
+    width: 100%; padding: 10px; border-radius: 5px;
+    border: 1px solid var(--neutral-color); box-sizing: border-box;
+    background-color: var(--bg-color); color: var(--text-color); font-size: 1em;
+}
+.control-panel button,
+.control-panel .button-label {
+    background-color: var(--primary-color); color: white;
+    font-weight: bold; border: none; cursor: pointer;
+    transition: background-color 0.3s ease; text-align: center;
+}
+.control-panel button.danger { background-color: var(--danger-color); }
+.control-panel button.danger:hover { background-color: var(--danger-hover-color); }
+.control-panel button:hover,
+.control-panel .button-label:hover { background-color: var(--primary-hover-color); }
+
+.juegos-selector { position: relative; cursor: pointer; }
+.juegos-selector-display {
+    padding: 10px; border: 1px solid var(--neutral-color);
+    border-radius: 5px; background-color: var(--bg-color);
+}
+.dropdown-juegos {
+    display: none; position: absolute; top: 100%; left: 0; width: 100%;
+    background-color: var(--surface-color); border: 1px solid var(--neutral-color);
+    border-top: none; box-shadow: 0 4px 6px var(--shadow-color);
+    z-index: 10; max-height: 200px; overflow-y: auto;
+}
+.juegos-selector.active .dropdown-juegos { display: block; }
+.dropdown-juegos label { display: flex; align-items: center; padding: 8px 10px; cursor: pointer; }
+.dropdown-juegos input[type="checkbox"] { margin-right: 10px; }
+
+.preview-table-container {
+    border: 1px solid var(--border-color); border-radius: 5px;
+    max-height: 250px; overflow-y: auto;
+}
+.preview-table { width: 100%; border-collapse: collapse; }
+.preview-table th, .preview-table td {
+    padding: 8px; text-align: left; border-bottom: 1px solid var(--border-color);
+}
+.preview-table tbody tr:hover { background-color: var(--hover-bg-color); }
+
+.filter-btn-group { display: flex; gap: 0; margin-bottom: 10px; }
+.filter-btn {
+    flex: 1; background-color: var(--neutral-color);
+    border: 1px solid var(--neutral-hover-color); color: white;
+    padding: 8px; cursor: pointer;
+    transition: background-color 0.3s, color 0.3s; font-size: 0.9em;
+}
+.filter-btn:not(:last-child) { border-right: none; }
+.filter-btn:first-child { border-top-left-radius: 5px; border-bottom-left-radius: 5px; }
+.filter-btn:last-child  { border-top-right-radius: 5px; border-bottom-right-radius: 5px; }
+.filter-btn.active { background-color: var(--primary-color); }
+
+.mesa-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.mesa-tag {
+    background-color: var(--neutral-color); color: white;
+    padding: 5px 10px; border-radius: 5px;
+    display: flex; align-items: center; gap: 8px; cursor: grab;
+}
+.mesa-tag:active { cursor: grabbing; }
+.delete-mesa { background: none; border: none; color: white; cursor: pointer; font-weight: bold; }
+
+/* Modal de alerta (max-width 400px, centrado) */
+.modal-content {
+    background-color: var(--surface-color); margin: auto; padding: 20px;
+    border-radius: 8px; width: 90%; max-width: 400px;
+    box-shadow: 0 5px 15px var(--shadow-color); text-align: center;
+}
+.modal-content h3 { margin-top: 0; }
+.modal-content p  { margin-bottom: 20px; }
+.modal-buttons { display: flex; justify-content: center; gap: 10px; }
+
+.edit-btn {
+    background-color: var(--primary-color); color: white; border: none;
+    padding: 5px 10px; border-radius: 5px; cursor: pointer;
+    transition: background-color 0.3s ease; font-size: 0.8em;
+}
+.edit-btn:hover { background-color: var(--primary-hover-color); }
+
+.delete-croupier-btn {
+    background-color: var(--danger-color); color: white; border: none;
+    padding: 5px 10px; border-radius: 5px; cursor: pointer;
+    transition: background-color 0.3s ease; font-size: 0.8em;
+}
+.delete-croupier-btn:hover { background-color: var(--danger-hover-color); }
