@@ -1,0 +1,308 @@
+/* Estilos específicos de index.html (Horario de Relevos) */
+
+body { padding: 10px; font-size: 14px; }
+
+.nav-buttons-container, .management-buttons-container {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    margin-bottom: 5px;
+}
+
+.header-nav-link {
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: var(--primary-color);
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+    font-size: 0.9em;
+}
+.header-nav-link.danger-btn { background-color: var(--danger-color); }
+.header-nav-link.danger-btn:hover { background-color: var(--danger-hover-color); }
+
+.reloj-y-controles-container {
+    text-align: center;
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    background-color: var(--surface-color);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.reloj-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.color-controls-top {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.color-controls-top input[type="color"] {
+    -webkit-appearance: none; -moz-appearance: none; appearance: none;
+    border: 1px solid var(--neutral-color);
+    width: 30px; height: 30px;
+    background-color: transparent; cursor: pointer; padding: 0; border-radius: 50%;
+}
+.color-controls-top button {
+    background-color: var(--primary-color);
+    color: white; border: none; cursor: pointer;
+    width: 30px; height: 30px; padding: 0; border-radius: 50%;
+    font-size: 1rem; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+}
+
+.quick-add-container {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin: 0 auto 10px auto;
+}
+#quick-add-selector {
+    width: 100%;
+    max-width: 200px;
+    padding: 8px;
+    font-size: 0.9rem;
+    border-radius: 5px;
+    border: 1px solid var(--neutral-color);
+    background-color: var(--surface-color);
+    color: var(--text-color);
+    cursor: pointer;
+    text-align: center;
+}
+
+.fecha {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-secondary-color);
+    background-color: var(--hover-bg-color);
+    padding: 6px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.reloj {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: var(--text-color);
+    background-color: var(--hover-bg-color);
+    padding: 8px 15px;
+    border-radius: 8px;
+}
+.reloj.warning-pulse {
+    background-color: var(--danger-color);
+    color: white;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%   { transform: scale(1);    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); }
+    70%  { transform: scale(1.05); box-shadow: 0 0 10px 20px rgba(231, 76, 60, 0); }
+    100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+}
+
+.horario-container {
+    max-width: 100%;
+    margin: 0 auto;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px var(--shadow-color);
+    background-color: var(--surface-color);
+}
+.horario-tabla { overflow-x: auto; position: relative; }
+
+.tabla { width: 100%; border-collapse: collapse; }
+.tabla th, .tabla td {
+    border: 1px solid var(--border-color);
+    padding: 2px;
+    text-align: center;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.8rem;
+}
+.tabla thead th {
+    background-color: var(--surface-color);
+    font-weight: bold;
+    color: var(--text-color);
+    position: sticky;
+    top: 0;
+    padding: 4px;
+    z-index: 6;
+}
+.tabla th:first-child, .tabla td:first-child {
+    position: sticky; left: 0; z-index: 6;
+    background-color: var(--sticky-col-bg);
+    white-space: nowrap;
+}
+.tabla thead th:first-child { z-index: 8; }
+.tabla th:nth-child(2), .tabla td:nth-child(2) {
+    position: sticky; left: 110px; z-index: 5;
+    background-color: var(--sticky-col-bg);
+    white-space: nowrap;
+}
+.tabla thead th:nth-child(2) { left: 110px; z-index: 7; }
+
+.tabla th.croupier-header, .tabla td:first-child {
+    width: 110px; min-width: 110px; max-width: 110px; text-align: left;
+}
+.tabla th.crono-header, .tabla td:nth-child(2) {
+    width: 80px; min-width: 80px; max-width: 80px; text-align: center;
+}
+.tabla th[data-horario], .tabla td[data-horario] {
+    width: 80px; min-width: 80px; max-width: 80px; padding: 2px;
+}
+
+.tabla thead th.agregar-horario-th {
+    background-color: var(--primary-color);
+    padding: 0; cursor: pointer; width: 30px;
+}
+.tabla thead th.agregar-horario-th:hover { background-color: var(--primary-hover-color); }
+.tabla thead th.agregar-horario-th span { color: white; font-size: 1.5rem; }
+
+.tabla th .horario-header-content {
+    display: flex; justify-content: center; align-items: center; gap: 5px; cursor: pointer;
+}
+.tabla th .delete-time {
+    background-color: var(--danger-color); color: white; border: none; border-radius: 50%;
+    width: 16px; height: 16px; font-size: 10px; cursor: pointer;
+    opacity: 0; transition: opacity 0.3s;
+}
+.tabla th:hover .delete-time { opacity: 1; }
+
+.croupier-cell-content {
+    display: flex; flex-direction: column; align-items: flex-start;
+    gap: 3px; text-align: left; position: relative;
+}
+.croupier-cell-content:hover .delete-croupier { opacity: 1; }
+.delete-croupier {
+    position: absolute; top: 2px; right: 2px;
+    background-color: var(--danger-color); color: white; border: none; border-radius: 50%;
+    width: 16px; height: 16px; font-size: 10px; cursor: pointer;
+    opacity: 0; transition: opacity 0.3s; z-index: 6;
+}
+.croupier-name { font-weight: bold; cursor: pointer; }
+
+.salida-card {
+    display: flex; align-items: center; gap: 4px;
+    padding: 2px 5px; background-color: var(--hover-bg-color);
+    border-radius: 5px; cursor: pointer; font-size: 0.7rem; font-weight: bold;
+}
+.croupier-row td:first-child { cursor: grab; }
+.croupier-row.salida-warning {
+    background-color: var(--danger-color) !important;
+    animation: pulse 1.5s infinite;
+}
+.croupier-row.salida-warning td { background-color: transparent !important; }
+.croupier-row.salida-warning .croupier-name,
+.croupier-row.salida-warning .salida-time { color: white !important; }
+.croupier-row.salida-warning .salida-card { background-color: var(--danger-hover-color); }
+
+/* Tamaño específico del relevo-cell en esta vista */
+.relevo-cell { padding: 2px; font-size: 0.65rem; }
+
+.croupier-row.row-selected    { background-color: var(--selected-bg-color); }
+.croupier-row.sortable-ghost  { opacity: 0.5; background-color: var(--neutral-hover-color); }
+.croupier-row.sortable-chosen { background-color: var(--neutral-hover-color); }
+
+.cronometro-cell {
+    display: flex; justify-content: center; align-items: center; cursor: pointer;
+}
+.cronometro-display {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 2px; background-color: var(--hover-bg-color); border-radius: 5px;
+    border: 1px solid var(--neutral-color); font-weight: bold;
+}
+.cronometro-display.running { background-color: var(--success-color); color: white; }
+.cronometro-display.warning { background-color: var(--danger-color); color: white; }
+.cronometro-display .timer  { font-size: 0.7rem; }
+
+.croupier-tooltip {
+    display: none; position: absolute; background-color: var(--surface-color);
+    color: var(--text-color); border: 1px solid var(--border-color);
+    border-radius: 6px; padding: 10px; box-shadow: 0 4px 8px var(--shadow-color);
+    z-index: 100; font-size: 0.9em; max-width: 250px; pointer-events: none;
+}
+.croupier-tooltip h5 { margin: 0 0 5px 0; padding-bottom: 5px; border-bottom: 1px solid var(--border-color); }
+.croupier-tooltip ul { margin: 0; padding-left: 20px; }
+
+/* Modal content (horario usa max-width 500px y close-btn) */
+.modal-content {
+    background-color: var(--surface-color); padding: 20px;
+    border-radius: 10px; box-shadow: 0 5px 15px var(--shadow-color);
+    width: 90%; max-width: 500px; position: relative;
+    max-height: 90vh; overflow-y: auto;
+}
+.close-btn {
+    color: var(--text-secondary-color); position: absolute; top: 10px; right: 15px;
+    font-size: 30px; font-weight: bold; cursor: pointer;
+}
+.modal-body select, .modal-body input {
+    width: 100%; padding: 10px; border-radius: 5px;
+    border: 1px solid var(--neutral-color); box-sizing: border-box;
+    background-color: var(--bg-color); color: var(--text-color);
+}
+.modal-footer {
+    margin-top: 20px; text-align: right;
+    border-top: 1px solid var(--border-color); padding-top: 15px;
+}
+.modal-footer button {
+    padding: 10px 15px; border-radius: 5px; border: none; cursor: pointer;
+    color: white; font-weight: bold; margin-left: 10px;
+}
+.modal-footer button.confirm   { background-color: var(--success-color); }
+.modal-footer button.danger    { background-color: var(--danger-color); }
+.modal-footer button.undo-redo { background-color: var(--neutral-color); }
+
+#relevo-modal-options {
+    display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;
+}
+#mesas-selector { display: flex; gap: 15px; margin-bottom: 15px; }
+#mesas-selector > div { flex: 1; border: 1px solid var(--border-color); border-radius: 5px; padding: 10px; }
+#mesas-disponibles, #mesas-seleccionadas { min-height: 100px; max-height: 200px; overflow-y: auto; }
+#mesas-selector .mesa-item {
+    padding: 8px; margin: 5px; background-color: var(--hover-bg-color);
+    border-radius: 5px; cursor: pointer; text-align: center;
+}
+#mesas-seleccionadas .mesa-item { background-color: var(--primary-color); color: white; }
+
+#quick-add-modal-content { max-width: 400px; }
+#quick-add-search-input {
+    width: 100%; padding: 10px; border-radius: 5px;
+    border: 1px solid var(--neutral-color); margin-bottom: 15px;
+}
+#quick-add-croupier-list { list-style-type: none; padding: 0; margin: 0; max-height: 300px; overflow-y: auto; }
+#quick-add-croupier-list li {
+    padding: 10px; border-bottom: 1px solid var(--border-color); cursor: pointer;
+    display: flex; align-items: center;
+}
+#quick-add-croupier-list li:hover { background-color: var(--hover-bg-color); }
+#quick-add-croupier-list li input[type="checkbox"] { margin-right: 10px; }
+
+.quick-add-controls { display: flex; gap: 0; margin-bottom: 10px; }
+.quick-add-controls .filter-btn {
+    flex: 1; background-color: var(--neutral-color); border: 1px solid var(--neutral-hover-color);
+    color: white; padding: 8px; cursor: pointer; font-size: 0.9em;
+}
+.quick-add-controls .filter-btn.active { background-color: var(--primary-color); }
+
+footer {
+    margin-top: 20px; padding: 15px 0; text-align: center;
+    font-size: 0.8em; color: var(--text-secondary-color);
+    border-top: 1px solid var(--border-color);
+}
