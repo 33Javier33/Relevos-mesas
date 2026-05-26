@@ -267,7 +267,7 @@
         <div class="header">
             <h1>Panel de Horarios</h1>
             <div id="current-time">00:00:00</div>
-
+            
             <div class="controls-wrapper">
                 <div class="search-box">
                     <input type="text" id="busqueda-personal" placeholder="Buscar persona...">
@@ -289,18 +289,18 @@
             </div>
             <div id="horario-container" class="horario-tabla-container"></div>
         </div>
-
+        
         <footer>CarlosPN Interactive® — Mobile BI Interface</footer>
     </div>
-
+    
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const URL_DEL_SCRIPT_DE_HORARIOS = 'https://script.google.com/macros/s/AKfycbw1kBHYt37_X5K7UdBZlJNTgNT2B2P0t4F6uVrCKK_hDgZ7j09cwSzNx5l9CvHwFCTDQg/exec';
-
+            
             let datosCompletosDelHorario = null;
             let indiceActual = 0;
             let filtroBusqueda = "";
-            const COLUMNAS_VISIBLES = 2;
+            const COLUMNAS_VISIBLES = 2; // Reducido a 2 en móvil para mejor visibilidad
             let timerInterval = null;
             let refreshInterval = null;
             let cronometroIntervals = {};
@@ -308,11 +308,11 @@
 
             const fechaSelector = document.getElementById('fecha-selector');
             const busquedaInput = document.getElementById('busqueda-personal');
-
-            const updateClock = () => {
-                document.getElementById('current-time').textContent = new Date().toLocaleTimeString('es-ES', {
-                    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-                });
+            
+            const updateClock = () => { 
+                document.getElementById('current-time').textContent = new Date().toLocaleTimeString('es-ES', { 
+                    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false 
+                }); 
             };
             setInterval(updateClock, 1000);
             updateClock();
@@ -341,8 +341,8 @@
                             document.getElementById('status-message').style.display = 'none';
                             document.getElementById('horario-wrapper').style.display = 'block';
                             newData.horarios.sort(sortHorarios);
-                            renderCurrentView();
-                            actualizarSistema();
+                            renderCurrentView(); 
+                            actualizarSistema(); 
                             timerInterval = setInterval(actualizarSistema, 1000);
                             refreshInterval = setInterval(() => loadSchedule(fechaSelector.value, false), 15000);
                         } else {
@@ -360,7 +360,7 @@
                  document.getElementById('status-message').textContent = `Sin datos para hoy.`;
                  document.getElementById('status-message').style.display = 'block';
                  document.getElementById('horario-wrapper').style.display = 'none';
-            };
+            }
 
             const updateScheduleSilently = (newData) => {
                 datosCompletosDelHorario = newData;
@@ -372,21 +372,21 @@
                 const div = document.createElement('div');
                 div.className = 'relevo-cell-view';
                 switch (data.actividad) {
-                    case 'releva':
-                        div.style.background = `linear-gradient(135deg, ${data.color}dd, ${data.color})`;
+                    case 'releva': 
+                        div.style.background = `linear-gradient(135deg, ${data.color}dd, ${data.color})`; 
                         div.textContent = data.mesas.join('\n'); break;
-                    case 'ayudante-pagador':
+                    case 'ayudante-pagador': 
                         div.classList.add('ayudante-pagador'); div.textContent = 'A. PAG'; break;
-                    case 'descanso':
+                    case 'descanso': 
                         div.classList.add('descanso'); div.textContent = 'DESC.'; break;
-                    default:
+                    default: 
                         div.style.backgroundColor = '#475569'; div.textContent = 'S/A';
                 }
                 return div;
             };
 
-            const sortHorarios = (a, b) => {
-                let aH = parseInt(a.split(':')[0],10), bH=parseInt(b.split(':')[0],10);
+            const sortHorarios = (a, b) => { 
+                let aH = parseInt(a.split(':')[0],10), bH=parseInt(b.split(':')[0],10); 
                 if(aH<6)aH+=24; if(bH<6)bH+=24;
                 return aH !== bH ? aH - bH : parseInt(a.split(':')[1],10) - parseInt(b.split(':')[1],10);
             };
@@ -397,25 +397,25 @@
                 const container = document.getElementById('horario-container');
                 container.innerHTML = '';
 
-                const croupiersFiltrados = croupiersEnTabla.filter(c =>
+                const croupiersFiltrados = croupiersEnTabla.filter(c => 
                     c.toLowerCase().includes(filtroBusqueda.toLowerCase())
                 );
 
                 const horariosVisibles = horarios.slice(indiceActual, indiceActual + COLUMNAS_VISIBLES);
                 const table = document.createElement('table'); table.className = 'tabla';
-
+                
                 let headerContent = `<thead><tr><th>Nombre</th>`;
                 horariosVisibles.forEach(hora => headerContent += `<th>${hora}</th>`);
                 headerContent += `</tr></thead>`;
                 table.innerHTML = headerContent;
-
+                
                 const tbody = document.createElement('tbody');
                 croupiersFiltrados.forEach(croupier => {
                     const tr = document.createElement('tr');
                     const croupierId = croupier.replace(/\s+/g, '-');
                     tr.id = `row-${croupierId}`;
-
-                    const th = document.createElement('td');
+                    
+                    const th = document.createElement('td'); // Usamos TD para sticky
                     th.innerHTML = `<div class="croupier-name-cell">${croupier}</div><span class="croupier-timer" id="timer-${croupierId}">00:00:00</span>`;
                     if (croupierColors?.[croupier]) th.style.borderLeft = `4px solid ${croupierColors[croupier]}`;
                     tr.appendChild(th);
@@ -447,7 +447,7 @@
                 const { croupiersEnTabla, horarios, datosRelevos, cronometroStartTime, horasSalida } = datosCompletosDelHorario;
                 const fechaVisible = new Date(fechaSelector.value + 'T00:00:00');
                 const sortedHorarios = [...horarios].sort(sortHorarios);
-
+                
                 const horariosDate = sortedHorarios.map(h => {
                     const [hour, minute] = h.split(':');
                     const date = new Date(fechaVisible);
@@ -520,6 +520,7 @@
                 if (timerEl) timerEl.textContent = tiempo;
             }
 
+            // Persistencia y Eventos
             const savedDate = localStorage.getItem('lastDate');
             const defaultDate = new URLSearchParams(window.location.search).get('fecha') || savedDate || getLocalDateString(new Date());
             fechaSelector.value = defaultDate;
@@ -546,14 +547,6 @@
                 if (indiceActual > 0) { indiceActual = Math.max(0, indiceActual - COLUMNAS_VISIBLES); renderCurrentView(); }
             });
         });
-
-        /* Desregistra SWs viejos y registra el nuevo */
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(regs => {
-                regs.forEach(reg => reg.unregister());
-            });
-            navigator.serviceWorker.register('./sw.js');
-        }
     </script>
 </body>
 </html>
