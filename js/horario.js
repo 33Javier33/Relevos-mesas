@@ -873,7 +873,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const result = { porCroupier: {}, porMesa: {} };
         const croupiersEnTabla = croupiersData.map(c => c.nombreCompleto);
 
-        // Convert horarios to minutes-since-midnight (with overnight adjustment)
         const toMinutes = (h) => {
             const [hr, mn] = h.split(':').map(Number);
             return (hr < 6 ? hr + 24 : hr) * 60 + mn;
@@ -884,14 +883,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         sorted.forEach((hora, idx) => {
-            const dur = idx < sorted.length - 1
-                ? toMinutes(sorted[idx + 1]) - toMinutes(hora)
-                : 30;
-            if (dur <= 0) return;
+            const horaMin = toMinutes(hora);
+            const nextMin = idx < sorted.length - 1 ? toMinutes(sorted[idx + 1]) : null;
 
             croupiersEnTabla.forEach(c => {
+                // Ignorar slots en o después de la hora de salida
+                const salidaStr = croupierSalidas[c];
+                const salidaMin = salidaStr ? toMinutes(salidaStr) : null;
+                if (salidaMin !== null && horaMin >= salidaMin) return;
+
                 const entry = datosRelevos[c]?.[hora];
                 if (!entry) return;
+
+                // Duración del slot, recortada por la hora de salida si aplica
+                let dur;
+                if (nextMin !== null) {
+                    dur = (salidaMin !== null ? Math.min(nextMin, salidaMin) : nextMin) - horaMin;
+                } else {
+                    dur = salidaMin !== null ? Math.max(0, salidaMin - horaMin) : 30;
+                }
+                if (dur <= 0) return;
+
                 result.porCroupier[c].totalMinutos += dur;
                 if (entry.actividad === 'releva' && entry.mesas?.length) {
                     const perMesa = Math.round(dur / entry.mesas.length);
@@ -911,10 +923,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // Sort croupiers in each mesa
         Object.values(result.porMesa).forEach(m => m.croupiers.sort((a, b) => b.minutos - a.minutos));
-
-        // Determine mesa principal per croupier
         Object.values(result.porCroupier).forEach(d => {
             const entries = Object.entries(d.minutosMesa);
             if (entries.length) d.mesaPrincipal = entries.sort((a, b) => b[1] - a[1])[0][0];
