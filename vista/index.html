@@ -54,6 +54,9 @@
             margin: 0;
             text-transform: uppercase;
             letter-spacing: 1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         #current-time {
@@ -520,13 +523,28 @@
                 if (timerEl) timerEl.textContent = tiempo;
             }
 
-            const savedDate = localStorage.getItem('lastDate');
-            const defaultDate = new URLSearchParams(window.location.search).get('fecha') || savedDate || getLocalDateString(new Date());
+            const urlDate = new URLSearchParams(window.location.search).get('fecha');
+            const sessionDate = sessionStorage.getItem('vistaFecha');
+
+            function getFechaApertura() {
+                const now = new Date();
+                /* Antes de las 06:00 el turno nocturno sigue siendo del día anterior */
+                if (now.getHours() < 6) {
+                    const ayer = new Date(now);
+                    ayer.setDate(ayer.getDate() - 1);
+                    return getLocalDateString(ayer);
+                }
+                return getLocalDateString(now);
+            }
+
+            const defaultDate = urlDate || sessionDate || getFechaApertura();
+            /* Fija la fecha en sessionStorage — no cambia aunque pase la medianoche */
+            if (!sessionDate) sessionStorage.setItem('vistaFecha', defaultDate);
             fechaSelector.value = defaultDate;
             loadSchedule(defaultDate, true);
 
             fechaSelector.addEventListener('change', () => {
-                localStorage.setItem('lastDate', fechaSelector.value);
+                sessionStorage.setItem('vistaFecha', fechaSelector.value);
                 loadSchedule(fechaSelector.value, true);
             });
 
