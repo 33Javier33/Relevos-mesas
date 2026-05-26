@@ -642,15 +642,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const mesasSeleccionadasDiv = document.getElementById('mesas-seleccionadas');
         mesasDisponiblesDiv.innerHTML = '';
         mesasSeleccionadasDiv.innerHTML = '';
-        mesasDeJuego.forEach(mesa => {
-            const mesaItem = `<div class="mesa-item" data-mesa="${mesa}">${mesa}</div>`;
-            if (mesasRelevo.includes(mesa)) {
-                mesasSeleccionadasDiv.innerHTML += mesaItem;
-            } else {
-                mesasDisponiblesDiv.innerHTML += mesaItem;
+
+        // Mesas ya asignadas a OTROS croupiers en este mismo horario
+        const mesasOcupadas = {};
+        croupiersData.forEach(c => {
+            if (c.nombreCompleto === croupier) return;
+            const rel = datosRelevos[c.nombreCompleto]?.[horario];
+            if (rel?.actividad === 'releva' && rel.mesas?.length) {
+                rel.mesas.forEach(m => { mesasOcupadas[m] = generarAlias(c.nombreCompleto); });
             }
         });
+
+        mesasDeJuego.forEach(mesa => {
+            if (mesasRelevo.includes(mesa)) {
+                mesasSeleccionadasDiv.innerHTML += `<div class="mesa-item" data-mesa="${mesa}">${mesa}</div>`;
+            } else if (mesasOcupadas[mesa]) {
+                mesasDisponiblesDiv.innerHTML += `<div class="mesa-item mesa-ocupada" data-mesa="${mesa}" title="Ya asignada a ${mesasOcupadas[mesa]}">${mesa}<span class="ocupada-label">↳${mesasOcupadas[mesa]}</span></div>`;
+            } else {
+                mesasDisponiblesDiv.innerHTML += `<div class="mesa-item" data-mesa="${mesa}">${mesa}</div>`;
+            }
+        });
+
         DOM.colorRelevoInput.value = relevoExistente?.color || '#3498db';
+        renderEstadoHorarioPanel(horario, croupier);
         llenarSelectorDescansoManual();
         DOM.relevoModal.style.display = 'flex';
     }
@@ -659,30 +673,73 @@ document.addEventListener('DOMContentLoaded', () => {
         DOM.relevoControlsContainer.style.display = actividad === 'releva' ? 'block' : 'none';
     }
 
+    function renderEstadoHorarioPanel(horario, croupierActual) {
+        const panel = document.getElementById('estado-horario-panel');
+        if (!panel) return;
+        const otros = croupiersData.filter(c => c.nombreCompleto !== croupierActual);
+        if (!otros.length) { panel.style.display = 'none'; return; }
+
+        const rows = otros.map(c => {
+            const rel = datosRelevos[c.nombreCompleto]?.[horario];
+            let info = '—';
+            let cls = '';
+            if (rel?.actividad === 'releva') {
+                info = rel.mesas?.join(', ') || '?';
+                cls = 'estado-mesa';
+            } else if (rel?.actividad === 'descanso') {
+                info = 'Descansando';
+                cls = 'estado-descanso';
+            } else if (rel?.actividad === 'ayudante-pagador') {
+                info = 'Ayud. Pagador';
+                cls = 'estado-ayudante';
+            }
+            return `<div class="estado-row"><span class="estado-nombre">${generarAlias(c.nombreCompleto)}</span><span class="estado-valor ${cls}">${info}</span></div>`;
+        });
+
+        panel.style.display = 'block';
+        panel.innerHTML = `<details><summary>Estado del turno a las <strong>${horario}</strong></summary><div class="estado-grid">${rows.join('')}</div></details>`;
+    }
+
     function llenarSelectorDescansoManual() {
         DOM.selectCroupierDescanso.innerHTML = '';
         const sortedHorarios = [...horarios].sort(sortHorarios);
         const currentIndex = sortedHorarios.indexOf(celdaActiva.horario);
         croupiersData.forEach(c => {
             if (c.nombreCompleto === celdaActiva.croupier) return;
-            let lastActivityInfo = ' (Sin Actividad Anterior)';
-            for (let i = currentIndex - 1; i >= 0; i--) {
-                const prevHorario = sortedHorarios[i];
-                const relevoData = datosRelevos[c.nombreCompleto]?.[prevHorario];
-                if (relevoData) {
-                    if (relevoData.actividad === 'releva' && relevoData.mesas.length > 0) {
-                        lastActivityInfo = ` (${relevoData.mesas.join(', ')})`;
-                    } else if (relevoData.actividad === 'descanso') {
-                        lastActivityInfo = ' (En Descanso)';
-                    } else if (relevoData.actividad === 'ayudante-pagador') {
-                        lastActivityInfo = ' (Ayud. Pagador)';
+
+            // Mostrar asignación del horario actual si ya existe
+            const currentRel = datosRelevos[c.nombreCompleto]?.[celdaActiva.horario];
+            let activityInfo = '';
+            if (currentRel?.actividad === 'releva' && currentRel.mesas?.length) {
+                activityInfo = ` [en ${currentRel.mesas.join(', ')}]`;
+            } else if (currentRel?.actividad === 'descanso') {
+                activityInfo = ' [descansando]';
+            } else if (currentRel?.actividad === 'ayudante-pagador') {
+                activityInfo = ' [ayud. pagador]';
+            }
+
+            // Si no tiene asignación actual, buscar en slots anteriores
+            if (!activityInfo) {
+                activityInfo = ' (sin actividad anterior)';
+                for (let i = currentIndex - 1; i >= 0; i--) {
+                    const prevHorario = sortedHorarios[i];
+                    const relevoData = datosRelevos[c.nombreCompleto]?.[prevHorario];
+                    if (relevoData) {
+                        if (relevoData.actividad === 'releva' && relevoData.mesas.length > 0) {
+                            activityInfo = ` (viene de ${relevoData.mesas.join(', ')})`;
+                        } else if (relevoData.actividad === 'descanso') {
+                            activityInfo = ' (en descanso)';
+                        } else if (relevoData.actividad === 'ayudante-pagador') {
+                            activityInfo = ' (ayud. pagador)';
+                        }
+                        break;
                     }
-                    break;
                 }
             }
+
             const option = document.createElement('option');
             option.value = c.nombreCompleto;
-            option.textContent = generarAlias(c.nombreCompleto) + lastActivityInfo;
+            option.textContent = generarAlias(c.nombreCompleto) + activityInfo;
             DOM.selectCroupierDescanso.appendChild(option);
         });
     }
@@ -765,9 +822,11 @@ document.addEventListener('DOMContentLoaded', () => {
         DOM.opcionAyudante.addEventListener('change', () => toggleRelevoControls('ayudante'));
         DOM.opcionDescanso.addEventListener('change', () => toggleRelevoControls('descanso'));
         document.getElementById('relevo-modal').addEventListener('click', e => {
-            if (e.target.classList.contains('mesa-item')) {
-                const targetList = e.target.parentElement.id === 'mesas-disponibles' ? 'mesas-seleccionadas' : 'mesas-disponibles';
-                document.getElementById(targetList).appendChild(e.target);
+            const item = e.target.classList.contains('mesa-item') ? e.target : e.target.closest?.('.mesa-item');
+            if (item) {
+                if (item.classList.contains('mesa-ocupada')) return; // bloqueada
+                const targetList = item.parentElement.id === 'mesas-disponibles' ? 'mesas-seleccionadas' : 'mesas-disponibles';
+                document.getElementById(targetList).appendChild(item);
             }
         });
         document.getElementById('crono-btn-start').addEventListener('click', () => {

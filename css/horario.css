@@ -314,10 +314,49 @@ body { padding: 10px; font-size: 14px; }
 #mesas-selector > div { flex: 1; border: 1px solid var(--border-color); border-radius: 5px; padding: 10px; }
 #mesas-disponibles, #mesas-seleccionadas { min-height: 100px; max-height: 200px; overflow-y: auto; }
 #mesas-selector .mesa-item {
-    padding: 8px; margin: 5px; background-color: var(--hover-bg-color);
+    padding: 6px 8px; margin: 4px; background-color: var(--hover-bg-color);
     border-radius: 5px; cursor: pointer; text-align: center;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
 }
 #mesas-seleccionadas .mesa-item { background-color: var(--primary-color); color: white; }
+.mesa-ocupada {
+    background-color: transparent !important;
+    color: var(--text-secondary-color) !important;
+    cursor: not-allowed !important;
+    border: 1px dashed var(--border-color);
+    opacity: 0.65;
+}
+.ocupada-label {
+    font-size: 0.7em; color: var(--danger-color);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60px;
+}
+
+#estado-horario-panel {
+    display: none; margin: 8px 0;
+    border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden;
+    font-size: 0.82em;
+}
+#estado-horario-panel details summary {
+    padding: 7px 12px; cursor: pointer;
+    background-color: var(--hover-bg-color); font-weight: 600;
+    user-select: none; list-style: none;
+    display: flex; align-items: center; gap: 5px;
+}
+#estado-horario-panel details summary::before { content: '▶'; font-size: 0.7em; transition: transform 0.2s; }
+#estado-horario-panel details[open] summary::before { transform: rotate(90deg); }
+.estado-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 4px; padding: 8px;
+}
+.estado-row {
+    display: flex; flex-direction: column; padding: 5px 8px;
+    border-radius: 4px; background-color: var(--bg-color); border: 1px solid var(--border-color);
+}
+.estado-nombre { font-weight: 600; font-size: 0.9em; }
+.estado-valor { font-size: 0.82em; color: var(--text-secondary-color); margin-top: 2px; }
+.estado-mesa     { color: var(--primary-color); font-weight: 600; }
+.estado-descanso { color: #f59e0b; font-weight: 600; }
+.estado-ayudante { color: #8b5cf6; font-weight: 600; }
 
 #quick-add-modal-content { max-width: 400px; }
 #quick-add-search-input {
