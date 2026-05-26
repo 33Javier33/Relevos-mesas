@@ -339,6 +339,39 @@ body { padding: 10px; font-size: 14px; }
 }
 .quick-add-controls .filter-btn.active { background-color: var(--primary-color); }
 
+.stats-tab-btn {
+    padding: 6px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background: var(--bg-color);
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: 0.85em;
+}
+.stats-tab-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85em;
+    margin-top: 10px;
+}
+.stats-table th {
+    background: var(--surface-color);
+    padding: 8px;
+    text-align: left;
+    border-bottom: 2px solid var(--border-color);
+    font-weight: bold;
+}
+.stats-table td {
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+.stats-table tr:hover td { background: var(--hover-bg-color); }
+
 footer {
     margin-top: 20px; padding: 15px 0; text-align: center;
     font-size: 0.8em; color: var(--text-secondary-color);

@@ -205,6 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const nuevaFechaStr = DOM.inputNuevaFecha.value;
         if (nuevaFechaStr) {
             await cambiarFecha(new Date(nuevaFechaStr + 'T00:00:00'));
+            sessionStorage.setItem('horarioFecha', getLocalDateString(fechaVisible));
         }
         cerrarModales();
     }
@@ -386,8 +387,21 @@ document.addEventListener('DOMContentLoaded', () => {
         await cargarDatosMaestros();
         const params = new URLSearchParams(window.location.search);
         const fechaURL = params.get('fecha');
-        const today = new Date();
-        const initialDate = fechaURL ? new Date(fechaURL + 'T00:00:00') : today;
+        const sessionFecha = sessionStorage.getItem('horarioFecha');
+
+        function getInitialDate() {
+            if (fechaURL) return new Date(fechaURL + 'T00:00:00');
+            if (sessionFecha) return new Date(sessionFecha + 'T00:00:00');
+            const now = new Date();
+            if (now.getHours() < 6) {
+                const ayer = new Date(now);
+                ayer.setDate(ayer.getDate() - 1);
+                return ayer;
+            }
+            return now;
+        }
+        const initialDate = getInitialDate();
+        if (!sessionFecha && !fechaURL) sessionStorage.setItem('horarioFecha', getLocalDateString(initialDate));
         await cambiarFecha(initialDate);
         setupEventListeners();
         setInterval(actualizarSistema, 1000);
@@ -782,6 +796,124 @@ document.addEventListener('DOMContentLoaded', () => {
         DOM.btnAddSelectedToTable.addEventListener('click', agregarCroupiersSeleccionadosDelModal);
         document.getElementById('btn-limpiar-croupiers').addEventListener('click', limpiarCroupiers);
         document.getElementById('btn-limpiar-horarios').addEventListener('click', limpiarHorarios);
+        document.getElementById('btn-stats').addEventListener('click', () => {
+            abrirStatsModal();
+        });
+        document.getElementById('btn-close-stats').addEventListener('click', cerrarModales);
+        document.getElementById('stats-tabs').addEventListener('click', (e) => {
+            if (e.target.classList.contains('stats-tab-btn')) {
+                document.querySelectorAll('.stats-tab-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                renderStatsTab(e.target.dataset.tab, calcularEstadisticas());
+            }
+        });
+    }
+
+    function calcularEstadisticas() {
+        const sorted = [...horarios].sort(sortHorarios);
+        const result = { porCroupier: {}, porMesa: {} };
+
+        // Convert horarios to minutes-since-midnight (with overnight adjustment)
+        const toMinutes = (h) => {
+            const [hr, mn] = h.split(':').map(Number);
+            return (hr < 6 ? hr + 24 : hr) * 60 + mn;
+        };
+
+        croupiersEnTabla.forEach(c => {
+            result.porCroupier[c] = { minutosMesa: {}, minutosAyudante: 0, minutosDescanso: 0, totalMinutos: 0, mesaPrincipal: '' };
+        });
+
+        sorted.forEach((hora, idx) => {
+            const dur = idx < sorted.length - 1
+                ? toMinutes(sorted[idx + 1]) - toMinutes(hora)
+                : 30;
+            if (dur <= 0) return;
+
+            croupiersEnTabla.forEach(c => {
+                const entry = datosRelevos[c]?.[hora];
+                if (!entry) return;
+                result.porCroupier[c].totalMinutos += dur;
+                if (entry.actividad === 'releva' && entry.mesas?.length) {
+                    const perMesa = Math.round(dur / entry.mesas.length);
+                    entry.mesas.forEach(mesa => {
+                        result.porCroupier[c].minutosMesa[mesa] = (result.porCroupier[c].minutosMesa[mesa] || 0) + perMesa;
+                        if (!result.porMesa[mesa]) result.porMesa[mesa] = { minutosTotal: 0, croupiers: [] };
+                        result.porMesa[mesa].minutosTotal += perMesa;
+                        const existing = result.porMesa[mesa].croupiers.find(x => x.nombre === c);
+                        if (existing) existing.minutos += perMesa;
+                        else result.porMesa[mesa].croupiers.push({ nombre: c, minutos: perMesa });
+                    });
+                } else if (entry.actividad === 'ayudante-pagador') {
+                    result.porCroupier[c].minutosAyudante += dur;
+                } else if (entry.actividad === 'descanso') {
+                    result.porCroupier[c].minutosDescanso += dur;
+                }
+            });
+        });
+
+        // Sort croupiers in each mesa
+        Object.values(result.porMesa).forEach(m => m.croupiers.sort((a, b) => b.minutos - a.minutos));
+
+        // Determine mesa principal per croupier
+        Object.values(result.porCroupier).forEach(d => {
+            const entries = Object.entries(d.minutosMesa);
+            if (entries.length) d.mesaPrincipal = entries.sort((a, b) => b[1] - a[1])[0][0];
+        });
+
+        return result;
+    }
+
+    function abrirStatsModal() {
+        const stats = calcularEstadisticas();
+        document.getElementById('stats-modal').style.display = 'flex';
+        document.querySelectorAll('.stats-tab-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
+        renderStatsTab('resumen', stats);
+    }
+
+    function renderStatsTab(tab, stats) {
+        const container = document.getElementById('stats-content');
+        if (tab === 'resumen') {
+            const rows = Object.entries(stats.porCroupier).map(([nombre, d]) => {
+                const totalH = Math.floor(d.totalMinutos / 60);
+                const totalM = d.totalMinutos % 60;
+                const mesaH = Math.floor((d.minutosMesa[d.mesaPrincipal] || 0) / 60);
+                const mesaM = (d.minutosMesa[d.mesaPrincipal] || 0) % 60;
+                return `<tr>
+                    <td><strong>${nombre}</strong></td>
+                    <td>${totalH}h ${totalM}m</td>
+                    <td>${d.mesaPrincipal || '—'}</td>
+                    <td>${mesaH}h ${mesaM}m</td>
+                    <td>${Math.floor(d.minutosDescanso / 60)}h ${d.minutosDescanso % 60}m</td>
+                </tr>`;
+            }).join('');
+            container.innerHTML = `<table class="stats-table">
+                <thead><tr><th>Croupier</th><th>Tiempo total</th><th>Mesa principal</th><th>Tiempo en mesa principal</th><th>Descansos</th></tr></thead>
+                <tbody>${rows || '<tr><td colspan="5" style="text-align:center;padding:20px;">Sin datos suficientes</td></tr>'}</tbody>
+            </table>`;
+        } else if (tab === 'mesas') {
+            const rows = Object.entries(stats.porMesa).sort((a, b) => b[1].minutosTotal - a[1].minutosTotal).map(([mesa, d]) => {
+                const h = Math.floor(d.minutosTotal / 60), m = d.minutosTotal % 60;
+                const top = d.croupiers.slice(0, 3).map(c => `${c.nombre} (${Math.floor(c.minutos / 60)}h${c.minutos % 60}m)`).join(', ');
+                return `<tr><td><strong>${mesa}</strong></td><td>${h}h ${m}m</td><td>${top}</td></tr>`;
+            }).join('');
+            container.innerHTML = `<table class="stats-table">
+                <thead><tr><th>Mesa</th><th>Tiempo ocupada</th><th>Principales croupiers</th></tr></thead>
+                <tbody>${rows || '<tr><td colspan="3" style="text-align:center;padding:20px;">Sin datos</td></tr>'}</tbody>
+            </table>`;
+        } else if (tab === 'descansos') {
+            const rows = Object.entries(stats.porCroupier)
+                .filter(([, d]) => d.minutosDescanso > 0)
+                .sort((a, b) => b[1].minutosDescanso - a[1].minutosDescanso)
+                .map(([nombre, d]) => {
+                    const h = Math.floor(d.minutosDescanso / 60), m = d.minutosDescanso % 60;
+                    const pct = d.totalMinutos > 0 ? Math.round(d.minutosDescanso / d.totalMinutos * 100) : 0;
+                    return `<tr><td><strong>${nombre}</strong></td><td>${h}h ${m}m</td><td>${pct}%</td></tr>`;
+                }).join('');
+            container.innerHTML = `<table class="stats-table">
+                <thead><tr><th>Croupier</th><th>Tiempo en descanso</th><th>% del turno</th></tr></thead>
+                <tbody>${rows || '<tr><td colspan="3" style="text-align:center;padding:20px;">Sin descansos registrados</td></tr>'}</tbody>
+            </table>`;
+        }
     }
 
     inicializar();

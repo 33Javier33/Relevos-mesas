@@ -35,6 +35,10 @@
         <button id="quick-add-selector">Cargando Croupiers...</button>
     </div>
 
+    <div style="display:flex; justify-content:center; margin-bottom:10px;">
+        <button id="btn-stats" style="padding:8px 20px; background:var(--primary-color); color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; font-size:0.9em;">📊 Estadísticas del Turno</button>
+    </div>
+
     <div class="horario-container">
         <div class="horario-tabla">
             <table class="tabla" id="tabla-horario">
@@ -166,6 +170,23 @@
             <div class="modal-footer" style="justify-content: center;">
                 <button id="custom-alert-cancel" class="danger" style="display: none;">Cancelar</button>
                 <button id="custom-alert-ok" class="confirm">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Estadísticas -->
+    <div id="stats-modal" class="modal">
+        <div class="modal-content" style="max-width:650px;">
+            <span class="close-btn">&times;</span>
+            <h2>📊 Estadísticas del Turno</h2>
+            <div id="stats-tabs" style="display:flex; gap:5px; margin-bottom:15px; flex-wrap:wrap;">
+                <button class="stats-tab-btn active" data-tab="resumen">Resumen</button>
+                <button class="stats-tab-btn" data-tab="mesas">Por Mesa</button>
+                <button class="stats-tab-btn" data-tab="descansos">Descansos</button>
+            </div>
+            <div id="stats-content"></div>
+            <div class="modal-footer">
+                <button id="btn-close-stats" class="confirm">Cerrar</button>
             </div>
         </div>
     </div>
