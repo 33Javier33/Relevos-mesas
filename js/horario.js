@@ -749,42 +749,73 @@ document.addEventListener('DOMContentLoaded', () => {
         DOM.selectCroupierDescanso.innerHTML = '';
         const sortedHorarios = [...horarios].sort(sortHorarios);
         const currentIndex = sortedHorarios.indexOf(celdaActiva.horario);
+
+        const toMin = (h) => { const [hr, mn] = h.split(':').map(Number); return (hr < 6 ? hr + 24 : hr) * 60 + mn; };
+        const fmtMin = (m) => m >= 60 ? `${Math.floor(m / 60)}h${m % 60 > 0 ? (m % 60) + 'm' : ''}` : `${m}m`;
+
+        // Calcula cuántos minutos consecutivos lleva un croupier en la misma mesa
+        // retrocediendo desde fromIndex (exclusivo) hacia atrás.
+        function minutosConsecutivosEnMesa(nombre, fromIndex) {
+            if (fromIndex <= 0) return null;
+            let refMesas = null;
+            let totalMin = 0;
+            for (let i = fromIndex - 1; i >= 0; i--) {
+                const rel = datosRelevos[nombre]?.[sortedHorarios[i]];
+                if (!rel || rel.actividad !== 'releva' || !rel.mesas?.length) break;
+                if (!refMesas) {
+                    refMesas = rel.mesas;
+                } else if (rel.mesas.length !== refMesas.length || !rel.mesas.every(m => refMesas.includes(m))) {
+                    break;
+                }
+                totalMin += toMin(sortedHorarios[i + 1]) - toMin(sortedHorarios[i]);
+            }
+            return refMesas && totalMin > 0 ? { minutos: totalMin, mesas: refMesas } : null;
+        }
+
         croupiersData.forEach(c => {
             if (c.nombreCompleto === celdaActiva.croupier) return;
+            const nombre = c.nombreCompleto;
 
-            // Mostrar asignación del horario actual si ya existe
-            const currentRel = datosRelevos[c.nombreCompleto]?.[celdaActiva.horario];
+            // Asignación en el slot actual
+            const currentRel = datosRelevos[nombre]?.[celdaActiva.horario];
             let activityInfo = '';
+
             if (currentRel?.actividad === 'releva' && currentRel.mesas?.length) {
-                activityInfo = ` [en ${currentRel.mesas.join(', ')}]`;
+                // Tiempo incluyendo el slot actual como si ya estuviera asignado
+                const prev = minutosConsecutivosEnMesa(nombre, currentIndex);
+                const slotDur = currentIndex < sortedHorarios.length - 1
+                    ? toMin(sortedHorarios[currentIndex + 1]) - toMin(sortedHorarios[currentIndex])
+                    : 30;
+                const total = (prev?.minutos || 0) + slotDur;
+                activityInfo = ` [en ${currentRel.mesas.join(', ')} · ${fmtMin(total)}]`;
             } else if (currentRel?.actividad === 'descanso') {
                 activityInfo = ' [descansando]';
             } else if (currentRel?.actividad === 'ayudante-pagador') {
                 activityInfo = ' [ayud. pagador]';
             }
 
-            // Si no tiene asignación actual, buscar en slots anteriores
+            // Sin asignación actual → buscar en slots anteriores
             if (!activityInfo) {
                 activityInfo = ' (sin actividad anterior)';
                 for (let i = currentIndex - 1; i >= 0; i--) {
-                    const prevHorario = sortedHorarios[i];
-                    const relevoData = datosRelevos[c.nombreCompleto]?.[prevHorario];
-                    if (relevoData) {
-                        if (relevoData.actividad === 'releva' && relevoData.mesas.length > 0) {
-                            activityInfo = ` (viene de ${relevoData.mesas.join(', ')})`;
-                        } else if (relevoData.actividad === 'descanso') {
-                            activityInfo = ' (en descanso)';
-                        } else if (relevoData.actividad === 'ayudante-pagador') {
-                            activityInfo = ' (ayud. pagador)';
-                        }
-                        break;
+                    const rel = datosRelevos[nombre]?.[sortedHorarios[i]];
+                    if (!rel) continue;
+                    if (rel.actividad === 'releva' && rel.mesas?.length) {
+                        const prev = minutosConsecutivosEnMesa(nombre, i + 1);
+                        const tiempo = prev ? ` · ${fmtMin(prev.minutos)}` : '';
+                        activityInfo = ` (viene de ${rel.mesas.join(', ')}${tiempo})`;
+                    } else if (rel.actividad === 'descanso') {
+                        activityInfo = ' (en descanso)';
+                    } else if (rel.actividad === 'ayudante-pagador') {
+                        activityInfo = ' (ayud. pagador)';
                     }
+                    break;
                 }
             }
 
             const option = document.createElement('option');
-            option.value = c.nombreCompleto;
-            option.textContent = generarAlias(c.nombreCompleto) + activityInfo;
+            option.value = nombre;
+            option.textContent = generarAlias(nombre) + activityInfo;
             DOM.selectCroupierDescanso.appendChild(option);
         });
     }
