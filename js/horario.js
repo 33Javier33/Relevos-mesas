@@ -872,47 +872,114 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderStatsTab(tab, stats) {
         const container = document.getElementById('stats-content');
+
         if (tab === 'resumen') {
-            const rows = Object.entries(stats.porCroupier).map(([nombre, d]) => {
-                const totalH = Math.floor(d.totalMinutos / 60);
-                const totalM = d.totalMinutos % 60;
-                const mesaH = Math.floor((d.minutosMesa[d.mesaPrincipal] || 0) / 60);
-                const mesaM = (d.minutosMesa[d.mesaPrincipal] || 0) % 60;
+            /* Solo croupiers con al menos una actividad asignada en el turno */
+            const activos = Object.entries(stats.porCroupier)
+                .filter(([, d]) => d.totalMinutos > 0)
+                .sort((a, b) => b[1].totalMinutos - a[1].totalMinutos);
+
+            const rows = activos.map(([nombre, d]) => {
+                const fmt = (m) => m >= 60 ? `${Math.floor(m/60)}h ${m%60}m` : `${m}m`;
+                const totalMesa = Object.values(d.minutosMesa).reduce((s, v) => s + v, 0);
+                const pctMesa   = d.totalMinutos > 0 ? Math.round(totalMesa / d.totalMinutos * 100) : 0;
+                const pctDesc   = d.totalMinutos > 0 ? Math.round(d.minutosDescanso / d.totalMinutos * 100) : 0;
+                const mesasStr  = Object.entries(d.minutosMesa)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([m, min]) => `${m} (${fmt(min)})`).join('<br>') || '—';
                 return `<tr>
                     <td><strong>${nombre}</strong></td>
-                    <td>${totalH}h ${totalM}m</td>
-                    <td>${d.mesaPrincipal || '—'}</td>
-                    <td>${mesaH}h ${mesaM}m</td>
-                    <td>${Math.floor(d.minutosDescanso / 60)}h ${d.minutosDescanso % 60}m</td>
+                    <td>${fmt(d.totalMinutos)}</td>
+                    <td>${mesasStr}</td>
+                    <td>${d.minutosAyudante > 0 ? fmt(d.minutosAyudante) : '—'}</td>
+                    <td>${d.minutosDescanso > 0 ? fmt(d.minutosDescanso) + ` (${pctDesc}%)` : '—'}</td>
+                    <td>${pctMesa}%</td>
                 </tr>`;
             }).join('');
-            container.innerHTML = `<table class="stats-table">
-                <thead><tr><th>Croupier</th><th>Tiempo total</th><th>Mesa principal</th><th>Tiempo en mesa principal</th><th>Descansos</th></tr></thead>
-                <tbody>${rows || '<tr><td colspan="5" style="text-align:center;padding:20px;">Sin datos suficientes</td></tr>'}</tbody>
-            </table>`;
+
+            container.innerHTML = `
+                <p style="font-size:0.8em;color:var(--text-secondary-color);margin:0 0 8px 0;">
+                    ${activos.length} croupier${activos.length !== 1 ? 's' : ''} con actividad registrada en este turno
+                </p>
+                <table class="stats-table">
+                    <thead><tr>
+                        <th>Croupier</th><th>Total turno</th><th>Mesas trabajadas</th>
+                        <th>Ayudante Pag.</th><th>Descanso</th><th>% en mesa</th>
+                    </tr></thead>
+                    <tbody>${rows || '<tr><td colspan="6" style="text-align:center;padding:20px;">Sin actividades registradas en la tabla</td></tr>'}</tbody>
+                </table>`;
+
         } else if (tab === 'mesas') {
-            const rows = Object.entries(stats.porMesa).sort((a, b) => b[1].minutosTotal - a[1].minutosTotal).map(([mesa, d]) => {
-                const h = Math.floor(d.minutosTotal / 60), m = d.minutosTotal % 60;
-                const top = d.croupiers.slice(0, 3).map(c => `${c.nombre} (${Math.floor(c.minutos / 60)}h${c.minutos % 60}m)`).join(', ');
-                return `<tr><td><strong>${mesa}</strong></td><td>${h}h ${m}m</td><td>${top}</td></tr>`;
-            }).join('');
-            container.innerHTML = `<table class="stats-table">
-                <thead><tr><th>Mesa</th><th>Tiempo ocupada</th><th>Principales croupiers</th></tr></thead>
-                <tbody>${rows || '<tr><td colspan="3" style="text-align:center;padding:20px;">Sin datos</td></tr>'}</tbody>
-            </table>`;
-        } else if (tab === 'descansos') {
-            const rows = Object.entries(stats.porCroupier)
-                .filter(([, d]) => d.minutosDescanso > 0)
-                .sort((a, b) => b[1].minutosDescanso - a[1].minutosDescanso)
-                .map(([nombre, d]) => {
-                    const h = Math.floor(d.minutosDescanso / 60), m = d.minutosDescanso % 60;
-                    const pct = d.totalMinutos > 0 ? Math.round(d.minutosDescanso / d.totalMinutos * 100) : 0;
-                    return `<tr><td><strong>${nombre}</strong></td><td>${h}h ${m}m</td><td>${pct}%</td></tr>`;
+            const rows = Object.entries(stats.porMesa)
+                .sort((a, b) => b[1].minutosTotal - a[1].minutosTotal)
+                .map(([mesa, d]) => {
+                    const fmt = (m) => m >= 60 ? `${Math.floor(m/60)}h ${m%60}m` : `${m}m`;
+                    const croupierList = d.croupiers
+                        .map(c => `${c.nombre} (${fmt(c.minutos)})`).join('<br>');
+                    return `<tr>
+                        <td><strong>${mesa}</strong></td>
+                        <td>${fmt(d.minutosTotal)}</td>
+                        <td>${d.croupiers.length}</td>
+                        <td>${croupierList}</td>
+                    </tr>`;
                 }).join('');
             container.innerHTML = `<table class="stats-table">
-                <thead><tr><th>Croupier</th><th>Tiempo en descanso</th><th>% del turno</th></tr></thead>
-                <tbody>${rows || '<tr><td colspan="3" style="text-align:center;padding:20px;">Sin descansos registrados</td></tr>'}</tbody>
+                <thead><tr><th>Mesa</th><th>Tiempo total ocupada</th><th># Croupiers</th><th>Croupiers asignados</th></tr></thead>
+                <tbody>${rows || '<tr><td colspan="4" style="text-align:center;padding:20px;">Sin datos de mesas</td></tr>'}</tbody>
             </table>`;
+
+        } else if (tab === 'descansos') {
+            const rows = Object.entries(stats.porCroupier)
+                .filter(([, d]) => d.totalMinutos > 0)
+                .sort((a, b) => b[1].minutosDescanso - a[1].minutosDescanso)
+                .map(([nombre, d]) => {
+                    const fmt = (m) => m >= 60 ? `${Math.floor(m/60)}h ${m%60}m` : `${m}m`;
+                    const pct = d.totalMinutos > 0 ? Math.round(d.minutosDescanso / d.totalMinutos * 100) : 0;
+                    const bar = `<div style="background:var(--border-color);border-radius:4px;overflow:hidden;height:8px;min-width:80px;">
+                        <div style="background:${pct > 30 ? 'var(--danger-color)' : 'var(--success-color)'};width:${pct}%;height:100%;"></div>
+                    </div>`;
+                    return `<tr>
+                        <td><strong>${nombre}</strong></td>
+                        <td>${d.minutosDescanso > 0 ? fmt(d.minutosDescanso) : '—'}</td>
+                        <td>${pct}% ${bar}</td>
+                        <td>${fmt(d.totalMinutos - d.minutosDescanso - d.minutosAyudante)}</td>
+                    </tr>`;
+                }).join('');
+            container.innerHTML = `<table class="stats-table">
+                <thead><tr><th>Croupier</th><th>En descanso</th><th>% del turno</th><th>Tiempo activo</th></tr></thead>
+                <tbody>${rows || '<tr><td colspan="4" style="text-align:center;padding:20px;">Sin croupiers con actividad</td></tr>'}</tbody>
+            </table>`;
+
+        } else if (tab === 'horarios') {
+            /* Vista de actividad por horario — muestra el turno completo */
+            const sorted = [...horarios].sort(sortHorarios);
+            const activos = croupiersEnTabla.filter(c =>
+                sorted.some(h => datosRelevos[c]?.[h])
+            );
+
+            const headerCols = sorted.map(h => `<th>${h}</th>`).join('');
+            const bodyRows = activos.map(c => {
+                const cells = sorted.map(h => {
+                    const entry = datosRelevos[c]?.[h];
+                    if (!entry) return '<td style="background:var(--bg-color);"></td>';
+                    if (entry.actividad === 'releva') {
+                        const color = entry.color || '#3498db';
+                        return `<td style="background:${color};color:#fff;font-size:0.7em;padding:2px;">${entry.mesas?.join('<br>') || ''}</td>`;
+                    }
+                    if (entry.actividad === 'descanso') return `<td style="background:#f59e0b;color:#000;font-size:0.7em;">DESC</td>`;
+                    if (entry.actividad === 'ayudante-pagador') return `<td style="background:#8b5cf6;color:#fff;font-size:0.7em;">A.PAG</td>`;
+                    return '<td></td>';
+                }).join('');
+                return `<tr><td style="white-space:nowrap;font-weight:bold;padding:4px 6px;">${c}</td>${cells}</tr>`;
+            }).join('');
+
+            container.innerHTML = `
+                <div style="overflow-x:auto;">
+                    <table class="stats-table" style="font-size:0.78em;">
+                        <thead><tr><th>Croupier</th>${headerCols}</tr></thead>
+                        <tbody>${bodyRows || '<tr><td colspan="${sorted.length+1}" style="text-align:center;padding:20px;">Sin datos</td></tr>'}</tbody>
+                    </table>
+                </div>`;
         }
     }
 
