@@ -242,6 +242,15 @@ body { padding: 10px; font-size: 14px; }
     border-radius: 5px; cursor: pointer; font-size: 0.7rem; font-weight: bold;
 }
 .croupier-row td:first-child { cursor: grab; }
+
+/* Alternating row colors — easier to follow a row horizontally */
+#sortable-tbody .croupier-row:nth-child(even) { background-color: var(--row-alt-color); }
+#sortable-tbody .croupier-row:nth-child(even) td:first-child,
+#sortable-tbody .croupier-row:nth-child(even) td:nth-child(2) { background-color: var(--row-alt-color); }
+/* Selected row overrides alternating on sticky cells */
+.croupier-row.row-selected td:first-child,
+.croupier-row.row-selected td:nth-child(2) { background-color: var(--selected-bg-color); }
+
 .croupier-row.salida-warning {
     background-color: var(--danger-color) !important;
     animation: pulse 1.5s infinite;

@@ -4,6 +4,7 @@
     --bg-color: #f4f7f9;
     --surface-color: #ffffff;
     --sticky-col-bg: #f4f7f9;
+    --row-alt-color: #edf2f7;
     --text-color: #34495e;
     --text-secondary-color: #7f8c8d;
     --border-color: #ecf0f1;
@@ -27,6 +28,7 @@ body.dark-mode {
     --bg-color: #121212;
     --surface-color: #1e1e1e;
     --sticky-col-bg: #2a2a2a;
+    --row-alt-color: #252a2f;
     --text-color: #e0e0e0;
     --text-secondary-color: #bdc3c7;
     --border-color: #333333;
