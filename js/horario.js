@@ -864,7 +864,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function abrirStatsModal() {
+        if (!horarios || !horarios.length) {
+            showModal('Sin datos', 'No hay horario cargado para la fecha actual.', 'info');
+            return;
+        }
         const stats = calcularEstadisticas();
+        const fechaStr = fechaVisible.toLocaleDateString('es-ES', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        });
+        document.getElementById('stats-fecha-titulo').textContent = fechaStr;
         document.getElementById('stats-modal').style.display = 'flex';
         document.querySelectorAll('.stats-tab-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
         renderStatsTab('resumen', stats);
