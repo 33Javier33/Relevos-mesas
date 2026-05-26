@@ -35,7 +35,8 @@
         <button id="quick-add-selector">Cargando Croupiers...</button>
     </div>
 
-    <div style="display:flex; justify-content:center; margin-bottom:10px;">
+    <div style="display:flex; justify-content:center; gap:10px; margin-bottom:10px;">
+        <button id="btn-mesas-turno" style="padding:8px 20px; background:var(--surface-color); color:var(--text-color); border:1px solid var(--border-color); border-radius:5px; cursor:pointer; font-weight:bold; font-size:0.9em;">🎰 Mesas del turno</button>
         <button id="btn-stats" style="padding:8px 20px; background:var(--primary-color); color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; font-size:0.9em;">📊 Estadísticas del Turno</button>
     </div>
 
@@ -189,6 +190,24 @@
             <div id="stats-content"></div>
             <div class="modal-footer">
                 <button id="btn-close-stats" class="confirm">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Mesas del turno -->
+    <div id="mesas-turno-modal" class="modal">
+        <div class="modal-content" style="max-width:500px;">
+            <span class="close-btn">&times;</span>
+            <h2>🎰 Mesas habilitadas del turno</h2>
+            <p style="font-size:0.85em;color:var(--text-secondary-color);margin:0 0 12px 0;">
+                Seleccioná las mesas activas. Solo estas aparecerán al asignar relevos.<br>
+                Si no seleccionás ninguna, se muestran todas.
+            </p>
+            <div id="mesas-turno-grid"></div>
+            <div class="modal-footer">
+                <button id="btn-mesas-turno-ninguna" class="undo-redo">Ninguna</button>
+                <button id="btn-mesas-turno-todas" class="undo-redo">Todas</button>
+                <button id="btn-mesas-turno-guardar" class="confirm">Guardar</button>
             </div>
         </div>
     </div>

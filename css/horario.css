@@ -420,6 +420,31 @@ body { padding: 10px; font-size: 14px; }
 }
 .stats-table tr:hover td { background: var(--hover-bg-color); }
 
+#mesas-turno-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 4px 0 16px 0;
+}
+.mesa-turno-chip {
+    padding: 7px 14px;
+    border-radius: 20px;
+    border: 2px solid var(--border-color);
+    background-color: var(--bg-color);
+    color: var(--text-secondary-color);
+    cursor: pointer;
+    font-size: 0.88em;
+    font-weight: 600;
+    user-select: none;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+.mesa-turno-chip:hover { border-color: var(--primary-color); color: var(--primary-color); }
+.mesa-turno-chip.activa {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+}
+
 footer {
     margin-top: 20px; padding: 15px 0; text-align: center;
     font-size: 0.8em; color: var(--text-secondary-color);

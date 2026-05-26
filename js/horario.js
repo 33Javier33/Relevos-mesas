@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const URL_DEL_SCRIPT_DE_MAESTROS = 'https://script.google.com/macros/s/AKfycbzjaL7OKe1_doagry1eo0w15vXOJy_-oEtWreLTzj1GoQgxyE8cDI7jTgWm7qqThB7M/exec';
     const URL_DEL_SCRIPT_DE_HORARIOS = 'https://script.google.com/macros/s/AKfycbw1kBHYt37_X5K7UdBZlJNTgNT2B2P0t4F6uVrCKK_hDgZ7j09cwSzNx5l9CvHwFCTDQg/exec';
 
-    let croupiersData = [], croupiersEnEspera = [], horarios = [], mesasDeJuego = [], datosRelevos = {}, croupierColors = {}, croupierSalidas = {}, horarioColors = {};
+    let croupiersData = [], croupiersEnEspera = [], horarios = [], mesasDeJuego = [], mesasHabilitadas = [], datosRelevos = {}, croupierColors = {}, croupierSalidas = {}, horarioColors = {};
     let cronometroIntervals = {}, cronometroStartTime = {}, cronometroCurrentStartTime = {};
     let fechaVisible = new Date(), celdaActiva = { croupier: null, horario: null }, croupierCronoActivo = null, croupierSalidaActivo = null, quickAddCurrentFilter = 'todos';
 
@@ -120,6 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
             croupiersEnTabla: croupiersData.map(c => c.nombreCompleto),
             horarios, datosRelevos, croupierColors, croupierSalidas, horarioColors,
             cronometroState: cronometroStartTime,
+            mesasHabilitadas,
         };
         localStorage.setItem(`horario_${getLocalDateString(fechaVisible)}`, JSON.stringify(dataToStore));
         if (!skipSheetsSync) sincronizarConSheets();
@@ -137,6 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         horarioColors = datos.horarioColors || {};
         horarios = datos.horarios || [];
         cronometroStartTime = datos.cronometroState || {};
+        mesasHabilitadas = datos.mesasHabilitadas || [];
         return true;
     }
 
@@ -199,6 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         renderizarHorario();
         reiniciarCronometrosActivos();
+        actualizarBotonMesasTurno();
     }
 
     async function guardarNuevaFecha() {
@@ -653,7 +656,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        mesasDeJuego.forEach(mesa => {
+        // Mostrar solo mesas habilitadas del turno (o todas si no hay selección)
+        const mesasVisibles = mesasHabilitadas.length > 0
+            ? mesasDeJuego.filter(m => mesasHabilitadas.includes(m))
+            : mesasDeJuego;
+
+        mesasVisibles.forEach(mesa => {
             if (mesasRelevo.includes(mesa)) {
                 mesasSeleccionadasDiv.innerHTML += `<div class="mesa-item" data-mesa="${mesa}">${mesa}</div>`;
             } else if (mesasOcupadas[mesa]) {
@@ -671,6 +679,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function toggleRelevoControls(actividad) {
         DOM.relevoControlsContainer.style.display = actividad === 'releva' ? 'block' : 'none';
+    }
+
+    function actualizarBotonMesasTurno() {
+        const btn = document.getElementById('btn-mesas-turno');
+        if (!btn) return;
+        if (mesasHabilitadas.length > 0) {
+            btn.textContent = `🎰 ${mesasHabilitadas.length} mesa${mesasHabilitadas.length !== 1 ? 's' : ''} activa${mesasHabilitadas.length !== 1 ? 's' : ''}`;
+            btn.style.borderColor = 'var(--primary-color)';
+            btn.style.color = 'var(--primary-color)';
+        } else {
+            btn.textContent = '🎰 Mesas del turno';
+            btn.style.borderColor = 'var(--border-color)';
+            btn.style.color = 'var(--text-color)';
+        }
+    }
+
+    function abrirMesasTurnoModal() {
+        const grid = document.getElementById('mesas-turno-grid');
+        grid.innerHTML = '';
+        mesasDeJuego.forEach(mesa => {
+            const activa = mesasHabilitadas.includes(mesa);
+            const chip = document.createElement('div');
+            chip.className = 'mesa-turno-chip' + (activa ? ' activa' : '');
+            chip.dataset.mesa = mesa;
+            chip.textContent = mesa;
+            chip.addEventListener('click', () => chip.classList.toggle('activa'));
+            grid.appendChild(chip);
+        });
+        document.getElementById('mesas-turno-modal').style.display = 'flex';
+    }
+
+    function guardarMesasTurno() {
+        const chips = document.querySelectorAll('#mesas-turno-grid .mesa-turno-chip.activa');
+        mesasHabilitadas = Array.from(chips).map(c => c.dataset.mesa);
+        guardarDatosEnLocalStorage();
+        actualizarBotonMesasTurno();
+        cerrarModales();
     }
 
     function renderEstadoHorarioPanel(horario, croupierActual) {
@@ -855,6 +900,14 @@ document.addEventListener('DOMContentLoaded', () => {
         DOM.btnAddSelectedToTable.addEventListener('click', agregarCroupiersSeleccionadosDelModal);
         document.getElementById('btn-limpiar-croupiers').addEventListener('click', limpiarCroupiers);
         document.getElementById('btn-limpiar-horarios').addEventListener('click', limpiarHorarios);
+        document.getElementById('btn-mesas-turno').addEventListener('click', abrirMesasTurnoModal);
+        document.getElementById('btn-mesas-turno-guardar').addEventListener('click', guardarMesasTurno);
+        document.getElementById('btn-mesas-turno-todas').addEventListener('click', () => {
+            document.querySelectorAll('#mesas-turno-grid .mesa-turno-chip').forEach(c => c.classList.add('activa'));
+        });
+        document.getElementById('btn-mesas-turno-ninguna').addEventListener('click', () => {
+            document.querySelectorAll('#mesas-turno-grid .mesa-turno-chip').forEach(c => c.classList.remove('activa'));
+        });
         document.getElementById('btn-stats').addEventListener('click', () => {
             abrirStatsModal();
         });
