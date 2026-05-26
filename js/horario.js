@@ -812,6 +812,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function calcularEstadisticas() {
         const sorted = [...horarios].sort(sortHorarios);
         const result = { porCroupier: {}, porMesa: {} };
+        const croupiersEnTabla = croupiersData.map(c => c.nombreCompleto);
 
         // Convert horarios to minutes-since-midnight (with overnight adjustment)
         const toMinutes = (h) => {
@@ -961,6 +962,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (tab === 'horarios') {
             /* Vista de actividad por horario — muestra el turno completo */
             const sorted = [...horarios].sort(sortHorarios);
+            const croupiersEnTabla = croupiersData.map(c => c.nombreCompleto);
             const activos = croupiersEnTabla.filter(c =>
                 sorted.some(h => datosRelevos[c]?.[h])
             );
