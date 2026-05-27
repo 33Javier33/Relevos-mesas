@@ -201,8 +201,10 @@
             const tdNombre = tr.insertCell();
             tdNombre.className = 'sv-td-croupier';
 
-            const salida  = data.horasSalida?.[nombre] || data.croupierSalidas?.[nombre] || '';
-            const estado  = calcularEstadoActual(nombre, data);
+            const salida     = data.horasSalida?.[nombre] || data.croupierSalidas?.[nombre] || '';
+            const estado     = calcularEstadoActual(nombre, data);
+            const cronoStart = data.cronometros?.[nombre];
+
             let estadoHTML = '';
             if (estado) {
                 if (estado.actividad === 'releva') {
@@ -216,10 +218,15 @@
                 }
             }
 
+            const cronoHTML = cronoStart
+                ? `<span class="sv-crono" data-crono-start="${cronoStart}">⏱ 00:00:00</span>`
+                : '';
+
             tdNombre.innerHTML =
                 `<strong>${generarAlias(nombre)}</strong>` +
-                (salida    ? `<br><span class="sv-salida">${salida}</span>` : '') +
-                (estadoHTML ? `<br>${estadoHTML}` : '');
+                (salida     ? `<br><span class="sv-salida">${salida}</span>` : '') +
+                (estadoHTML ? `<br>${estadoHTML}` : '') +
+                (cronoHTML  ? `<br>${cronoHTML}` : '');
 
             sorted.forEach(hora => {
                 const td = tr.insertCell();
@@ -395,6 +402,17 @@
         cargarHorario(true);
         setInterval(() => cargarHorario(false), 30000);
         setInterval(cargarContadorSolicitudes, 5000);
+
+        // Cronómetros en tiempo real — actualiza todos los .sv-crono cada segundo
+        setInterval(() => {
+            document.querySelectorAll('.sv-crono[data-crono-start]').forEach(el => {
+                const elapsed = Math.max(0, Date.now() - parseInt(el.dataset.cronoStart, 10));
+                const h = Math.floor(elapsed / 3600000);
+                const m = Math.floor((elapsed % 3600000) / 60000);
+                const s = Math.floor((elapsed % 60000) / 1000);
+                el.textContent = `⏱ ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+            });
+        }, 1000);
 
         document.getElementById('sv-btn-logout').addEventListener('click', logout);
         document.getElementById('sv-prev-day').addEventListener('click', () => cambiarDia(-1));
