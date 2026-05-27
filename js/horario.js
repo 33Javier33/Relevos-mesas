@@ -136,7 +136,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 croupiersEnTabla: croupiersData.map(c => c.nombreCompleto),
                 croupierColors, horarioColors,
                 horasSalida: croupierSalidas,
-                cronometros: cronometroStartTime
+                cronometros: cronometroStartTime,
+                mesasHabilitadas
             };
             fetch(URL_DEL_SCRIPT_DE_HORARIOS, {
                 method: 'POST',
