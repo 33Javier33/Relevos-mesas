@@ -130,7 +130,7 @@
     }
 
     function calcularEstadoActual(nombre, data) {
-        if (!data.horarios?.length || !data.datosRelevos?.[nombre]) return null;
+        if (!data.horarios?.length) return null;
 
         const now    = new Date();
         const nowMin = (now.getHours() < 6 ? now.getHours() + 24 : now.getHours()) * 60 + now.getMinutes();
@@ -143,17 +143,21 @@
         }
         if (idx === -1) return null;
 
-        const entry = data.datosRelevos[nombre]?.[sorted[idx]];
-        if (!entry) return null;
+        const entry = data.datosRelevos?.[nombre]?.[sorted[idx]];
+
+        // Sin asignación en este slot → devolvemos al menos el inicio del slot para el crono
+        if (!entry?.actividad) {
+            return { actividad: null, minutos: 0, startTimestamp: slotToTimestamp(sorted[idx]) };
+        }
 
         // Contar minutos consecutivos en la misma actividad/mesas hacia atrás
         const slotDur = i => {
-            const d = i < sorted.length - 1 ? toMin(sorted[i + 1]) - toMin(sorted[i]) : 30;
-            return d > 0 ? d : 30;
+            const dur = i < sorted.length - 1 ? toMin(sorted[i + 1]) - toMin(sorted[i]) : 30;
+            return dur > 0 ? dur : 30;
         };
 
-        if (entry.actividad === 'releva' && entry.mesas?.length) {
-            const key = [...entry.mesas].sort().join(',');
+        if (entry.actividad === 'releva') {
+            const key = [...(entry.mesas || [])].sort().join(',');
             let total = 0, streakStart = idx;
             for (let i = idx; i >= 0; i--) {
                 const e = data.datosRelevos[nombre]?.[sorted[i]];
@@ -162,7 +166,7 @@
                 total += slotDur(i);
                 streakStart = i;
             }
-            return { actividad: 'releva', mesas: entry.mesas, color: entry.color || '#3498db', minutos: total, startTimestamp: slotToTimestamp(sorted[streakStart]) };
+            return { actividad: 'releva', mesas: entry.mesas || [], color: entry.color || '#3498db', minutos: total, startTimestamp: slotToTimestamp(sorted[streakStart]) };
         }
 
         if (entry.actividad === 'descanso') {
@@ -176,11 +180,14 @@
             return { actividad: 'descanso', minutos: total, startTimestamp: slotToTimestamp(sorted[streakStart]) };
         }
 
-        if (entry.actividad === 'ayudante-pagador') {
-            return { actividad: 'ayudante-pagador', minutos: 0, startTimestamp: slotToTimestamp(sorted[idx]) };
+        // ayudante-pagador y cualquier otra actividad
+        let streakStart = idx;
+        for (let i = idx - 1; i >= 0; i--) {
+            const e = data.datosRelevos[nombre]?.[sorted[i]];
+            if (!e || e.actividad !== entry.actividad) break;
+            streakStart = i;
         }
-
-        return null;
+        return { actividad: entry.actividad, minutos: 0, startTimestamp: slotToTimestamp(sorted[streakStart]) };
     }
 
     function renderizarTabla(data) {
@@ -238,14 +245,15 @@
                 (salida     ? `<br><span class="sv-salida">${salida}</span>` : '') +
                 (estadoHTML ? `<br>${estadoHTML}` : '');
 
-            // Timer: manual (operator-set) tiene prioridad; si no, usamos el inicio del slot actual
+            // Timer: manual (operator-set) tiene prioridad; si no, inicio del slot calculado
             const cronoTimestamp = cronoStart || estado?.startTimestamp || null;
             const tdCrono = tr.insertCell();
             tdCrono.className = 'sv-td-crono';
             if (cronoTimestamp) {
                 tdCrono.innerHTML = `<span class="sv-crono" data-crono-start="${cronoTimestamp}">⏱ 00:00:00</span>`;
             } else {
-                tdCrono.innerHTML = '<span class="sv-crono-empty">—</span>';
+                // Sin turno activo: mostrar igual que el operador (00:00:00 inactivo)
+                tdCrono.innerHTML = `<span class="sv-crono sv-crono-idle">⏱ 00:00:00</span>`;
             }
 
             sorted.forEach(hora => {
