@@ -1028,9 +1028,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('solicitudes-container');
         container.innerHTML = '<p style="text-align:center;color:var(--text-secondary-color);padding:20px 0">Cargando…</p>';
         try {
-            const fechaStr = getLocalDateString(fechaVisible);
-            const res = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=solicitudes&fecha=${fechaStr}&t=${Date.now()}`);
+            const res = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=solicitudes&t=${Date.now()}`);
             const data = await res.json();
+            if (data.found === false && !data.solicitudes) {
+                container.innerHTML = '<p style="color:var(--danger-color);text-align:center;padding:20px 0">Error al cargar. Verificá que el script de Google esté actualizado.</p>';
+                return;
+            }
             renderizarSolicitudesOperador(data.solicitudes || [], container);
         } catch {
             container.innerHTML = '<p style="color:var(--danger-color);text-align:center;padding:20px 0">Error al cargar solicitudes.</p>';
@@ -1039,7 +1042,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderizarSolicitudesOperador(lista, container) {
         if (!lista.length) {
-            container.innerHTML = '<p style="color:var(--text-secondary-color);text-align:center;padding:20px 0">No hay solicitudes para este turno.</p>';
+            container.innerHTML = '<p style="color:var(--text-secondary-color);text-align:center;padding:20px 0">No hay solicitudes.</p>';
             return;
         }
         const ESTADOS = {

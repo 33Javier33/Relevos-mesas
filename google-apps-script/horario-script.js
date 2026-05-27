@@ -181,10 +181,20 @@ function obtenerSolicitudes_(fecha, estado) {
     const sheet = ss.getSheetByName('Solicitudes');
     if (!sheet || sheet.getLastRow() <= 1) return jsonResponse({ found: true, solicitudes: [] });
 
+    const tz = Session.getScriptTimeZone();
     const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, SOLICITUDES_HEADERS.length).getValues();
     let list = rows.map(row => {
       const obj = {};
-      SOLICITUDES_HEADERS.forEach((h, i) => { obj[h.toLowerCase()] = row[i] !== undefined ? row[i].toString() : ''; });
+      SOLICITUDES_HEADERS.forEach((h, i) => {
+        let val = row[i];
+        // Google Sheets may auto-convert date strings to Date objects
+        if (val instanceof Date) {
+          val = Utilities.formatDate(val, tz, 'yyyy-MM-dd');
+        } else {
+          val = val !== undefined && val !== null ? val.toString() : '';
+        }
+        obj[h.toLowerCase()] = val;
+      });
       return obj;
     }).filter(s => s.id);
 
