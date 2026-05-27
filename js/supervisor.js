@@ -133,18 +133,34 @@
             selCroupier.appendChild(opt);
         });
 
-        // Mesas: intentar cargar maestros o usar mesasHabilitadas
+        // Mesas: 1° mesasHabilitadas del turno, 2° mesas en uso en datosRelevos, 3° maestros
         const selMesa = document.getElementById('sv-mesa');
         selMesa.innerHTML = '<option value="">— Sin especificar —</option>';
-        let mesas = data.mesasHabilitadas?.length ? data.mesasHabilitadas : mesasDisponibles;
+
+        let mesas = [];
+
+        if (data.mesasHabilitadas?.length) {
+            mesas = [...data.mesasHabilitadas];
+        } else if (data.datosRelevos) {
+            const set = new Set();
+            Object.values(data.datosRelevos).forEach(porHora => {
+                Object.values(porHora).forEach(entry => {
+                    if (entry.mesas) entry.mesas.forEach(m => set.add(m));
+                });
+            });
+            mesas = [...set].sort();
+        }
 
         if (!mesas.length) {
-            try {
-                const res = await fetch(`${GAS_MAESTROS}?t=${Date.now()}`);
-                const maestros = await res.json();
-                mesas = maestros.mesas || [];
-                mesasDisponibles = mesas;
-            } catch { /* sin mesas */ }
+            mesas = mesasDisponibles;
+            if (!mesas.length) {
+                try {
+                    const res = await fetch(`${GAS_MAESTROS}?t=${Date.now()}`);
+                    const maestros = await res.json();
+                    mesas = maestros.mesas || [];
+                    mesasDisponibles = mesas;
+                } catch { /* sin mesas */ }
+            }
         }
 
         mesas.forEach(m => {
