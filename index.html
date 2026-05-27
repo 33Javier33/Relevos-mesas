@@ -9,7 +9,7 @@
 </head>
 <body>
     <div class="reloj-y-controles-container">
-        <h1>Horario de Relevos</h1>
+        <h1>Horario de Relevos <button class="help-btn" data-help="general" title="Ayuda general">?</button></h1>
         <div class="config-menu-container">
             <button id="btn-config" class="config-btn" title="Configuración">⚙️</button>
             <div id="config-dropdown" class="config-dropdown">
@@ -22,10 +22,12 @@
         </div>
         <div class="reloj-container">
             <div id="fecha-actual" class="fecha"></div>
+            <button class="help-btn" data-help="fecha" title="¿Cómo funciona la fecha?">?</button>
             <div id="reloj-digital" class="reloj">00:00:00</div>
             <div class="color-controls-top">
                 <input type="color" id="color-picker" value="#3498db">
                 <button id="btn-aplicar-color" title="Aplicar color a seleccionados">🎨</button>
+                <button class="help-btn" data-help="color-picker" title="¿Cómo usar los colores?">?</button>
             </div>
         </div>
         <p id="sincro-status" style="font-size: 0.8em; color: var(--text-secondary-color); margin: 0;">Sincronización automática activa.</p>
@@ -33,11 +35,14 @@
 
     <div class="quick-add-container">
         <button id="quick-add-selector">Cargando Croupiers...</button>
+        <button class="help-btn" data-help="quick-add" title="¿Cómo agregar croupiers?">?</button>
     </div>
 
-    <div style="display:flex; justify-content:center; gap:10px; margin-bottom:10px;">
+    <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:10px;">
         <button id="btn-mesas-turno" style="padding:8px 20px; background:var(--surface-color); color:var(--text-color); border:1px solid var(--border-color); border-radius:5px; cursor:pointer; font-weight:bold; font-size:0.9em;">🎰 Mesas del turno</button>
+        <button class="help-btn" data-help="mesas-turno" title="¿Cómo funciona esto?">?</button>
         <button id="btn-stats" style="padding:8px 20px; background:var(--primary-color); color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; font-size:0.9em;">📊 Estadísticas del Turno</button>
+        <button class="help-btn" data-help="stats" title="¿Qué muestra?">?</button>
     </div>
 
     <div class="horario-container">
@@ -79,14 +84,14 @@
                 <p>Croupier: <strong id="croupier-info"></strong> | Horario: <strong id="horario-info"></strong></p>
                 <div id="estado-horario-panel"></div>
                 <hr>
-                <h4>Selecciona la actividad:</h4>
+                <h4>Selecciona la actividad: <button class="help-btn" data-help="actividad">?</button></h4>
                 <div id="relevo-modal-options">
                     <div><input type="radio" id="opcion-relevo" name="actividad" value="releva" checked><label for="opcion-relevo">Relevo (Trabajo)</label></div>
                     <div><input type="radio" id="opcion-ayudante" name="actividad" value="ayudante-pagador"><label for="opcion-ayudante">Ayudante Pagador</label></div>
                     <div><input type="radio" id="opcion-descanso" name="actividad" value="descanso"><label for="opcion-descanso">Descanso</label></div>
                 </div>
                 <div id="relevo-controls-container">
-                    <h4>Asignar mesas:</h4>
+                    <h4>Asignar mesas: <button class="help-btn" data-help="mesas-selector">?</button></h4>
                     <div id="mesas-selector">
                         <div><h5>Disponibles</h5><div id="mesas-disponibles"></div></div>
                         <div><h5>Seleccionadas</h5><div id="mesas-seleccionadas"></div></div>
@@ -94,7 +99,7 @@
                     <div><label for="color-relevo">Color:</label><input type="color" id="color-relevo" value="#3498db"></div>
                 </div>
                 <hr>
-                <h4>Asignar descanso manual</h4>
+                <h4>Asignar descanso manual <button class="help-btn" data-help="descanso-manual">?</button></h4>
                 <div>
                     <label for="select-croupier-descanso">Seleccionar croupier para descanso:</label>
                     <select id="select-croupier-descanso" multiple></select>
@@ -192,6 +197,12 @@
                 <button id="btn-close-stats" class="confirm">Cerrar</button>
             </div>
         </div>
+    </div>
+
+    <!-- Popover de ayuda contextual -->
+    <div id="help-popover">
+        <button id="help-popover-close">×</button>
+        <div id="help-popover-body"></div>
     </div>
 
     <!-- Modal: Mesas del turno -->

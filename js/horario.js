@@ -10,6 +10,46 @@ document.addEventListener('DOMContentLoaded', () => {
     let fechaVisible = new Date(), celdaActiva = { croupier: null, horario: null }, croupierCronoActivo = null, croupierSalidaActivo = null, quickAddCurrentFilter = 'todos';
 
     let saveTimeout;
+
+    const HELP_TEXTS = {
+        general: `<strong>Horario de Relevos — Guía rápida</strong><br><br>
+            <b>Tabla:</b> cada fila es un croupier del turno. Arrastrá la fila para reordenar. Hacé clic en cualquier celda de horario para asignar una actividad.<br><br>
+            <b>⏰ Salida:</b> registrá la hora de salida de cada croupier. La fila parpadea en rojo cuando se acerca ese momento.<br><br>
+            <b>Cronómetro:</b> temporizador individual por croupier para medir tiempo en mesa o descanso.<br><br>
+            <b>+:</b> en el encabezado de la tabla, agrega un nuevo horario al turno.<br><br>
+            <b>☑ Checkbox:</b> seleccioná varias filas para aplicar un color en bloque.`,
+        fecha: `La fecha muestra el día activo del turno.<br><br>
+            Hacé clic sobre ella para editarla manualmente.<br><br>
+            <strong>No cambia automáticamente</strong> después de medianoche — solo cuando el operador la modifica. Los turnos que empiezan antes de las 06:00 quedan asignados al día anterior.`,
+        'color-picker': `Seleccioná un color con el selector y luego hacé clic en <b>🎨</b> para aplicarlo a todas las filas marcadas con el checkbox.<br><br>
+            Útil para identificar grupos, contratos o equipos a simple vista.`,
+        'quick-add': `Abre el panel para agregar croupiers al turno actual.<br><br>
+            Podés filtrar por tipo de contrato:<br>
+            • <b>Planta</b> — personal fijo<br>
+            • <b>Part Time</b> — jornada parcial<br>
+            • <b>Llamado</b> — convocado por turno<br><br>
+            También podés buscar por nombre.`,
+        'mesas-turno': `Definí qué mesas están abiertas en este turno.<br><br>
+            Solo las mesas marcadas aparecerán al asignar relevos. Las mesas sin marcar quedan ocultas para simplificar la asignación.<br><br>
+            Si no marcás ninguna, <strong>se muestran todas</strong> las mesas (comportamiento por defecto).`,
+        stats: `Muestra estadísticas del turno en cuatro pestañas:<br><br>
+            • <b>Resumen:</b> tiempo total, mesas y % por croupier<br>
+            • <b>Por Mesa:</b> cuánto tiempo estuvo cada mesa ocupada<br>
+            • <b>Descansos:</b> tiempo de descanso y % del turno<br>
+            • <b>Por Horario:</b> grilla completa de actividades<br><br>
+            Solo cuenta croupiers con actividad registrada y respeta la hora de salida.`,
+        actividad: `Elegí qué hace el croupier en este horario:<br><br>
+            • <b>Relevo (Trabajo):</b> trabaja en una o más mesas<br>
+            • <b>Ayudante Pagador:</b> asiste en los pagos sin ocupar mesa propia<br>
+            • <b>Descanso:</b> pausa — no se le asigna mesa`,
+        'mesas-selector': `Hacé clic en una mesa para moverla entre <em>Disponibles</em> y <em>Seleccionadas</em>.<br><br>
+            Las mesas con <strong>borde punteado y nombre en rojo</strong> ya están asignadas a otro croupier en este horario — no pueden seleccionarse para evitar conflictos.`,
+        'estado-horario': `Muestra un resumen de dónde está cada croupier <strong>en este mismo horario</strong>.<br><br>
+            Útil para coordinar relevos: podés ver quién está en mesa, descansando o libre antes de asignar.`,
+        'descanso-manual': `Seleccioná uno o más croupiers para asignarles descanso al guardar esta tarjeta.<br><br>
+            El tiempo entre corchetes indica cuántos minutos llevan <strong>continuamente en la misma mesa</strong>. Los que llevan más tiempo son los candidatos naturales al siguiente descanso.<br><br>
+            Ejemplo: <em>Carlos [en RA25 · 1h30m]</em> lleva 90 minutos sin descanso en RA25.`,
+    };
     let syncInterval;
 
     const DOM = {
@@ -407,6 +447,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!sessionFecha && !fechaURL) sessionStorage.setItem('horarioFecha', getLocalDateString(initialDate));
         await cambiarFecha(initialDate);
         setupEventListeners();
+        setupHelpPopovers();
         setInterval(actualizarSistema, 1000);
         iniciarSincronizacionAutomatica();
 
@@ -742,7 +783,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         panel.style.display = 'block';
-        panel.innerHTML = `<details><summary>Estado del turno a las <strong>${horario}</strong></summary><div class="estado-grid">${rows.join('')}</div></details>`;
+        panel.innerHTML = `<details><summary>Estado del turno a las <strong>${horario}</strong> <button class="help-btn" data-help="estado-horario">?</button></summary><div class="estado-grid">${rows.join('')}</div></details>`;
     }
 
     function llenarSelectorDescansoManual() {
@@ -883,6 +924,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function ocultarTooltip() { DOM.croupierTooltip.style.display = 'none'; }
     function cerrarModales() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
+
+    function setupHelpPopovers() {
+        const popover = document.getElementById('help-popover');
+        const body    = document.getElementById('help-popover-body');
+        const closeBtn = document.getElementById('help-popover-close');
+
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('.help-btn');
+            if (btn) {
+                e.stopPropagation();
+                const key = btn.dataset.help;
+                body.innerHTML = HELP_TEXTS[key] || 'Sin información disponible.';
+                popover.style.display = 'block';
+
+                // Posicionamiento relativo al botón, ajustado al viewport
+                const r = btn.getBoundingClientRect();
+                let top  = r.bottom + 8;
+                let left = r.left;
+                const pw = popover.offsetWidth || 280;
+                const ph = popover.offsetHeight || 200;
+                if (left + pw > window.innerWidth - 12) left = window.innerWidth - pw - 12;
+                if (left < 8) left = 8;
+                if (top + ph > window.innerHeight - 8) top = r.top - ph - 8;
+                popover.style.left = left + 'px';
+                popover.style.top  = top  + 'px';
+                return;
+            }
+            if (!popover.contains(e.target)) popover.style.display = 'none';
+        });
+
+        closeBtn.addEventListener('click', () => { popover.style.display = 'none'; });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') popover.style.display = 'none'; });
+    }
 
     function setupEventListeners() {
         DOM.btnAplicarColor.addEventListener('click', aplicarColor);
