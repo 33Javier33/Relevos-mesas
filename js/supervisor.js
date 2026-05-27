@@ -108,6 +108,70 @@
         }
     }
 
+    function toMin(h) {
+        const [hr, mn] = h.split(':').map(Number);
+        return (hr < 6 ? hr + 24 : hr) * 60 + mn;
+    }
+
+    function formatMin(min) {
+        if (min <= 0) return '0m';
+        return min >= 60
+            ? `${Math.floor(min / 60)}h${String(min % 60).padStart(2, '0')}m`
+            : `${min}m`;
+    }
+
+    function calcularEstadoActual(nombre, data) {
+        if (!data.horarios?.length || !data.datosRelevos?.[nombre]) return null;
+
+        const now   = new Date();
+        const nowMin = (now.getHours() < 6 ? now.getHours() + 24 : now.getHours()) * 60 + now.getMinutes();
+        const sorted = [...data.horarios].sort(sortHorarios);
+
+        // Slot actual = último slot cuyo inicio ≤ hora actual
+        let idx = -1;
+        for (let i = sorted.length - 1; i >= 0; i--) {
+            if (toMin(sorted[i]) <= nowMin) { idx = i; break; }
+        }
+        if (idx === -1) return null;
+
+        const entry = data.datosRelevos[nombre]?.[sorted[idx]];
+        if (!entry) return null;
+
+        // Contar minutos consecutivos en la misma actividad/mesas hacia atrás
+        const slotDur = i => {
+            const d = i < sorted.length - 1 ? toMin(sorted[i + 1]) - toMin(sorted[i]) : 30;
+            return d > 0 ? d : 30;
+        };
+
+        if (entry.actividad === 'releva' && entry.mesas?.length) {
+            const key = [...entry.mesas].sort().join(',');
+            let total = 0;
+            for (let i = idx; i >= 0; i--) {
+                const e = data.datosRelevos[nombre]?.[sorted[i]];
+                if (!e || e.actividad !== 'releva') break;
+                if ([...(e.mesas || [])].sort().join(',') !== key) break;
+                total += slotDur(i);
+            }
+            return { actividad: 'releva', mesas: entry.mesas, color: entry.color || '#3498db', minutos: total };
+        }
+
+        if (entry.actividad === 'descanso') {
+            let total = 0;
+            for (let i = idx; i >= 0; i--) {
+                const e = data.datosRelevos[nombre]?.[sorted[i]];
+                if (!e || e.actividad !== 'descanso') break;
+                total += slotDur(i);
+            }
+            return { actividad: 'descanso', minutos: total };
+        }
+
+        if (entry.actividad === 'ayudante-pagador') {
+            return { actividad: 'ayudante-pagador', minutos: 0 };
+        }
+
+        return null;
+    }
+
     function renderizarTabla(data) {
         const container = document.getElementById('sv-schedule-container');
         if (!data.found || !data.horarios?.length || !data.croupiersEnTabla?.length) {
@@ -136,8 +200,26 @@
             const tr = tbody.insertRow();
             const tdNombre = tr.insertCell();
             tdNombre.className = 'sv-td-croupier';
-            const salida = data.horasSalida?.[nombre] || data.croupierSalidas?.[nombre] || '';
-            tdNombre.innerHTML = `<strong>${generarAlias(nombre)}</strong>${salida ? `<br><span class="sv-salida">${salida}</span>` : ''}`;
+
+            const salida  = data.horasSalida?.[nombre] || data.croupierSalidas?.[nombre] || '';
+            const estado  = calcularEstadoActual(nombre, data);
+            let estadoHTML = '';
+            if (estado) {
+                if (estado.actividad === 'releva') {
+                    const c = estado.color;
+                    estadoHTML = `<span class="sv-tiempo-mesa" style="background:${c}22;color:${c};border-color:${c}44;">` +
+                        `🎰 ${estado.mesas.join(', ')} · ${formatMin(estado.minutos)}</span>`;
+                } else if (estado.actividad === 'descanso') {
+                    estadoHTML = `<span class="sv-tiempo-mesa sv-tiempo-descanso">☕ ${formatMin(estado.minutos)}</span>`;
+                } else if (estado.actividad === 'ayudante-pagador') {
+                    estadoHTML = `<span class="sv-tiempo-mesa sv-tiempo-ayudante">A.PAG</span>`;
+                }
+            }
+
+            tdNombre.innerHTML =
+                `<strong>${generarAlias(nombre)}</strong>` +
+                (salida    ? `<br><span class="sv-salida">${salida}</span>` : '') +
+                (estadoHTML ? `<br>${estadoHTML}` : '');
 
             sorted.forEach(hora => {
                 const td = tr.insertCell();

@@ -62,12 +62,32 @@ body { margin:0; padding:0; display:flex; flex-direction:column; height:100dvh; 
 .sv-td-croupier {
     position:sticky; left:0; z-index:2;
     background:var(--sticky-col-bg);
-    white-space:nowrap; padding:4px 10px;
-    font-size:0.82em; width:110px; min-width:110px;
+    white-space:normal; padding:4px 10px;
+    font-size:0.82em; width:120px; min-width:120px;
+    vertical-align:middle;
 }
 .sv-td-relevo { width:72px; min-width:72px; }
 .sv-tabla .relevo-cell { font-size:0.68rem; padding:3px 2px; }
 .sv-salida { font-size:0.7em; color:var(--text-secondary-color); }
+
+/* Indicador de tiempo en mesa / descanso */
+.sv-tiempo-mesa {
+    display:inline-block; margin-top:3px;
+    font-size:0.68em; font-weight:700;
+    padding:1px 5px; border-radius:4px;
+    border:1px solid transparent;
+    white-space:nowrap; line-height:1.5;
+}
+.sv-tiempo-descanso {
+    background:rgba(245,158,11,0.15);
+    color:#b45309;
+    border-color:rgba(245,158,11,0.3);
+}
+.sv-tiempo-ayudante {
+    background:rgba(139,92,246,0.15);
+    color:#7c3aed;
+    border-color:rgba(139,92,246,0.3);
+}
 
 /* Alternating rows */
 .sv-tabla tbody tr:nth-child(even) td { background-color:var(--row-alt-color); }
