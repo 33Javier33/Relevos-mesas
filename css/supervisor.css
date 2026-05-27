@@ -67,6 +67,13 @@ body { margin:0; padding:0; display:flex; flex-direction:column; height:100dvh; 
     vertical-align:middle;
 }
 .sv-td-relevo { width:72px; min-width:72px; }
+.sv-th-crono { white-space:nowrap; }
+.sv-td-crono {
+    width:84px; min-width:84px;
+    text-align:center; vertical-align:middle;
+    padding:4px 2px;
+}
+.sv-crono-empty { font-size:0.75em; color:var(--text-secondary-color); }
 .sv-tabla .relevo-cell { font-size:0.68rem; padding:3px 2px; }
 .sv-salida { font-size:0.7em; color:var(--text-secondary-color); }
 
@@ -104,7 +111,8 @@ body { margin:0; padding:0; display:flex; flex-direction:column; height:100dvh; 
 
 /* Alternating rows */
 .sv-tabla tbody tr:nth-child(even) td { background-color:var(--row-alt-color); }
-.sv-tabla tbody tr:nth-child(even) .sv-td-croupier { background-color:var(--row-alt-color); }
+.sv-tabla tbody tr:nth-child(even) .sv-td-croupier,
+.sv-tabla tbody tr:nth-child(even) .sv-td-crono { background-color:var(--row-alt-color); }
 
 /* ── Bottom bar ───────────────────────────────────────────── */
 .sv-bottom-bar {

@@ -189,6 +189,10 @@
         thNombre.className = 'sv-th-croupier';
         thNombre.textContent = 'Croupier';
         headerRow.appendChild(thNombre);
+        const thCrono = document.createElement('th');
+        thCrono.className = 'sv-th-crono';
+        thCrono.textContent = 'Crono.';
+        headerRow.appendChild(thCrono);
         sorted.forEach(h => {
             const th = document.createElement('th');
             th.textContent = h;
@@ -218,15 +222,18 @@
                 }
             }
 
-            const cronoHTML = cronoStart
-                ? `<span class="sv-crono" data-crono-start="${cronoStart}">⏱ 00:00:00</span>`
-                : '';
-
             tdNombre.innerHTML =
                 `<strong>${generarAlias(nombre)}</strong>` +
                 (salida     ? `<br><span class="sv-salida">${salida}</span>` : '') +
-                (estadoHTML ? `<br>${estadoHTML}` : '') +
-                (cronoHTML  ? `<br>${cronoHTML}` : '');
+                (estadoHTML ? `<br>${estadoHTML}` : '');
+
+            const tdCrono = tr.insertCell();
+            tdCrono.className = 'sv-td-crono';
+            if (cronoStart) {
+                tdCrono.innerHTML = `<span class="sv-crono" data-crono-start="${cronoStart}">⏱ 00:00:00</span>`;
+            } else {
+                tdCrono.innerHTML = '<span class="sv-crono-empty">—</span>';
+            }
 
             sorted.forEach(hora => {
                 const td = tr.insertCell();
