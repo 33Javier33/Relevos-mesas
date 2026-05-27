@@ -120,10 +120,19 @@
             : `${min}m`;
     }
 
+    // Convierte un slot "HH:MM" al Unix timestamp exacto usando fechaActual.
+    // Slots < 06:00 pertenecen al día siguiente (turno nocturno).
+    function slotToTimestamp(slotStr) {
+        const [h, m] = slotStr.split(':').map(Number);
+        const [y, mo, d] = fechaActual.split('-').map(Number);
+        const nextDay = h < 6 ? 1 : 0;
+        return new Date(y, mo - 1, d + nextDay, h, m, 0, 0).getTime();
+    }
+
     function calcularEstadoActual(nombre, data) {
         if (!data.horarios?.length || !data.datosRelevos?.[nombre]) return null;
 
-        const now   = new Date();
+        const now    = new Date();
         const nowMin = (now.getHours() < 6 ? now.getHours() + 24 : now.getHours()) * 60 + now.getMinutes();
         const sorted = [...data.horarios].sort(sortHorarios);
 
@@ -145,28 +154,30 @@
 
         if (entry.actividad === 'releva' && entry.mesas?.length) {
             const key = [...entry.mesas].sort().join(',');
-            let total = 0;
+            let total = 0, streakStart = idx;
             for (let i = idx; i >= 0; i--) {
                 const e = data.datosRelevos[nombre]?.[sorted[i]];
                 if (!e || e.actividad !== 'releva') break;
                 if ([...(e.mesas || [])].sort().join(',') !== key) break;
                 total += slotDur(i);
+                streakStart = i;
             }
-            return { actividad: 'releva', mesas: entry.mesas, color: entry.color || '#3498db', minutos: total };
+            return { actividad: 'releva', mesas: entry.mesas, color: entry.color || '#3498db', minutos: total, startTimestamp: slotToTimestamp(sorted[streakStart]) };
         }
 
         if (entry.actividad === 'descanso') {
-            let total = 0;
+            let total = 0, streakStart = idx;
             for (let i = idx; i >= 0; i--) {
                 const e = data.datosRelevos[nombre]?.[sorted[i]];
                 if (!e || e.actividad !== 'descanso') break;
                 total += slotDur(i);
+                streakStart = i;
             }
-            return { actividad: 'descanso', minutos: total };
+            return { actividad: 'descanso', minutos: total, startTimestamp: slotToTimestamp(sorted[streakStart]) };
         }
 
         if (entry.actividad === 'ayudante-pagador') {
-            return { actividad: 'ayudante-pagador', minutos: 0 };
+            return { actividad: 'ayudante-pagador', minutos: 0, startTimestamp: slotToTimestamp(sorted[idx]) };
         }
 
         return null;
@@ -227,10 +238,12 @@
                 (salida     ? `<br><span class="sv-salida">${salida}</span>` : '') +
                 (estadoHTML ? `<br>${estadoHTML}` : '');
 
+            // Timer: manual (operator-set) tiene prioridad; si no, usamos el inicio del slot actual
+            const cronoTimestamp = cronoStart || estado?.startTimestamp || null;
             const tdCrono = tr.insertCell();
             tdCrono.className = 'sv-td-crono';
-            if (cronoStart) {
-                tdCrono.innerHTML = `<span class="sv-crono" data-crono-start="${cronoStart}">⏱ 00:00:00</span>`;
+            if (cronoTimestamp) {
+                tdCrono.innerHTML = `<span class="sv-crono" data-crono-start="${cronoTimestamp}">⏱ 00:00:00</span>`;
             } else {
                 tdCrono.innerHTML = '<span class="sv-crono-empty">—</span>';
             }
