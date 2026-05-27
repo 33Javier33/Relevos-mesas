@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let saveTimeout;
     let solicitudesPrevCount = -1;
+    let haySolicitudesNoVistas = false;
 
     const HELP_TEXTS = {
         general: `<strong>Horario de Relevos — Guía rápida</strong><br><br>
@@ -459,7 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setInterval(actualizarSistema, 1000);
         iniciarSincronizacionAutomatica();
         cargarNotificacionesSolicitudes();
-        setInterval(cargarNotificacionesSolicitudes, 15000);
+        setInterval(cargarNotificacionesSolicitudes, 5000);
 
         new Sortable(DOM.tbody, {
             animation: 150,
@@ -982,29 +983,39 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
             const count = data.solicitudes?.length || 0;
             const badge = document.getElementById('notif-badge');
+            const bell  = document.getElementById('btn-notif');
+
             if (badge) {
                 badge.textContent = count;
                 badge.style.display = count > 0 ? 'inline-block' : 'none';
+            }
 
-                if (solicitudesPrevCount >= 0 && count > solicitudesPrevCount) {
-                    const nuevas = count - solicitudesPrevCount;
-                    const msg = nuevas === 1 ? '🔔 Nueva solicitud de supervisor' : `🔔 ${nuevas} nuevas solicitudes de supervisor`;
-                    mostrarToast(msg);
+            // Carga inicial: si ya hay pendientes, marcar como no vistas
+            if (solicitudesPrevCount === -1 && count > 0) {
+                haySolicitudesNoVistas = true;
+            }
 
-                    // Pulse badge
+            // Llegaron nuevas solicitudes desde el último chequeo
+            if (solicitudesPrevCount >= 0 && count > solicitudesPrevCount) {
+                const nuevas = count - solicitudesPrevCount;
+                mostrarToast(nuevas === 1 ? '🔔 Nueva solicitud de supervisor' : `🔔 ${nuevas} nuevas solicitudes de supervisor`);
+                haySolicitudesNoVistas = true;
+                // Pulso puntual del badge
+                if (badge) {
                     badge.classList.remove('notif-pulse');
                     void badge.offsetWidth;
                     badge.classList.add('notif-pulse');
-
-                    // Ring bell button
-                    const bell = document.getElementById('btn-notif');
-                    if (bell) {
-                        bell.classList.remove('bell-ring');
-                        void bell.offsetWidth;
-                        bell.classList.add('bell-ring');
-                    }
                 }
             }
+
+            // Sin solicitudes pendientes → limpiar estado
+            if (count === 0) haySolicitudesNoVistas = false;
+
+            // Campana: persistente si hay no-vistas, quieta si no
+            if (bell) {
+                bell.classList.toggle('bell-has-unread', haySolicitudesNoVistas && count > 0);
+            }
+
             solicitudesPrevCount = count;
         } catch { /* silencioso */ }
     }
@@ -1028,7 +1039,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('solicitudes-container');
         container.innerHTML = '<p style="text-align:center;color:var(--text-secondary-color);padding:20px 0">Cargando…</p>';
         try {
-            const res = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=solicitudes&t=${Date.now()}`);
+            const fechaStr = getLocalDateString(fechaVisible);
+            const res = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=solicitudes&fecha=${fechaStr}&t=${Date.now()}`);
             const data = await res.json();
             if (data.found === false && !data.solicitudes) {
                 container.innerHTML = '<p style="color:var(--danger-color);text-align:center;padding:20px 0">Error al cargar. Verificá que el script de Google esté actualizado.</p>';
@@ -1205,7 +1217,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         document.getElementById('btn-notif').addEventListener('click', () => {
+            haySolicitudesNoVistas = false;
             solicitudesPrevCount = -1;
+            document.getElementById('btn-notif').classList.remove('bell-has-unread');
             abrirSolicitudesModal();
         });
         document.getElementById('btn-cerrar-sesion').addEventListener('click', cerrarSesion);

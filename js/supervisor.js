@@ -274,11 +274,12 @@
     document.addEventListener('DOMContentLoaded', () => {
         if (!checkAuth()) return;
 
-        const saved = sessionStorage.getItem('supervisorFecha');
-        fechaActual = saved || getLocalStr(getFechaApertura());
-        if (!saved) sessionStorage.setItem('supervisorFecha', fechaActual);
+        // Siempre arrancar en la fecha de apertura del casino (igual que el operador)
+        fechaActual = getLocalStr(getFechaApertura());
+        sessionStorage.setItem('supervisorFecha', fechaActual);
 
         cargarHorario();
+        setInterval(cargarContadorSolicitudes, 5000);
 
         document.getElementById('sv-btn-logout').addEventListener('click', logout);
         document.getElementById('sv-prev-day').addEventListener('click', () => cambiarDia(-1));

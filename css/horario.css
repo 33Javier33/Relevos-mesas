@@ -562,7 +562,7 @@ footer {
     animation: badgePulse 0.55s ease 3;
 }
 
-/* ── Bell ring animation ─────────────────────────────────── */
+/* ── Bell ring (puntual) ────────────────────────────────── */
 @keyframes bellRing {
     0%, 100% { transform: rotate(0deg); }
     15%       { transform: rotate(18deg); }
@@ -574,4 +574,19 @@ footer {
 .bell-ring {
     animation: bellRing 0.65s ease 2;
     transform-origin: center top;
+}
+
+/* ── Bell: persistente mientras haya solicitudes no vistas ─ */
+@keyframes bellAttention {
+    0%, 60%, 100% { transform: rotate(0deg); }
+    65%  { transform: rotate(15deg); }
+    70%  { transform: rotate(-12deg); }
+    75%  { transform: rotate(9deg); }
+    80%  { transform: rotate(-6deg); }
+    85%  { transform: rotate(3deg); }
+}
+.bell-has-unread {
+    animation: bellAttention 2.2s ease infinite;
+    transform-origin: center top;
+    filter: drop-shadow(0 0 4px var(--danger-color));
 }
