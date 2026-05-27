@@ -242,6 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderizarHorario();
         reiniciarCronometrosActivos();
         actualizarBotonMesasTurno();
+        cargarNotificacionesSolicitudes();
     }
 
     async function guardarNuevaFecha() {
@@ -427,6 +428,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function inicializar() {
+        const role = localStorage.getItem('userRole');
+        if (!role || role !== 'operador') {
+            window.location.href = 'login.html';
+            return;
+        }
         await cargarDatosMaestros();
         const params = new URLSearchParams(window.location.search);
         const fechaURL = params.get('fecha');
@@ -450,6 +456,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setupHelpPopovers();
         setInterval(actualizarSistema, 1000);
         iniciarSincronizacionAutomatica();
+        cargarNotificacionesSolicitudes();
 
         new Sortable(DOM.tbody, {
             animation: 150,
@@ -958,6 +965,140 @@ document.addEventListener('DOMContentLoaded', () => {
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape') popover.style.display = 'none'; });
     }
 
+    // ── Auth & Solicitudes (Operador) ─────────────────────────
+    function cerrarSesion() {
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('loginTime');
+        window.location.href = 'login.html';
+    }
+
+    async function cargarNotificacionesSolicitudes() {
+        try {
+            const fechaStr = getLocalDateString(fechaVisible);
+            const res = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=solicitudes&fecha=${fechaStr}&estado=pendiente&t=${Date.now()}`);
+            const data = await res.json();
+            const count = data.solicitudes?.length || 0;
+            const badge = document.getElementById('notif-badge');
+            if (badge) {
+                badge.textContent = count;
+                badge.style.display = count > 0 ? 'inline-block' : 'none';
+            }
+        } catch { /* silencioso */ }
+    }
+
+    async function abrirSolicitudesModal() {
+        const modal = document.getElementById('solicitudes-modal');
+        modal.style.display = 'flex';
+        const container = document.getElementById('solicitudes-container');
+        container.innerHTML = '<p style="text-align:center;color:var(--text-secondary-color);padding:20px 0">Cargando…</p>';
+        try {
+            const fechaStr = getLocalDateString(fechaVisible);
+            const res = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=solicitudes&fecha=${fechaStr}&t=${Date.now()}`);
+            const data = await res.json();
+            renderizarSolicitudesOperador(data.solicitudes || [], container);
+        } catch {
+            container.innerHTML = '<p style="color:var(--danger-color);text-align:center;padding:20px 0">Error al cargar solicitudes.</p>';
+        }
+    }
+
+    function renderizarSolicitudesOperador(lista, container) {
+        if (!lista.length) {
+            container.innerHTML = '<p style="color:var(--text-secondary-color);text-align:center;padding:20px 0">No hay solicitudes para este turno.</p>';
+            return;
+        }
+        const ESTADOS = {
+            pendiente: { icon: '🟡', label: 'Pendiente', bg: 'rgba(243,156,18,0.15)', color: '#b7770d' },
+            aprobado:  { icon: '✅', label: 'Aprobado',  bg: 'rgba(46,204,113,0.15)',  color: '#1a8a45' },
+            rechazado: { icon: '❌', label: 'Rechazado', bg: 'rgba(231,76,60,0.15)',   color: '#c0392b' },
+        };
+        container.innerHTML = lista.map(s => {
+            const est = ESTADOS[s.estado] || ESTADOS.pendiente;
+            const isPendiente = s.estado === 'pendiente';
+            return `<div style="border:1px solid var(--border-color);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:var(--bg-color);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
+                    <span style="font-weight:700;font-size:0.88em;">${s.tipo || 'Solicitud'}</span>
+                    <span style="font-size:0.78em;font-weight:600;padding:2px 8px;border-radius:10px;background:${est.bg};color:${est.color};">${est.icon} ${est.label}</span>
+                </div>
+                ${s.mesa     ? `<div style="font-size:0.84em;margin-bottom:4px;"><b>Mesa:</b> ${s.mesa}</div>` : ''}
+                ${s.croupier ? `<div style="font-size:0.84em;margin-bottom:4px;"><b>Croupier:</b> ${s.croupier}</div>` : ''}
+                <div style="font-size:0.84em;padding:8px 10px;background:var(--surface-color);border-radius:6px;border:1px solid var(--border-color);margin:6px 0;">${s.descripcion}</div>
+                ${s.respuesta ? `<div style="font-size:0.82em;color:var(--primary-color);margin-top:6px;padding:6px 10px;background:rgba(52,152,219,0.08);border-radius:6px;">💬 ${s.respuesta}</div>` : ''}
+                <div style="font-size:0.73em;color:var(--text-secondary-color);margin-top:6px;">${s.supervisor} — ${new Date(s.fecha).toLocaleString('es-ES', {dateStyle:'short',timeStyle:'short'})}</div>
+                ${isPendiente ? `<div style="display:flex;gap:8px;margin-top:10px;align-items:center;">
+                    <input type="text" data-id="${s.id}" class="sol-respuesta-input" placeholder="Respuesta (opcional)" style="flex:1;padding:6px 10px;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-color);color:var(--text-color);font-size:0.85em;font-family:inherit;min-width:0;">
+                    <button class="sol-btn-aprobar" data-id="${s.id}" style="padding:6px 12px;border:none;border-radius:6px;background:#27ae60;color:white;cursor:pointer;font-size:0.82em;font-weight:600;white-space:nowrap;">✅ Aprobar</button>
+                    <button class="sol-btn-rechazar" data-id="${s.id}" style="padding:6px 12px;border:none;border-radius:6px;background:#e74c3c;color:white;cursor:pointer;font-size:0.82em;font-weight:600;white-space:nowrap;">❌ Rechazar</button>
+                </div>` : ''}
+            </div>`;
+        }).join('');
+
+        container.querySelectorAll('.sol-btn-aprobar').forEach(btn => {
+            btn.addEventListener('click', () => responderSolicitudDesdeOperador(btn.dataset.id, 'aprobado', container));
+        });
+        container.querySelectorAll('.sol-btn-rechazar').forEach(btn => {
+            btn.addEventListener('click', () => responderSolicitudDesdeOperador(btn.dataset.id, 'rechazado', container));
+        });
+    }
+
+    async function responderSolicitudDesdeOperador(id, estado, container) {
+        const input = container.querySelector(`.sol-respuesta-input[data-id="${id}"]`);
+        const respuesta = input ? input.value.trim() : '';
+        try {
+            const res = await fetch(URL_DEL_SCRIPT_DE_HORARIOS, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'responderSolicitud', id, estado, respuesta })
+            });
+            const data = await res.json();
+            if (data.success) {
+                await abrirSolicitudesModal();
+                cargarNotificacionesSolicitudes();
+            } else {
+                showModal('Error', 'No se pudo actualizar la solicitud.', 'error');
+            }
+        } catch {
+            showModal('Error', 'Error de conexión.', 'error');
+        }
+    }
+
+    function abrirConfigPasswordsModal() {
+        document.getElementById('pass-actual').value = '';
+        document.getElementById('pass-nueva-operador').value = '';
+        document.getElementById('pass-nueva-supervisor').value = '';
+        document.getElementById('config-pass-modal').style.display = 'flex';
+        document.getElementById('config-dropdown').classList.remove('open');
+    }
+
+    async function guardarConfigPasswords() {
+        const passActual       = document.getElementById('pass-actual').value.trim();
+        const nuevaOperador    = document.getElementById('pass-nueva-operador').value.trim();
+        const nuevaSupervisor  = document.getElementById('pass-nueva-supervisor').value.trim();
+        if (!passActual) { showModal('Error', 'Ingresá la contraseña actual.', 'error'); return; }
+        if (!nuevaOperador && !nuevaSupervisor) { showModal('Error', 'Ingresá al menos una contraseña nueva.', 'error'); return; }
+
+        const btn = document.getElementById('btn-guardar-passwords');
+        btn.disabled = true;
+        btn.textContent = 'Guardando…';
+
+        try {
+            const res = await fetch(URL_DEL_SCRIPT_DE_HORARIOS, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'updateConfig', passActual, nuevaOperador, nuevaSupervisor })
+            });
+            const data = await res.json();
+            if (data.success) {
+                cerrarModales();
+                showModal('Éxito', 'Contraseñas actualizadas correctamente.', 'success');
+            } else {
+                showModal('Error', data.message || 'No se pudo actualizar.', 'error');
+            }
+        } catch {
+            showModal('Error', 'Error de conexión.', 'error');
+        }
+
+        btn.disabled = false;
+        btn.textContent = 'Guardar';
+    }
+
     function setupEventListeners() {
         DOM.btnAplicarColor.addEventListener('click', aplicarColor);
         DOM.fechaDisplay.addEventListener('click', abrirFechaModal);
@@ -1024,6 +1165,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderStatsTab(e.target.dataset.tab, calcularEstadisticas());
             }
         });
+        document.getElementById('btn-notif').addEventListener('click', abrirSolicitudesModal);
+        document.getElementById('btn-cerrar-sesion').addEventListener('click', cerrarSesion);
+        document.getElementById('btn-config-passwords').addEventListener('click', abrirConfigPasswordsModal);
+        document.getElementById('btn-guardar-passwords').addEventListener('click', guardarConfigPasswords);
     }
 
     function calcularEstadisticas() {

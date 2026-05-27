@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso — Horario de Relevos</title>
+    <link rel="stylesheet" href="css/shared.css">
+    <style>
+        body { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; box-sizing:border-box; }
+        .login-card { background:var(--surface-color); border-radius:16px; padding:36px 32px; width:100%; max-width:360px; box-shadow:0 8px 32px var(--shadow-color); text-align:center; }
+        .login-logo { font-size:2.5rem; margin-bottom:8px; }
+        .login-card h1 { font-size:1.25rem; margin:0 0 4px 0; }
+        .login-subtitle { color:var(--text-secondary-color); font-size:0.85em; margin:0 0 28px 0; }
+        .role-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:22px; }
+        .role-btn { display:flex; flex-direction:column; align-items:center; gap:6px; padding:16px 10px; border:2px solid var(--border-color); border-radius:10px; background:var(--bg-color); color:var(--text-color); cursor:pointer; font-family:inherit; font-size:0.88em; font-weight:600; transition:border-color 0.15s, background-color 0.15s, color 0.15s; }
+        .role-btn .role-icon { font-size:1.8rem; line-height:1; }
+        .role-btn:hover { border-color:var(--primary-color); }
+        .role-btn.active { border-color:var(--primary-color); background:rgba(52,152,219,0.08); color:var(--primary-color); }
+        .field-group { text-align:left; margin-bottom:14px; }
+        .field-group label { display:block; font-size:0.78em; font-weight:700; color:var(--text-secondary-color); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.5px; }
+        .field-group input { width:100%; padding:11px 14px; border:1px solid var(--border-color); border-radius:8px; background:var(--bg-color); color:var(--text-color); font-size:1em; box-sizing:border-box; font-family:inherit; transition:border-color 0.15s; }
+        .field-group input:focus { outline:none; border-color:var(--primary-color); }
+        #nombre-group { display:none; }
+        .login-error { color:var(--danger-color); font-size:0.83em; margin-top:8px; display:none; text-align:left; }
+        .btn-ingresar { width:100%; padding:13px; background:var(--primary-color); color:white; border:none; border-radius:8px; font-size:1em; font-weight:bold; cursor:pointer; font-family:inherit; margin-top:6px; transition:background-color 0.15s; }
+        .btn-ingresar:hover:not(:disabled) { background:var(--primary-hover-color); }
+        .btn-ingresar:disabled { opacity:0.6; cursor:not-allowed; }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="login-logo">🎰</div>
+        <h1>Horario de Relevos</h1>
+        <p class="login-subtitle">Seleccioná tu rol para ingresar</p>
+
+        <div class="role-grid">
+            <button class="role-btn active" data-role="operador">
+                <span class="role-icon">👨‍💼</span>
+                <span>Operador</span>
+            </button>
+            <button class="role-btn" data-role="supervisor">
+                <span class="role-icon">👀</span>
+                <span>Supervisor</span>
+            </button>
+        </div>
+
+        <div class="field-group" id="nombre-group">
+            <label for="login-nombre">Tu nombre</label>
+            <input type="text" id="login-nombre" placeholder="Ej: Juan García" autocomplete="name">
+        </div>
+
+        <div class="field-group">
+            <label for="login-pass">Contraseña</label>
+            <input type="password" id="login-pass" placeholder="Ingresá tu clave" autocomplete="current-password">
+        </div>
+
+        <div class="login-error" id="login-error">Contraseña incorrecta. Intentá de nuevo.</div>
+        <button class="btn-ingresar" id="btn-ingresar">Ingresar</button>
+    </div>
+
+    <script>
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbw1kBHYt37_X5K7UdBZlJNTgNT2B2P0t4F6uVrCKK_hDgZ7j09cwSzNx5l9CvHwFCTDQg/exec';
+        let selectedRole = 'operador';
+
+        // Si ya tiene sesión activa, redirigir
+        const existingRole = localStorage.getItem('userRole');
+        if (existingRole === 'operador') window.location.href = 'index.html';
+        else if (existingRole === 'supervisor') window.location.href = 'supervisor.html';
+
+        document.querySelectorAll('.role-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedRole = btn.dataset.role;
+                document.getElementById('nombre-group').style.display = selectedRole === 'supervisor' ? 'block' : 'none';
+                document.getElementById('login-error').style.display = 'none';
+            });
+        });
+
+        document.getElementById('login-pass').addEventListener('keydown', e => {
+            if (e.key === 'Enter') document.getElementById('btn-ingresar').click();
+        });
+
+        document.getElementById('btn-ingresar').addEventListener('click', async () => {
+            const password = document.getElementById('login-pass').value.trim();
+            const nombre   = document.getElementById('login-nombre').value.trim();
+            if (!password) { document.getElementById('login-error').textContent = 'Ingresá tu contraseña.'; document.getElementById('login-error').style.display = 'block'; return; }
+
+            const btn = document.getElementById('btn-ingresar');
+            const errorDiv = document.getElementById('login-error');
+            btn.disabled = true;
+            btn.textContent = 'Verificando…';
+            errorDiv.style.display = 'none';
+
+            try {
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'login', role: selectedRole, password })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    localStorage.setItem('userRole', data.role);
+                    localStorage.setItem('loginTime', Date.now());
+                    if (selectedRole === 'supervisor' && nombre) localStorage.setItem('supervisorNombre', nombre);
+                    window.location.href = data.role === 'operador' ? 'index.html' : 'supervisor.html';
+                } else {
+                    errorDiv.textContent = data.message || 'Contraseña incorrecta.';
+                    errorDiv.style.display = 'block';
+                    btn.disabled = false;
+                    btn.textContent = 'Ingresar';
+                }
+            } catch {
+                errorDiv.textContent = 'Error de conexión. Verificá tu internet.';
+                errorDiv.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'Ingresar';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vista Supervisor — Horario de Relevos</title>
+    <link rel="stylesheet" href="css/shared.css">
+    <link rel="stylesheet" href="css/supervisor.css">
+</head>
+<body>
+    <header class="sv-header">
+        <div class="sv-header-left">
+            <span class="sv-logo">🎰</span>
+            <div>
+                <div class="sv-title">Horario de Relevos</div>
+                <div class="sv-role-badge">👀 Supervisor</div>
+            </div>
+        </div>
+        <div class="sv-header-right">
+            <button id="sv-btn-logout" class="sv-btn-ghost" title="Cerrar sesión">🚪 Salir</button>
+        </div>
+    </header>
+
+    <div class="sv-date-bar">
+        <button id="sv-prev-day" class="sv-nav-btn">‹</button>
+        <div id="sv-fecha-display" class="sv-fecha">--</div>
+        <button id="sv-next-day" class="sv-nav-btn">›</button>
+    </div>
+
+    <div class="sv-main">
+        <div id="sv-schedule-container" class="sv-schedule-container">
+            <div id="sv-status" class="sv-status-msg">Cargando horario…</div>
+        </div>
+    </div>
+
+    <div class="sv-bottom-bar">
+        <button id="sv-btn-nueva-solicitud" class="sv-btn-primary">✉️ Nueva Solicitud</button>
+        <button id="sv-btn-ver-solicitudes" class="sv-btn-secondary">📋 Mis Solicitudes <span id="sv-badge" class="sv-badge" style="display:none">0</span></button>
+    </div>
+
+    <!-- Modal: Nueva Solicitud -->
+    <div id="sv-solicitud-modal" class="sv-modal">
+        <div class="sv-modal-content">
+            <button class="sv-modal-close" id="sv-close-solicitud">×</button>
+            <h2>✉️ Nueva Solicitud</h2>
+            <p class="sv-modal-subtitle" id="sv-solicitud-fecha-label"></p>
+
+            <div class="sv-form-group">
+                <label>Tipo de solicitud</label>
+                <select id="sv-tipo">
+                    <option value="Cambio de croupier">Cambio de croupier</option>
+                    <option value="Cambio de mesa">Cambio de mesa</option>
+                    <option value="Nota informativa">Nota informativa</option>
+                </select>
+            </div>
+            <div class="sv-form-group">
+                <label>Mesa</label>
+                <select id="sv-mesa"><option value="">— Sin especificar —</option></select>
+            </div>
+            <div class="sv-form-group">
+                <label>Croupier</label>
+                <select id="sv-croupier"><option value="">— Sin especificar —</option></select>
+            </div>
+            <div class="sv-form-group">
+                <label>Descripción <span style="color:var(--danger-color)">*</span></label>
+                <textarea id="sv-descripcion" rows="3" placeholder="Describí el cambio o nota que necesitás comunicar…"></textarea>
+            </div>
+            <div class="sv-modal-footer">
+                <button id="sv-btn-enviar-solicitud" class="sv-btn-primary" style="width:100%">Enviar Solicitud</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Lista de Solicitudes -->
+    <div id="sv-lista-modal" class="sv-modal">
+        <div class="sv-modal-content">
+            <button class="sv-modal-close" id="sv-close-lista">×</button>
+            <h2>📋 Solicitudes del turno</h2>
+            <div id="sv-lista-container">
+                <p style="color:var(--text-secondary-color);text-align:center;padding:20px 0">Cargando…</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/shared.js"></script>
+    <script src="js/supervisor.js"></script>
+</body>
+</html>

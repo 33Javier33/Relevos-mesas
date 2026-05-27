@@ -10,14 +10,23 @@
 <body>
     <div class="reloj-y-controles-container">
         <h1>Horario de Relevos <button class="help-btn" data-help="general" title="Ayuda general">?</button></h1>
-        <div class="config-menu-container">
-            <button id="btn-config" class="config-btn" title="Configuración">⚙️</button>
-            <div id="config-dropdown" class="config-dropdown">
-                <a href="./base/index.html" class="config-item">📋 Panel de Gestión</a>
-                <a href="https://vista-de-relevos.vercel.app/" id="link-to-viewer" class="config-item">👁️ Visualizador</a>
-                <hr class="config-divider">
-                <button id="btn-limpiar-croupiers" class="config-item config-item-danger">🗑️ Limpiar Croupiers</button>
-                <button id="btn-limpiar-horarios" class="config-item config-item-danger">🗑️ Limpiar Horarios</button>
+        <div style="display:flex;align-items:center;gap:6px;">
+            <button id="btn-notif" class="config-btn" title="Solicitudes pendientes" style="position:relative;">
+                🔔
+                <span id="notif-badge" style="display:none;position:absolute;top:-3px;right:-5px;background:var(--danger-color);color:white;border-radius:10px;font-size:0.6em;padding:1px 5px;font-weight:bold;min-width:14px;text-align:center;line-height:1.4;">0</span>
+            </button>
+            <div class="config-menu-container">
+                <button id="btn-config" class="config-btn" title="Configuración">⚙️</button>
+                <div id="config-dropdown" class="config-dropdown">
+                    <a href="./base/index.html" class="config-item">📋 Panel de Gestión</a>
+                    <a href="https://vista-de-relevos.vercel.app/" id="link-to-viewer" class="config-item">👁️ Visualizador</a>
+                    <hr class="config-divider">
+                    <button id="btn-limpiar-croupiers" class="config-item config-item-danger">🗑️ Limpiar Croupiers</button>
+                    <button id="btn-limpiar-horarios" class="config-item config-item-danger">🗑️ Limpiar Horarios</button>
+                    <hr class="config-divider">
+                    <button id="btn-config-passwords" class="config-item">🔑 Contraseñas</button>
+                    <button id="btn-cerrar-sesion" class="config-item config-item-danger">🚪 Cerrar sesión</button>
+                </div>
             </div>
         </div>
         <div class="reloj-container">
@@ -223,6 +232,40 @@
         </div>
     </div>
 
+    <!-- Modal: Solicitudes (Operador) -->
+    <div id="solicitudes-modal" class="modal">
+        <div class="modal-content" style="max-width:560px;">
+            <span class="close-btn">&times;</span>
+            <h2>📋 Solicitudes del turno</h2>
+            <div id="solicitudes-container" style="margin-top:12px;max-height:60vh;overflow-y:auto;"></div>
+        </div>
+    </div>
+
+    <!-- Modal: Cambiar contraseñas -->
+    <div id="config-pass-modal" class="modal">
+        <div class="modal-content" style="max-width:400px;">
+            <span class="close-btn">&times;</span>
+            <h2>🔑 Cambiar Contraseñas</h2>
+            <div style="margin-top:14px;">
+                <div style="margin-bottom:12px;">
+                    <label style="display:block;font-size:0.8em;font-weight:700;color:var(--text-secondary-color);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px;">Contraseña actual (Operador)</label>
+                    <input type="password" id="pass-actual" placeholder="Contraseña actual" style="width:100%;padding:10px 12px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-color);color:var(--text-color);font-size:0.9em;font-family:inherit;box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label style="display:block;font-size:0.8em;font-weight:700;color:var(--text-secondary-color);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px;">Nueva contraseña Operador</label>
+                    <input type="password" id="pass-nueva-operador" placeholder="Dejar vacío para no cambiar" style="width:100%;padding:10px 12px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-color);color:var(--text-color);font-size:0.9em;font-family:inherit;box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label style="display:block;font-size:0.8em;font-weight:700;color:var(--text-secondary-color);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px;">Nueva contraseña Supervisor</label>
+                    <input type="password" id="pass-nueva-supervisor" placeholder="Dejar vacío para no cambiar" style="width:100%;padding:10px 12px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-color);color:var(--text-color);font-size:0.9em;font-family:inherit;box-sizing:border-box;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-guardar-passwords" class="confirm">Guardar</button>
+            </div>
+        </div>
+    </div>
+
     <footer>CarlosPN Interactive®</footer>
 
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
@@ -233,6 +276,7 @@
         const _cfgDrop = document.getElementById('config-dropdown');
         _cfgBtn.addEventListener('click', (e) => { e.stopPropagation(); _cfgDrop.classList.toggle('open'); });
         document.addEventListener('click', () => _cfgDrop.classList.remove('open'));
+        _cfgDrop.addEventListener('click', (e) => e.stopPropagation());
     </script>
 </body>
 </html>
