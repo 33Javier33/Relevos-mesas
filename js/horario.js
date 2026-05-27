@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let fechaVisible = new Date(), celdaActiva = { croupier: null, horario: null }, croupierCronoActivo = null, croupierSalidaActivo = null, quickAddCurrentFilter = 'todos';
 
     let saveTimeout;
+    let solicitudesPrevCount = -1;
 
     const HELP_TEXTS = {
         general: `<strong>Horario de Relevos — Guía rápida</strong><br><br>
@@ -235,6 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function cambiarFecha(nuevaFecha) {
         fechaVisible = nuevaFecha;
+        solicitudesPrevCount = -1;
         actualizarFechaDisplay();
         if (!cargarHorarioDesdeLocalStorage()) {
             await sincronizarDesdeSheets(true);
@@ -457,6 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setInterval(actualizarSistema, 1000);
         iniciarSincronizacionAutomatica();
         cargarNotificacionesSolicitudes();
+        setInterval(cargarNotificacionesSolicitudes, 15000);
 
         new Sortable(DOM.tbody, {
             animation: 150,
@@ -982,8 +985,41 @@ document.addEventListener('DOMContentLoaded', () => {
             if (badge) {
                 badge.textContent = count;
                 badge.style.display = count > 0 ? 'inline-block' : 'none';
+
+                if (solicitudesPrevCount >= 0 && count > solicitudesPrevCount) {
+                    const nuevas = count - solicitudesPrevCount;
+                    const msg = nuevas === 1 ? '🔔 Nueva solicitud de supervisor' : `🔔 ${nuevas} nuevas solicitudes de supervisor`;
+                    mostrarToast(msg);
+
+                    // Pulse badge
+                    badge.classList.remove('notif-pulse');
+                    void badge.offsetWidth;
+                    badge.classList.add('notif-pulse');
+
+                    // Ring bell button
+                    const bell = document.getElementById('btn-notif');
+                    if (bell) {
+                        bell.classList.remove('bell-ring');
+                        void bell.offsetWidth;
+                        bell.classList.add('bell-ring');
+                    }
+                }
             }
+            solicitudesPrevCount = count;
         } catch { /* silencioso */ }
+    }
+
+    function mostrarToast(mensaje, duracion = 4500) {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.textContent = mensaje;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.classList.add('toast-saliendo');
+            setTimeout(() => toast.remove(), 400);
+        }, duracion - 400);
     }
 
     async function abrirSolicitudesModal() {
@@ -1165,7 +1201,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderStatsTab(e.target.dataset.tab, calcularEstadisticas());
             }
         });
-        document.getElementById('btn-notif').addEventListener('click', abrirSolicitudesModal);
+        document.getElementById('btn-notif').addEventListener('click', () => {
+            solicitudesPrevCount = -1;
+            abrirSolicitudesModal();
+        });
         document.getElementById('btn-cerrar-sesion').addEventListener('click', cerrarSesion);
         document.getElementById('btn-config-passwords').addEventListener('click', abrirConfigPasswordsModal);
         document.getElementById('btn-guardar-passwords').addEventListener('click', guardarConfigPasswords);

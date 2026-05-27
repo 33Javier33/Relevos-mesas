@@ -508,3 +508,70 @@ footer {
     font-size: 0.8em; color: var(--text-secondary-color);
     border-top: 1px solid var(--border-color);
 }
+
+/* ── Toast notifications ────────────────────────────────── */
+#toast-container {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+}
+.toast {
+    background: #1a252f;
+    color: #fff;
+    padding: 13px 22px;
+    border-radius: 10px;
+    font-size: 0.9em;
+    font-weight: 600;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+    border-left: 4px solid var(--danger-color);
+    animation: toastEntrar 0.3s cubic-bezier(.22,.9,.36,1) forwards;
+    pointer-events: auto;
+    max-width: 340px;
+    text-align: center;
+    white-space: nowrap;
+}
+.toast-saliendo {
+    animation: toastSalir 0.35s ease forwards !important;
+}
+@keyframes toastEntrar {
+    from { opacity: 0; transform: translateY(18px) scale(0.95); }
+    to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+@keyframes toastSalir {
+    from { opacity: 1; transform: translateY(0)   scale(1); }
+    to   { opacity: 0; transform: translateY(14px) scale(0.95); }
+}
+
+/* ── Notification badge pulse ───────────────────────────── */
+@keyframes badgePulse {
+    0%   { transform: scale(1); }
+    20%  { transform: scale(1.55); }
+    40%  { transform: scale(1.2); }
+    60%  { transform: scale(1.5); }
+    80%  { transform: scale(1.15); }
+    100% { transform: scale(1); }
+}
+.notif-pulse {
+    animation: badgePulse 0.55s ease 3;
+}
+
+/* ── Bell ring animation ─────────────────────────────────── */
+@keyframes bellRing {
+    0%, 100% { transform: rotate(0deg); }
+    15%       { transform: rotate(18deg); }
+    35%       { transform: rotate(-14deg); }
+    55%       { transform: rotate(10deg); }
+    70%       { transform: rotate(-7deg); }
+    85%       { transform: rotate(4deg); }
+}
+.bell-ring {
+    animation: bellRing 0.65s ease 2;
+    transform-origin: center top;
+}
