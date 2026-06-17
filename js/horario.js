@@ -462,6 +462,7 @@ document.addEventListener('DOMContentLoaded', () => {
         iniciarSincronizacionAutomatica();
         cargarNotificacionesSolicitudes();
         setInterval(cargarNotificacionesSolicitudes, 5000);
+        initMirrorScroll();
 
         new Sortable(DOM.tbody, {
             animation: 150,
@@ -501,7 +502,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function renderizarHorario() { renderizarCabecera(); renderizarCuerpo(); renderQuickAddSelector(); }
+    function renderizarHorario() { renderizarCabecera(); renderizarCuerpo(); renderQuickAddSelector(); actualizarMirrorScroll(); }
+
+    function actualizarMirrorScroll() {
+        const tabla   = document.querySelector('.horario-tabla');
+        const track   = document.getElementById('mirror-scroll-track');
+        const inner   = document.getElementById('mirror-scroll-inner');
+        if (!tabla || !track || !inner) return;
+        inner.style.width = tabla.scrollWidth + 'px';
+    }
+
+    function initMirrorScroll() {
+        const tabla = document.querySelector('.horario-tabla');
+        const track = document.getElementById('mirror-scroll-track');
+        if (!tabla || !track) return;
+        let ignoreTabla = false, ignoreTrack = false;
+        tabla.addEventListener('scroll', () => {
+            if (ignoreTabla) return;
+            ignoreTrack = true;
+            track.scrollLeft = tabla.scrollLeft;
+            ignoreTrack = false;
+        });
+        track.addEventListener('scroll', () => {
+            if (ignoreTrack) return;
+            ignoreTabla = true;
+            tabla.scrollLeft = track.scrollLeft;
+            ignoreTabla = false;
+        });
+        actualizarMirrorScroll();
+    }
 
     function renderizarCabecera() {
         DOM.thead.innerHTML = '';
