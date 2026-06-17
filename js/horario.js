@@ -347,21 +347,78 @@ document.addEventListener('DOMContentLoaded', () => {
         const { croupier, horario } = celdaActiva;
         const actividad = document.querySelector('input[name="actividad"]:checked').value;
         if (!datosRelevos[croupier]) datosRelevos[croupier] = {};
+
+        let mesasAsignadas = [];
         if (actividad === 'releva') {
             const mesas = Array.from(document.getElementById('mesas-seleccionadas').children).map(item => item.dataset.mesa);
             if (mesas.length > 0) {
                 datosRelevos[croupier][horario] = { actividad: 'releva', mesas, color: DOM.colorRelevoInput.value };
+                mesasAsignadas = mesas;
             } else {
                 delete datosRelevos[croupier][horario];
             }
         } else {
             datosRelevos[croupier][horario] = { actividad };
         }
-        Array.from(DOM.selectCroupierDescanso.selectedOptions).forEach(opt => {
-            const croupierDescanso = opt.value;
-            if (!datosRelevos[croupierDescanso]) datosRelevos[croupierDescanso] = {};
-            datosRelevos[croupierDescanso][horario] = { actividad: 'descanso' };
+
+        const descansoSelected = Array.from(DOM.selectCroupierDescanso.selectedOptions).map(opt => opt.value);
+        descansoSelected.forEach(cd => {
+            if (!datosRelevos[cd]) datosRelevos[cd] = {};
+            datosRelevos[cd][horario] = { actividad: 'descanso' };
         });
+
+        // Si hay mesas asignadas y alguien va a descanso, auto-registrar al croupier
+        // desplazado (el que estaba en la mesa tomada y no va a descanso) moviéndose
+        // a la mesa vacada por quien sí va a descanso.
+        if (actividad === 'releva' && mesasAsignadas.length > 0 && descansoSelected.length > 0) {
+            const sortedH = [...horarios].sort(sortHorarios);
+            const ci = sortedH.indexOf(horario);
+            if (ci > 0) {
+                function findLastHolder(mesa) {
+                    for (let i = ci - 1; i >= 0; i--) {
+                        for (const [n, slots] of Object.entries(datosRelevos)) {
+                            if (n === croupier) continue;
+                            const rel = slots[sortedH[i]];
+                            if (rel?.actividad === 'releva' && rel.mesas?.includes(mesa)) {
+                                return { nombre: n, color: rel.color };
+                            }
+                        }
+                    }
+                    return null;
+                }
+
+                const displaced = new Map(); // nombre → color
+                const vacatedMesas = [];
+
+                for (const mesa of mesasAsignadas) {
+                    const holder = findLastHolder(mesa);
+                    if (!holder) continue;
+                    if (descansoSelected.includes(holder.nombre)) {
+                        vacatedMesas.push(mesa);
+                    } else if (!displaced.has(holder.nombre)) {
+                        displaced.set(holder.nombre, holder.color);
+                    }
+                }
+
+                if (displaced.size > 0 && vacatedMesas.length > 0) {
+                    const displacedArr = [...displaced.entries()];
+                    if (displacedArr.length === 1) {
+                        const [nombre, color] = displacedArr[0];
+                        if (!datosRelevos[nombre]?.[horario]) {
+                            if (!datosRelevos[nombre]) datosRelevos[nombre] = {};
+                            datosRelevos[nombre][horario] = { actividad: 'releva', mesas: vacatedMesas, color };
+                        }
+                    } else {
+                        displacedArr.forEach(([nombre, color], idx) => {
+                            if (idx >= vacatedMesas.length || datosRelevos[nombre]?.[horario]) return;
+                            if (!datosRelevos[nombre]) datosRelevos[nombre] = {};
+                            datosRelevos[nombre][horario] = { actividad: 'releva', mesas: [vacatedMesas[idx]], color };
+                        });
+                    }
+                }
+            }
+        }
+
         guardarDatosEnLocalStorage();
         renderizarHorario();
         actualizarSistema();
