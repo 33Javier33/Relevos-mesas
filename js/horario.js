@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let fechaVisible = new Date(), celdaActiva = { croupier: null, horario: null }, croupierCronoActivo = null, croupierSalidaActivo = null, quickAddCurrentFilter = 'todos';
 
     let saveTimeout;
+    let isSaving = false;
     let solicitudesPrevCount = -1;
     let haySolicitudesNoVistas = false;
 
@@ -129,6 +130,8 @@ document.addEventListener('DOMContentLoaded', () => {
         clearTimeout(saveTimeout);
         DOM.sincroStatus.textContent = 'Guardando cambios en Sheets...';
         saveTimeout = setTimeout(() => {
+            saveTimeout = null;
+            isSaving = true;
             const datosAEnviar = {
                 action: 'save',
                 fecha: getLocalDateString(fechaVisible),
@@ -148,12 +151,12 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(data => {
                 console.log('Sincronización de guardado completa:', data.message || 'OK');
                 DOM.sincroStatus.textContent = 'Sincronización automática activa.';
-                saveTimeout = null;
+                isSaving = false;
             })
             .catch(err => {
                 console.error("Error en la sincronización de guardado:", err);
                 DOM.sincroStatus.textContent = 'ERROR de sincronización. Revisa la conexión.';
-                saveTimeout = null;
+                isSaving = false;
             });
         }, 1500);
     }
@@ -188,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function sincronizarDesdeSheets(forceRender = true) {
         const fechaISO = getLocalDateString(fechaVisible);
         try {
-            if (saveTimeout && !forceRender) return;
+            if ((saveTimeout || isSaving) && !forceRender) return;
             const response = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=load&fecha=${fechaISO}&t=${new Date().getTime()}`);
             const data = await response.json();
             if (data.found) {
@@ -406,13 +409,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         const [nombre, color] = displacedArr[0];
                         if (!datosRelevos[nombre]?.[horario]) {
                             if (!datosRelevos[nombre]) datosRelevos[nombre] = {};
-                            datosRelevos[nombre][horario] = { actividad: 'releva', mesas: vacatedMesas, color };
+                            datosRelevos[nombre][horario] = { actividad: 'releva', mesas: vacatedMesas, color, autoDisplaced: true };
                         }
                     } else {
                         displacedArr.forEach(([nombre, color], idx) => {
                             if (idx >= vacatedMesas.length || datosRelevos[nombre]?.[horario]) return;
                             if (!datosRelevos[nombre]) datosRelevos[nombre] = {};
-                            datosRelevos[nombre][horario] = { actividad: 'releva', mesas: [vacatedMesas[idx]], color };
+                            datosRelevos[nombre][horario] = { actividad: 'releva', mesas: [vacatedMesas[idx]], color, autoDisplaced: true };
                         });
                     }
                 }
@@ -650,7 +653,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 td.dataset.croupier = croupierObj.nombreCompleto;
                 td.dataset.horario = hora;
                 const relevoData = datosRelevos[croupierObj.nombreCompleto]?.[hora];
-                if (relevoData) td.appendChild(crearTarjetaRelevo(relevoData));
+                if (relevoData && !relevoData.autoDisplaced) td.appendChild(crearTarjetaRelevo(relevoData));
                 tr.appendChild(td);
             });
             DOM.tbody.appendChild(tr);
