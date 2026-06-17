@@ -350,78 +350,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const { croupier, horario } = celdaActiva;
         const actividad = document.querySelector('input[name="actividad"]:checked').value;
         if (!datosRelevos[croupier]) datosRelevos[croupier] = {};
-
-        let mesasAsignadas = [];
         if (actividad === 'releva') {
             const mesas = Array.from(document.getElementById('mesas-seleccionadas').children).map(item => item.dataset.mesa);
             if (mesas.length > 0) {
                 datosRelevos[croupier][horario] = { actividad: 'releva', mesas, color: DOM.colorRelevoInput.value };
-                mesasAsignadas = mesas;
             } else {
                 delete datosRelevos[croupier][horario];
             }
         } else {
             datosRelevos[croupier][horario] = { actividad };
         }
-
-        const descansoSelected = Array.from(DOM.selectCroupierDescanso.selectedOptions).map(opt => opt.value);
-        descansoSelected.forEach(cd => {
+        Array.from(DOM.selectCroupierDescanso.selectedOptions).forEach(opt => {
+            const cd = opt.value;
             if (!datosRelevos[cd]) datosRelevos[cd] = {};
             datosRelevos[cd][horario] = { actividad: 'descanso' };
         });
-
-        // Si hay mesas asignadas y alguien va a descanso, auto-registrar al croupier
-        // desplazado (el que estaba en la mesa tomada y no va a descanso) moviéndose
-        // a la mesa vacada por quien sí va a descanso.
-        if (actividad === 'releva' && mesasAsignadas.length > 0 && descansoSelected.length > 0) {
-            const sortedH = [...horarios].sort(sortHorarios);
-            const ci = sortedH.indexOf(horario);
-            if (ci > 0) {
-                function findLastHolder(mesa) {
-                    for (let i = ci - 1; i >= 0; i--) {
-                        for (const [n, slots] of Object.entries(datosRelevos)) {
-                            if (n === croupier) continue;
-                            const rel = slots[sortedH[i]];
-                            if (rel?.actividad === 'releva' && rel.mesas?.includes(mesa)) {
-                                return { nombre: n, color: rel.color };
-                            }
-                        }
-                    }
-                    return null;
-                }
-
-                const displaced = new Map(); // nombre → color
-                const vacatedMesas = [];
-
-                for (const mesa of mesasAsignadas) {
-                    const holder = findLastHolder(mesa);
-                    if (!holder) continue;
-                    if (descansoSelected.includes(holder.nombre)) {
-                        vacatedMesas.push(mesa);
-                    } else if (!displaced.has(holder.nombre)) {
-                        displaced.set(holder.nombre, holder.color);
-                    }
-                }
-
-                if (displaced.size > 0 && vacatedMesas.length > 0) {
-                    const displacedArr = [...displaced.entries()];
-                    if (displacedArr.length === 1) {
-                        const [nombre, color] = displacedArr[0];
-                        if (!datosRelevos[nombre]?.[horario]) {
-                            if (!datosRelevos[nombre]) datosRelevos[nombre] = {};
-                            datosRelevos[nombre][horario] = { actividad: 'releva', mesas: vacatedMesas, color, autoDisplaced: true };
-                        }
-                    } else {
-                        displacedArr.forEach(([nombre, color], idx) => {
-                            if (idx >= vacatedMesas.length || datosRelevos[nombre]?.[horario]) return;
-                            if (!datosRelevos[nombre]) datosRelevos[nombre] = {};
-                            datosRelevos[nombre][horario] = { actividad: 'releva', mesas: [vacatedMesas[idx]], color, autoDisplaced: true };
-                        });
-                    }
-                }
-            }
-        }
-
         guardarDatosEnLocalStorage();
         renderizarHorario();
         actualizarSistema();
@@ -653,7 +596,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 td.dataset.croupier = croupierObj.nombreCompleto;
                 td.dataset.horario = hora;
                 const relevoData = datosRelevos[croupierObj.nombreCompleto]?.[hora];
-                if (relevoData && !relevoData.autoDisplaced) td.appendChild(crearTarjetaRelevo(relevoData));
+                if (relevoData) td.appendChild(crearTarjetaRelevo(relevoData));
                 tr.appendChild(td);
             });
             DOM.tbody.appendChild(tr);
@@ -895,8 +838,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const toMin = (h) => { const [hr, mn] = h.split(':').map(Number); return (hr < 6 ? hr + 24 : hr) * 60 + mn; };
         const fmtMin = (m) => m >= 60 ? `${Math.floor(m / 60)}h${m % 60 > 0 ? (m % 60) + 'm' : ''}` : `${m}m`;
 
-        // Calcula cuántos minutos consecutivos lleva un croupier en la misma mesa
-        // retrocediendo desde fromIndex (exclusivo) hacia atrás.
         function minutosConsecutivosEnMesa(nombre, fromIndex) {
             if (fromIndex <= 0) return null;
             let refMesas = null;
@@ -914,16 +855,66 @@ document.addEventListener('DOMContentLoaded', () => {
             return refMesas && totalMin > 0 ? { minutos: totalMin, mesas: refMesas } : null;
         }
 
+        // Calcula la ubicación efectiva de un croupier sin asignación directa,
+        // siguiendo la cadena de desplazamiento: si su última mesa fue tomada por
+        // otro croupier que envió a alguien a descanso, el croupier desplazado
+        // pasó a la mesa vacada por quien fue a descanso.
+        function calcularUbicacionEfectiva(nombre) {
+            for (let i = currentIndex - 1; i >= 0; i--) {
+                const rel = datosRelevos[nombre]?.[sortedHorarios[i]];
+                if (!rel) continue;
+                if (rel.actividad !== 'releva' || !rel.mesas?.length) {
+                    return { tipo: rel.actividad, slotIdx: i };
+                }
+                let mesasActuales = rel.mesas;
+                let slotActual = i;
+                // Buscar si alguien tomó esas mesas en un slot posterior
+                for (let j = i + 1; j < currentIndex; j++) {
+                    const slot = sortedHorarios[j];
+                    for (const [otro, slots] of Object.entries(datosRelevos)) {
+                        if (otro === nombre) continue;
+                        const otroRel = slots[slot];
+                        if (otroRel?.actividad !== 'releva') continue;
+                        if (!(otroRel.mesas || []).some(m => mesasActuales.includes(m))) continue;
+                        // "otro" tomó alguna de las mesas de "nombre" en slot j.
+                        // Buscar mesas vacadas por croupiers que fueron a descanso en ese slot.
+                        const vacadas = [];
+                        for (const [d, dSlots] of Object.entries(datosRelevos)) {
+                            if (d === nombre || d === otro) continue;
+                            if (dSlots[slot]?.actividad !== 'descanso') continue;
+                            for (let k = j - 1; k >= 0; k--) {
+                                const prevD = datosRelevos[d]?.[sortedHorarios[k]];
+                                if (!prevD) continue;
+                                if (prevD.actividad === 'releva' && prevD.mesas?.length) {
+                                    prevD.mesas.forEach(m => {
+                                        if ((otroRel.mesas || []).includes(m) && !mesasActuales.includes(m)) {
+                                            vacadas.push(m);
+                                        }
+                                    });
+                                }
+                                break;
+                            }
+                        }
+                        if (vacadas.length > 0) {
+                            mesasActuales = vacadas;
+                            slotActual = j;
+                        }
+                        break;
+                    }
+                }
+                return { tipo: 'releva', mesas: mesasActuales, slotIdx: slotActual };
+            }
+            return null;
+        }
+
         croupiersData.forEach(c => {
             if (c.nombreCompleto === celdaActiva.croupier) return;
             const nombre = c.nombreCompleto;
 
-            // Asignación en el slot actual
             const currentRel = datosRelevos[nombre]?.[celdaActiva.horario];
             let activityInfo = '';
 
             if (currentRel?.actividad === 'releva' && currentRel.mesas?.length) {
-                // Tiempo incluyendo el slot actual como si ya estuviera asignado
                 const prev = minutosConsecutivosEnMesa(nombre, currentIndex);
                 const slotDur = currentIndex < sortedHorarios.length - 1
                     ? toMin(sortedHorarios[currentIndex + 1]) - toMin(sortedHorarios[currentIndex])
@@ -936,22 +927,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 activityInfo = ' [ayud. pagador]';
             }
 
-            // Sin asignación actual → buscar en slots anteriores
             if (!activityInfo) {
-                activityInfo = ' (sin actividad anterior)';
-                for (let i = currentIndex - 1; i >= 0; i--) {
-                    const rel = datosRelevos[nombre]?.[sortedHorarios[i]];
-                    if (!rel) continue;
-                    if (rel.actividad === 'releva' && rel.mesas?.length) {
-                        const prev = minutosConsecutivosEnMesa(nombre, i + 1);
-                        const tiempo = prev ? ` · ${fmtMin(prev.minutos)}` : '';
-                        activityInfo = ` (viene de ${rel.mesas.join(', ')}${tiempo})`;
-                    } else if (rel.actividad === 'descanso') {
-                        activityInfo = ' (en descanso)';
-                    } else if (rel.actividad === 'ayudante-pagador') {
-                        activityInfo = ' (ayud. pagador)';
-                    }
-                    break;
+                const ubicacion = calcularUbicacionEfectiva(nombre);
+                if (ubicacion?.tipo === 'releva') {
+                    const prev = minutosConsecutivosEnMesa(nombre, ubicacion.slotIdx + 1);
+                    const tiempo = prev ? ` · ${fmtMin(prev.minutos)}` : '';
+                    activityInfo = ` (viene de ${ubicacion.mesas.join(', ')}${tiempo})`;
+                } else if (ubicacion?.tipo === 'descanso') {
+                    activityInfo = ' (en descanso)';
+                } else if (ubicacion?.tipo === 'ayudante-pagador') {
+                    activityInfo = ' (ayud. pagador)';
+                } else {
+                    activityInfo = ' (sin actividad anterior)';
                 }
             }
 
