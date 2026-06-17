@@ -227,16 +227,18 @@ body {
     flex: 1;
     min-height: 0;
     border-radius: 8px;
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden;
     box-shadow: 0 4px 6px var(--shadow-color);
     background-color: var(--surface-color);
 }
 .tabla-controles-bar { flex-shrink: 0; margin-bottom: 8px; }
 .horario-tabla {
     overflow-x: auto;
+    overflow-y: hidden;
     position: relative;
+    scrollbar-width: none;
 }
+.horario-tabla::-webkit-scrollbar { display: none; }
 
 /* Scrollbar espejo sticky — siempre visible al fondo del área visible */
 #mirror-scroll-outer {
