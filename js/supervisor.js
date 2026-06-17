@@ -149,15 +149,23 @@
         const idx = getSlotActualIdx(sorted);
         if (idx < 0) return null;
 
-        const card = data.datosRelevos?.[nombre]?.[sorted[idx]];
-        if (!card) return null; // Sin tarjeta → cronómetro en 0
+        // Find effective card, skipping autoDisplaced entries
+        let card = null, cardIdx = idx;
+        for (let i = idx; i >= 0; i--) {
+            const c = data.datosRelevos?.[nombre]?.[sorted[i]];
+            if (!c) break;
+            if (!c.autoDisplaced) { card = c; cardIdx = i; break; }
+        }
+        if (!card) return null;
 
-        // Buscar inicio del streak (misma actividad + mismas mesas hacia atrás)
+        // Buscar inicio del streak (misma actividad + mismas mesas hacia atrás, saltando autoDisplaced)
         const mesaKey = card.actividad === 'releva' ? [...(card.mesas || [])].sort().join(',') : null;
-        let streakStart = idx;
-        for (let i = idx - 1; i >= 0; i--) {
+        let streakStart = cardIdx;
+        for (let i = cardIdx - 1; i >= 0; i--) {
             const e = data.datosRelevos[nombre]?.[sorted[i]];
-            if (!e || e.actividad !== card.actividad) break;
+            if (!e) break;
+            if (e.autoDisplaced) continue;
+            if (e.actividad !== card.actividad) break;
             if (mesaKey !== null && [...(e.mesas || [])].sort().join(',') !== mesaKey) break;
             streakStart = i;
         }
@@ -170,7 +178,13 @@
         const idx = getSlotActualIdx(sorted);
         if (idx < 0) return null;
 
-        const entry = data.datosRelevos?.[nombre]?.[sorted[idx]];
+        // Find effective entry, skipping autoDisplaced entries
+        let entry = null, effectiveIdx = idx;
+        for (let i = idx; i >= 0; i--) {
+            const e = data.datosRelevos?.[nombre]?.[sorted[i]];
+            if (!e) break;
+            if (!e.autoDisplaced) { entry = e; effectiveIdx = i; break; }
+        }
         if (!entry?.actividad) return null;
 
         const slotDur = i => {
@@ -180,20 +194,21 @@
 
         if (entry.actividad === 'releva') {
             const key = [...(entry.mesas || [])].sort().join(',');
-            let total = 0, streakStart = idx;
+            let total = 0;
+            // Start from idx to include autoDisplaced slots in total time
             for (let i = idx; i >= 0; i--) {
                 const e = data.datosRelevos[nombre]?.[sorted[i]];
                 if (!e || e.actividad !== 'releva') break;
+                if (e.autoDisplaced) { total += slotDur(i); continue; }
                 if ([...(e.mesas || [])].sort().join(',') !== key) break;
                 total += slotDur(i);
-                streakStart = i;
             }
             return { actividad: 'releva', mesas: entry.mesas || [], color: entry.color || '#3498db', minutos: total };
         }
 
         if (entry.actividad === 'descanso') {
             let total = 0;
-            for (let i = idx; i >= 0; i--) {
+            for (let i = effectiveIdx; i >= 0; i--) {
                 const e = data.datosRelevos[nombre]?.[sorted[i]];
                 if (!e || e.actividad !== 'descanso') break;
                 total += slotDur(i);

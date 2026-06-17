@@ -286,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 for (let i = horariosDate.length - 1; i >= 0; i--) {
                     if (now >= horariosDate[i]) {
                         const activity = datosRelevos[croupier]?.[sortedHorarios[i]];
-                        if (activity) {
+                        if (activity && !activity.autoDisplaced) {
                             lastActionTime = horariosDate[i].getTime();
                             lastActionIsWork = activity.actividad === 'releva' || activity.actividad === 'ayudante-pagador';
                             break;
@@ -899,6 +899,10 @@ document.addEventListener('DOMContentLoaded', () => {
             for (let i = fromIndex - 1; i >= 0; i--) {
                 const rel = datosRelevos[nombre]?.[sortedHorarios[i]];
                 if (!rel || rel.actividad !== 'releva' || !rel.mesas?.length) break;
+                if (rel.autoDisplaced) {
+                    totalMin += toMin(sortedHorarios[i + 1]) - toMin(sortedHorarios[i]);
+                    continue;
+                }
                 if (!refMesas) {
                     refMesas = rel.mesas;
                 } else if (rel.mesas.length !== refMesas.length || !rel.mesas.every(m => refMesas.includes(m))) {
