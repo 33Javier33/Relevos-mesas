@@ -360,11 +360,61 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             datosRelevos[croupier][horario] = { actividad };
         }
-        Array.from(DOM.selectCroupierDescanso.selectedOptions).forEach(opt => {
-            const cd = opt.value;
+        const descansoSelected = Array.from(DOM.selectCroupierDescanso.selectedOptions).map(opt => opt.value);
+        descansoSelected.forEach(cd => {
             if (!datosRelevos[cd]) datosRelevos[cd] = {};
             datosRelevos[cd][horario] = { actividad: 'descanso' };
         });
+
+        // Auto-registrar al croupier desplazado moviéndose a la mesa vacada.
+        // La tarjeta se marca autoDisplaced:true → se muestra apagada (solo informativa).
+        if (actividad === 'releva' && descansoSelected.length > 0) {
+            const sortedH = [...horarios].sort(sortHorarios);
+            const ci = sortedH.indexOf(horario);
+            if (ci > 0) {
+                const mesasAsignadas = datosRelevos[croupier]?.[horario]?.mesas || [];
+                function findLastHolder(mesa) {
+                    for (let i = ci - 1; i >= 0; i--) {
+                        for (const [n, slots] of Object.entries(datosRelevos)) {
+                            if (n === croupier) continue;
+                            const rel = slots[sortedH[i]];
+                            if (rel?.actividad === 'releva' && rel.mesas?.includes(mesa)) {
+                                return { nombre: n, color: rel.color };
+                            }
+                        }
+                    }
+                    return null;
+                }
+                const displaced = new Map();
+                const vacatedMesas = [];
+                for (const mesa of mesasAsignadas) {
+                    const holder = findLastHolder(mesa);
+                    if (!holder) continue;
+                    if (descansoSelected.includes(holder.nombre)) {
+                        vacatedMesas.push(mesa);
+                    } else if (!displaced.has(holder.nombre)) {
+                        displaced.set(holder.nombre, holder.color);
+                    }
+                }
+                if (displaced.size > 0 && vacatedMesas.length > 0) {
+                    const displacedArr = [...displaced.entries()];
+                    if (displacedArr.length === 1) {
+                        const [nombre, color] = displacedArr[0];
+                        if (!datosRelevos[nombre]?.[horario]) {
+                            if (!datosRelevos[nombre]) datosRelevos[nombre] = {};
+                            datosRelevos[nombre][horario] = { actividad: 'releva', mesas: vacatedMesas, color, autoDisplaced: true };
+                        }
+                    } else {
+                        displacedArr.forEach(([nombre, color], idx) => {
+                            if (idx >= vacatedMesas.length || datosRelevos[nombre]?.[horario]) return;
+                            if (!datosRelevos[nombre]) datosRelevos[nombre] = {};
+                            datosRelevos[nombre][horario] = { actividad: 'releva', mesas: [vacatedMesas[idx]], color, autoDisplaced: true };
+                        });
+                    }
+                }
+            }
+        }
+
         guardarDatosEnLocalStorage();
         renderizarHorario();
         actualizarSistema();
@@ -596,7 +646,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 td.dataset.croupier = croupierObj.nombreCompleto;
                 td.dataset.horario = hora;
                 const relevoData = datosRelevos[croupierObj.nombreCompleto]?.[hora];
-                if (relevoData) td.appendChild(crearTarjetaRelevo(relevoData));
+                if (relevoData) {
+                    const card = crearTarjetaRelevo(relevoData);
+                    if (relevoData.autoDisplaced) card.classList.add('relevo-desplazado');
+                    td.appendChild(card);
+                }
                 tr.appendChild(td);
             });
             DOM.tbody.appendChild(tr);

@@ -355,6 +355,12 @@ body {
 
 /* Tamaño específico del relevo-cell en esta vista */
 .relevo-cell { padding: 2px; font-size: 0.65rem; }
+.relevo-cell.relevo-desplazado {
+    opacity: 0.38;
+    filter: grayscale(0.6);
+    outline: 1px dashed rgba(0,0,0,0.3);
+    outline-offset: -1px;
+}
 
 .croupier-row.row-selected    { background-color: var(--selected-bg-color); }
 .croupier-row.sortable-ghost  { opacity: 0.5; background-color: var(--neutral-hover-color); }
