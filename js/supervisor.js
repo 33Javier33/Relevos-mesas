@@ -231,8 +231,6 @@
             headerRow.appendChild(th);
         });
 
-        console.log('[SV] renderizarTabla → horarios:', sorted, '| croupiers:', data.croupiersEnTabla, '| datosRelevos keys:', Object.keys(data.datosRelevos || {}), '| cronometros:', data.cronometros);
-
         const tbody = table.createTBody();
         data.croupiersEnTabla.forEach(nombre => {
             const tr = tbody.insertRow();
@@ -242,8 +240,6 @@
             const salida        = data.horasSalida?.[nombre] || data.croupierSalidas?.[nombre] || '';
             const estado        = calcularEstadoActual(nombre, data, sorted);
             const cronoTimestamp = calcularCronoStart(nombre, data, sorted);
-
-            console.log(`[SV] ${nombre}: estado=`, estado, '| cronoTimestamp=', cronoTimestamp);
 
             let estadoHTML = '';
             if (estado) {
