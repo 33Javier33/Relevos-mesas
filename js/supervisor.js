@@ -444,7 +444,7 @@
         fechaActual = getLocalStr(getFechaApertura());
 
         cargarHorario(true);
-        setInterval(() => cargarHorario(false), 30000);
+        setInterval(() => cargarHorario(false), 8000);
         setInterval(cargarContadorSolicitudes, 5000);
 
         // Cronómetros en tiempo real — actualiza todos los .sv-crono cada segundo

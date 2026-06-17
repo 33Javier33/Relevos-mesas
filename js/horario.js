@@ -233,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function iniciarSincronizacionAutomatica() {
         syncInterval = setInterval(async () => {
             await sincronizarDesdeSheets(false);
-        }, 30000);
+        }, 8000);
     }
 
     async function cambiarFecha(nuevaFecha) {
