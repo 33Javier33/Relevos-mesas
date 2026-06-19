@@ -1288,8 +1288,58 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.textContent = 'Guardar';
     }
 
+    function cargarFichasData() {
+        try {
+            const raw = JSON.parse(localStorage.getItem('fichasData') || '{}');
+            fichasData = {};
+            for (const [mesa, val] of Object.entries(raw || {})) {
+                if (!val || typeof val !== 'object') {
+                    fichasData[mesa] = { inventario: {}, horas: [] };
+                } else if (val.inventario !== undefined || val.horas !== undefined) {
+                    fichasData[mesa] = { inventario: val.inventario || {}, horas: val.horas || [] };
+                } else {
+                    fichasData[mesa] = { inventario: val, horas: [] };
+                }
+            }
+        } catch { fichasData = {}; }
+    }
+
+    function guardarFichasData() {
+        localStorage.setItem('fichasData', JSON.stringify(fichasData));
+    }
+
+    function getMesaData(mesa) {
+        if (!fichasData[mesa] || typeof fichasData[mesa] !== 'object') fichasData[mesa] = { inventario: {}, horas: [] };
+        if (!fichasData[mesa].inventario) fichasData[mesa].inventario = {};
+        if (!fichasData[mesa].horas) fichasData[mesa].horas = [];
+        return fichasData[mesa];
+    }
+
+    function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+    function calcTotalInventario(inv) {
+        return DENOMINACIONES.reduce((s, d) => s + d * (parseInt(inv[String(d)]) || 0), 0);
+    }
+    function calcNetoHora(h) {
+        return (parseInt(h.cambios) || 0) - (h.drops || []).reduce((s, dr) => s + (parseInt(dr.monto) || 0), 0);
+    }
+    function calcNetoMesa(datos) {
+        return (datos.horas || []).reduce((s, h) => s + calcNetoHora(h), 0);
+    }
+
+    function actualizarSummaryPanel(panel) {
+        const mesa = panel.dataset.mesa;
+        const datos = getMesaData(mesa);
+        const chips = calcTotalInventario(datos.inventario);
+        const neto = calcNetoMesa(datos);
+        const chipsEl = panel.querySelector('.fichas-summary-chips');
+        const netEl   = panel.querySelector('.fichas-summary-net');
+        if (chipsEl) chipsEl.textContent = chips > 0 ? `Chips: $${fmtFichas(chips)}` : 'Sin fichas';
+        if (netEl)   netEl.textContent   = neto  > 0 ? `Neto: $${fmtFichas(neto)}`  : '';
+    }
+
     function abrirFichasModal() {
-        try { fichasData = JSON.parse(localStorage.getItem('fichasData') || '{}'); } catch { fichasData = {}; }
+        cargarFichasData();
         const mesas = mesasHabilitadas.length > 0 ? mesasHabilitadas : mesasDeJuego;
         const content = document.getElementById('fichas-content');
         content.innerHTML = '';
@@ -1302,89 +1352,235 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function crearPanelFichas(mesa) {
-        const datos = fichasData[mesa] || {};
-        const panel = document.createElement('div');
-        panel.className = 'fichas-mesa-panel';
+        const datos = getMesaData(mesa);
+        const chips  = calcTotalInventario(datos.inventario);
+        const neto   = calcNetoMesa(datos);
 
-        const header = document.createElement('div');
-        header.className = 'fichas-mesa-header';
-        header.textContent = `🎰 ${mesa}`;
-        panel.appendChild(header);
+        const panel = document.createElement('details');
+        panel.className = 'fichas-mesa-panel';
+        panel.dataset.mesa = mesa;
+
+        // ── Summary (collapsed header) ─────────────────────────
+        const summary = document.createElement('summary');
+        summary.className = 'fichas-mesa-summary';
+        summary.innerHTML =
+            `<span class="fichas-summary-name">🎰 ${mesa}</span>` +
+            `<span class="fichas-summary-chips">${chips > 0 ? `Chips: $${fmtFichas(chips)}` : 'Sin fichas'}</span>` +
+            `<span class="fichas-summary-net">${neto > 0 ? `Neto: $${fmtFichas(neto)}` : ''}</span>`;
+        panel.appendChild(summary);
+
+        // ── Section 1: Inventario de Fichas ───────────────────
+        const secInv = document.createElement('div');
+        secInv.className = 'fichas-section';
+
+        const invTitleRow = document.createElement('div');
+        invTitleRow.className = 'fichas-section-title-row';
+        invTitleRow.innerHTML = '<span class="fichas-section-title">Inventario de Fichas</span>';
+        secInv.appendChild(invTitleRow);
 
         const tabla = document.createElement('div');
         tabla.className = 'fichas-tabla';
 
         DENOMINACIONES.forEach(den => {
-            const qty = parseInt(datos[String(den)]) || 0;
+            const qty = parseInt(datos.inventario[String(den)]) || 0;
             const row = document.createElement('div');
             row.className = 'fichas-row';
-
-            const denSpan = document.createElement('span');
-            denSpan.className = 'fichas-den';
-            denSpan.textContent = fmtFichas(den);
-
-            const sep1 = document.createElement('span');
-            sep1.className = 'fichas-sep';
-            sep1.textContent = '—';
-
-            const input = document.createElement('input');
-            input.type = 'number';
-            input.className = 'fichas-cantidad';
-            input.min = '0';
-            input.value = qty || '';
-            input.placeholder = '0';
-            input.dataset.mesa = mesa;
-            input.dataset.den = String(den);
-
-            const sep2 = document.createElement('span');
-            sep2.className = 'fichas-sep';
-            sep2.textContent = '—';
-
-            const totalSpan = document.createElement('span');
-            totalSpan.className = 'fichas-total';
-            totalSpan.textContent = qty > 0 ? fmtFichas(den * qty) : '—';
-
-            row.appendChild(denSpan);
-            row.appendChild(sep1);
-            row.appendChild(input);
-            row.appendChild(sep2);
-            row.appendChild(totalSpan);
-            tabla.appendChild(row);
-
+            row.innerHTML =
+                `<span class="fichas-den">${fmtFichas(den)}</span>` +
+                `<span class="fichas-sep">—</span>` +
+                `<input type="number" class="fichas-cantidad" min="0" value="${qty || ''}" placeholder="0">` +
+                `<span class="fichas-sep">—</span>` +
+                `<span class="fichas-total">${qty > 0 ? fmtFichas(den * qty) : '—'}</span>`;
+            const input     = row.querySelector('.fichas-cantidad');
+            const totalSpan = row.querySelector('.fichas-total');
             input.addEventListener('input', () => {
                 const q = Math.max(0, parseInt(input.value) || 0);
                 totalSpan.textContent = q > 0 ? fmtFichas(den * q) : '—';
-                if (!fichasData[mesa]) fichasData[mesa] = {};
-                fichasData[mesa][String(den)] = q;
-                const grand = DENOMINACIONES.reduce((s, d) => s + d * (fichasData[mesa]?.[String(d)] || 0), 0);
-                panel.querySelector('.fichas-grand-total').textContent = grand > 0 ? fmtFichas(grand) : '—';
-                localStorage.setItem('fichasData', JSON.stringify(fichasData));
+                datos.inventario[String(den)] = q;
+                const gt = calcTotalInventario(datos.inventario);
+                tabla.querySelector('.fichas-grand-total').textContent = gt > 0 ? fmtFichas(gt) : '—';
+                actualizarSummaryPanel(panel);
+                guardarFichasData();
             });
+            tabla.appendChild(row);
         });
 
-        const grandTotal = DENOMINACIONES.reduce((s, d) => s + d * (parseInt(datos[String(d)]) || 0), 0);
+        const gt = calcTotalInventario(datos.inventario);
         const totalRow = document.createElement('div');
         totalRow.className = 'fichas-row fichas-total-row';
-        totalRow.innerHTML = `<span></span><span></span><span class="fichas-lbl-total">TOTAL</span><span></span><span class="fichas-grand-total">${grandTotal > 0 ? fmtFichas(grandTotal) : '—'}</span>`;
+        totalRow.innerHTML = `<span></span><span></span><span class="fichas-lbl-total">TOTAL</span><span></span><span class="fichas-grand-total">${gt > 0 ? fmtFichas(gt) : '—'}</span>`;
         tabla.appendChild(totalRow);
 
         const clearRow = document.createElement('div');
         clearRow.className = 'fichas-clear-row';
         const clearBtn = document.createElement('button');
         clearBtn.className = 'fichas-clear-btn';
-        clearBtn.textContent = '🗑️ Limpiar';
+        clearBtn.textContent = '🗑️ Limpiar fichas';
         clearBtn.addEventListener('click', () => {
-            fichasData[mesa] = {};
-            localStorage.setItem('fichasData', JSON.stringify(fichasData));
+            datos.inventario = {};
             tabla.querySelectorAll('.fichas-cantidad').forEach(inp => { inp.value = ''; });
             tabla.querySelectorAll('.fichas-total').forEach(s => { s.textContent = '—'; });
-            panel.querySelector('.fichas-grand-total').textContent = '—';
+            tabla.querySelector('.fichas-grand-total').textContent = '—';
+            actualizarSummaryPanel(panel);
+            guardarFichasData();
         });
         clearRow.appendChild(clearBtn);
         tabla.appendChild(clearRow);
+        secInv.appendChild(tabla);
+        panel.appendChild(secInv);
 
-        panel.appendChild(tabla);
+        // ── Section 2: Cambios y Fichas Drop ──────────────────
+        const secCambios = document.createElement('div');
+        secCambios.className = 'fichas-section fichas-cambios-section';
+
+        const cambiosTitleRow = document.createElement('div');
+        cambiosTitleRow.className = 'fichas-section-title-row';
+        cambiosTitleRow.innerHTML =
+            '<span class="fichas-section-title">Cambios y Fichas Drop</span>' +
+            '<button class="fichas-nueva-hora-btn">+ Nueva hora</button>';
+        secCambios.appendChild(cambiosTitleRow);
+
+        const horasContainer = document.createElement('div');
+        horasContainer.className = 'fichas-horas-container';
+        [...(datos.horas || [])].reverse().forEach(h => {
+            horasContainer.appendChild(crearHoraCard(h, datos, panel));
+        });
+        secCambios.appendChild(horasContainer);
+
+        cambiosTitleRow.querySelector('.fichas-nueva-hora-btn').addEventListener('click', () => {
+            const now = new Date();
+            const newH = {
+                id: genId(),
+                hora: `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`,
+                cambios: 0,
+                drops: []
+            };
+            datos.horas.push(newH);
+            guardarFichasData();
+            actualizarSummaryPanel(panel);
+            horasContainer.insertBefore(crearHoraCard(newH, datos, panel), horasContainer.firstChild);
+        });
+
+        panel.appendChild(secCambios);
         return panel;
+    }
+
+    function crearHoraCard(horaObj, datos, panel) {
+        const card = document.createElement('div');
+        card.className = 'fichas-hora-card';
+        card.dataset.horaId = horaObj.id;
+
+        function actualizarNeto() {
+            const n = calcNetoHora(horaObj);
+            const badge = card.querySelector('.fichas-hora-neto-badge');
+            if (badge) {
+                badge.textContent = `Neto: $${fmtFichas(Math.abs(n))}${n < 0 ? ' ▼' : ''}`;
+                badge.className = 'fichas-hora-neto-badge' + (n < 0 ? ' neto-negativo' : '');
+            }
+            actualizarSummaryPanel(panel);
+        }
+
+        // Header
+        const neto = calcNetoHora(horaObj);
+        card.innerHTML =
+            `<div class="fichas-hora-header">` +
+            `<input type="time" class="fichas-hora-time" value="${horaObj.hora || ''}">` +
+            `<span class="fichas-hora-neto-badge${neto < 0 ? ' neto-negativo' : ''}">Neto: $${fmtFichas(Math.abs(neto))}${neto < 0 ? ' ▼' : ''}</span>` +
+            `<button class="fichas-hora-del" title="Eliminar hora">×</button>` +
+            `</div>` +
+            `<div class="fichas-cambio-row">` +
+            `<label class="fichas-campo-label">💵 Cambios:</label>` +
+            `<input type="number" class="fichas-cambios-input" min="0" value="${horaObj.cambios || ''}" placeholder="0">` +
+            `<span class="fichas-cambios-fmt">${horaObj.cambios > 0 ? fmtFichas(horaObj.cambios) : '—'}</span>` +
+            `</div>` +
+            `<div class="fichas-drops-section">` +
+            `<div class="fichas-drops-list"></div>` +
+            `<div class="fichas-add-drop-row">` +
+            `<button class="fichas-add-drop-btn">🪙 + Ficha Drop</button>` +
+            `<span class="fichas-drop-input-wrap" style="display:none">` +
+            `<input type="number" class="fichas-new-drop-input" min="1" placeholder="Monto drop">` +
+            `<button class="fichas-drop-confirm">✓</button>` +
+            `<button class="fichas-drop-cancel">✕</button>` +
+            `</span>` +
+            `</div>` +
+            `</div>`;
+
+        const dropsList = card.querySelector('.fichas-drops-list');
+        (horaObj.drops || []).forEach(dr => dropsList.appendChild(crearDropItem(dr, horaObj, card, actualizarNeto)));
+
+        // Time input
+        card.querySelector('.fichas-hora-time').addEventListener('change', e => {
+            horaObj.hora = e.target.value;
+            guardarFichasData();
+        });
+
+        // Delete hour
+        card.querySelector('.fichas-hora-del').addEventListener('click', () => {
+            datos.horas = datos.horas.filter(h => h.id !== horaObj.id);
+            guardarFichasData();
+            actualizarSummaryPanel(panel);
+            card.remove();
+        });
+
+        // Cambios input
+        const cambiosInput = card.querySelector('.fichas-cambios-input');
+        const cambiosFmt   = card.querySelector('.fichas-cambios-fmt');
+        cambiosInput.addEventListener('input', () => {
+            const v = Math.max(0, parseInt(cambiosInput.value) || 0);
+            cambiosFmt.textContent = v > 0 ? fmtFichas(v) : '—';
+            horaObj.cambios = v;
+            guardarFichasData();
+            actualizarNeto();
+        });
+
+        // Add drop
+        const addBtn    = card.querySelector('.fichas-add-drop-btn');
+        const inputWrap = card.querySelector('.fichas-drop-input-wrap');
+        const dropInput = card.querySelector('.fichas-new-drop-input');
+        const confirmBtn = card.querySelector('.fichas-drop-confirm');
+        const cancelBtn  = card.querySelector('.fichas-drop-cancel');
+
+        addBtn.addEventListener('click', () => {
+            addBtn.style.display = 'none';
+            inputWrap.style.display = 'inline-flex';
+            dropInput.value = '';
+            dropInput.focus();
+        });
+
+        const confirmarDrop = () => {
+            const monto = parseInt(dropInput.value);
+            if (!monto || monto <= 0) { dropInput.focus(); return; }
+            const newDrop = { id: genId(), monto };
+            horaObj.drops = horaObj.drops || [];
+            horaObj.drops.push(newDrop);
+            guardarFichasData();
+            dropsList.appendChild(crearDropItem(newDrop, horaObj, card, actualizarNeto));
+            actualizarNeto();
+            addBtn.style.display = '';
+            inputWrap.style.display = 'none';
+        };
+        confirmBtn.addEventListener('click', confirmarDrop);
+        dropInput.addEventListener('keydown', e => { if (e.key === 'Enter') confirmarDrop(); if (e.key === 'Escape') cancelBtn.click(); });
+        cancelBtn.addEventListener('click', () => { addBtn.style.display = ''; inputWrap.style.display = 'none'; });
+
+        return card;
+    }
+
+    function crearDropItem(dr, horaObj, card, actualizarNeto) {
+        const item = document.createElement('div');
+        item.className = 'fichas-drop-item';
+        item.innerHTML =
+            `<span class="fichas-drop-chip">🪙</span>` +
+            `<span class="fichas-drop-amt">$${fmtFichas(dr.monto)}</span>` +
+            `<span class="fichas-drop-badge">Drop ingresado</span>` +
+            `<button class="fichas-drop-del" title="Eliminar">×</button>`;
+        item.querySelector('.fichas-drop-del').addEventListener('click', () => {
+            horaObj.drops = horaObj.drops.filter(d => d.id !== dr.id);
+            guardarFichasData();
+            actualizarNeto();
+            item.remove();
+        });
+        return item;
     }
 
     function setupEventListeners() {
