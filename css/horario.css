@@ -703,98 +703,88 @@ footer {
 }
 .fichas-clear-btn:hover { border-color: var(--danger-color); color: var(--danger-color); }
 
-/* Nueva hora button */
-.fichas-nueva-hora-btn {
-    padding: 3px 10px; border: 1px solid var(--primary-color); border-radius: 5px;
-    background: none; color: var(--primary-color);
-    font-family: inherit; font-size: 0.76em; font-weight: 600; cursor: pointer;
+/* Add form */
+.fichas-add-form {
+    display: flex; gap: 6px; align-items: center;
+    margin-bottom: 8px; padding: 7px 8px;
+    background: var(--hover-bg-color); border-radius: 7px;
 }
-.fichas-nueva-hora-btn:hover { background: rgba(52,152,219,0.1); }
-
-/* Hour cards */
-.fichas-cambios-section { padding-bottom: 10px; }
-.fichas-horas-container { display: flex; flex-direction: column; gap: 7px; }
-.fichas-hora-card {
-    border: 1px solid var(--border-color);
-    border-radius: 7px;
-    overflow: hidden;
-    background: var(--bg-color);
-}
-.fichas-hora-header {
-    display: flex; align-items: center; gap: 8px;
-    padding: 5px 10px;
-    background: var(--hover-bg-color);
-    border-bottom: 1px solid var(--border-color);
-}
-.fichas-hora-time {
+.fichas-form-hora {
+    width: 84px; padding: 5px 6px;
     border: 1px solid var(--border-color); border-radius: 5px;
     background: var(--bg-color); color: var(--text-color);
-    padding: 2px 5px; font-family: inherit; font-size: 0.9em; font-weight: 700;
+    font-family: inherit; font-size: 0.87em; font-weight: 700;
 }
-.fichas-hora-neto-badge {
-    margin-left: auto; font-size: 0.77em; font-weight: 700;
+.fichas-form-monto {
+    flex: 1; padding: 5px 8px; text-align: right;
+    border: 1px solid var(--border-color); border-radius: 5px;
+    background: var(--bg-color); color: var(--text-color);
+    font-family: inherit; font-size: 0.87em;
+    font-variant-numeric: tabular-nums;
+}
+.fichas-form-monto:focus { outline: none; border-color: var(--primary-color); }
+.fichas-form-agregar {
+    padding: 5px 12px; background: var(--primary-color); color: white;
+    border: none; border-radius: 5px; font-family: inherit;
+    font-size: 0.84em; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.fichas-form-agregar:hover { background: var(--primary-hover-color); }
+
+/* Hour rows list */
+.fichas-cambios-section { padding-bottom: 10px; }
+.fichas-horas-lista { display: flex; flex-direction: column; gap: 4px; }
+.fichas-hora-row { border: 1px solid var(--border-color); border-radius: 7px; overflow: hidden; }
+.fichas-row-main {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 10px; background: var(--bg-color); flex-wrap: wrap;
+}
+.fichas-row-hora { font-weight: 700; font-size: 0.88em; min-width: 40px; flex-shrink: 0; }
+.fichas-row-cambios { font-size: 0.84em; font-variant-numeric: tabular-nums; }
+.fichas-row-drop-tot { font-size: 0.78em; color: var(--text-secondary-color); }
+.fichas-row-drop-tot.has-drop { color: var(--danger-color); font-weight: 600; }
+.fichas-row-neto {
+    margin-left: auto; font-size: 0.8em; font-weight: 700;
     color: var(--success-color); font-variant-numeric: tabular-nums;
 }
-.fichas-hora-neto-badge.neto-negativo { color: var(--danger-color); }
-.fichas-hora-del {
+.fichas-row-neto.neto-negativo { color: var(--danger-color); }
+.fichas-row-drop-btn {
+    padding: 2px 8px; border: 1px dashed var(--border-color); border-radius: 5px;
+    background: none; color: var(--text-secondary-color);
+    font-family: inherit; font-size: 0.73em; cursor: pointer; flex-shrink: 0;
+}
+.fichas-row-drop-btn:hover { border-color: var(--danger-color); color: var(--danger-color); }
+.fichas-row-del {
     background: none; border: none; cursor: pointer;
-    color: var(--text-secondary-color); font-size: 1em; line-height: 1; padding: 1px 4px;
+    color: var(--text-secondary-color); font-size: 1em; padding: 0 2px; line-height: 1; flex-shrink: 0;
 }
-.fichas-hora-del:hover { color: var(--danger-color); }
+.fichas-row-del:hover { color: var(--danger-color); }
 
-/* Cambios row */
-.fichas-cambio-row {
-    display: flex; align-items: center; gap: 8px;
-    padding: 6px 10px 4px;
+/* Drop sub-row */
+.fichas-drops-sub {
+    padding: 4px 10px 6px;
+    border-top: 1px solid rgba(231,76,60,0.2);
+    background: rgba(231,76,60,0.04);
 }
-.fichas-campo-label { font-size: 0.8em; font-weight: 600; white-space: nowrap; }
-.fichas-cambios-input {
-    width: 90px; text-align: right; padding: 3px 6px;
-    border: 1px solid var(--border-color); border-radius: 5px;
-    background: var(--bg-color); color: var(--text-color);
-    font-family: inherit; font-size: 0.87em; -moz-appearance: textfield;
+.fichas-drops-list { display: flex; flex-direction: column; gap: 3px; margin-bottom: 4px; }
+.fichas-mini-drop {
+    display: flex; align-items: center; gap: 5px; font-size: 0.82em; padding: 2px 2px;
 }
-.fichas-cambios-input::-webkit-outer-spin-button,
-.fichas-cambios-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.fichas-cambios-input:focus { outline: none; border-color: var(--primary-color); }
-.fichas-cambios-fmt { font-size: 0.79em; color: var(--text-secondary-color); font-variant-numeric: tabular-nums; }
-
-/* Drop list */
-.fichas-drops-section { padding: 2px 10px 7px; }
-.fichas-drops-list { display: flex; flex-direction: column; gap: 3px; margin-bottom: 5px; }
-.fichas-drop-item {
-    display: flex; align-items: center; gap: 6px;
-    background: rgba(231,76,60,0.07); border: 1px solid rgba(231,76,60,0.22);
-    border-radius: 5px; padding: 3px 8px;
-}
-.fichas-drop-chip { font-size: 0.88em; }
-.fichas-drop-amt { font-size: 0.83em; font-weight: 700; font-variant-numeric: tabular-nums; }
+.fichas-drop-amt { font-weight: 700; font-variant-numeric: tabular-nums; }
 .fichas-drop-badge {
     font-size: 0.68em; color: var(--danger-color);
-    background: rgba(231,76,60,0.12); border-radius: 4px; padding: 1px 5px; margin-left: 2px;
+    background: rgba(231,76,60,0.12); border-radius: 4px; padding: 1px 5px;
 }
 .fichas-drop-del {
     margin-left: auto; background: none; border: none;
-    cursor: pointer; color: var(--danger-color); font-size: 0.9em; padding: 0 2px; line-height: 1;
+    cursor: pointer; color: var(--danger-color); font-size: 0.88em; padding: 0; line-height: 1;
 }
-
-/* Add drop inline */
-.fichas-add-drop-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-.fichas-add-drop-btn {
-    padding: 3px 10px; border: 1px dashed var(--border-color); border-radius: 5px;
-    background: none; color: var(--text-secondary-color);
-    font-family: inherit; font-size: 0.76em; cursor: pointer;
-}
-.fichas-add-drop-btn:hover { border-color: var(--danger-color); color: var(--danger-color); }
-.fichas-drop-input-wrap { display: inline-flex; align-items: center; gap: 4px; }
-.fichas-new-drop-input {
-    width: 95px; padding: 3px 6px;
+.fichas-inline-form { display: none; align-items: center; gap: 4px; }
+.fichas-inline-monto {
+    width: 105px; padding: 3px 6px; text-align: right;
     border: 1px solid var(--danger-color); border-radius: 5px;
     background: var(--bg-color); color: var(--text-color);
-    font-family: inherit; font-size: 0.84em; -moz-appearance: textfield;
+    font-family: inherit; font-size: 0.83em; font-variant-numeric: tabular-nums;
 }
-.fichas-new-drop-input::-webkit-outer-spin-button,
-.fichas-new-drop-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.fichas-new-drop-input:focus { outline: none; }
-.fichas-drop-confirm { background: var(--success-color); color: white; border: none; border-radius: 4px; padding: 3px 7px; font-size: 0.82em; cursor: pointer; }
-.fichas-drop-cancel  { background: var(--neutral-color);  color: white; border: none; border-radius: 4px; padding: 3px 7px; font-size: 0.82em; cursor: pointer; }
+.fichas-inline-monto:focus { outline: none; }
+.fichas-inline-ok     { background: var(--success-color); color: white; border: none; border-radius: 4px; padding: 3px 7px; font-size: 0.8em; cursor: pointer; }
+.fichas-inline-cancel { background: var(--neutral-color); color: white; border: none; border-radius: 4px; padding: 3px 7px; font-size: 0.8em; cursor: pointer; }

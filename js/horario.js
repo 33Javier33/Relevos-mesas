@@ -1435,153 +1435,172 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const cambiosTitleRow = document.createElement('div');
         cambiosTitleRow.className = 'fichas-section-title-row';
-        cambiosTitleRow.innerHTML =
-            '<span class="fichas-section-title">Cambios y Fichas Drop</span>' +
-            '<button class="fichas-nueva-hora-btn">+ Nueva hora</button>';
+        cambiosTitleRow.innerHTML = '<span class="fichas-section-title">Cambios y Fichas Drop</span>';
         secCambios.appendChild(cambiosTitleRow);
 
-        const horasContainer = document.createElement('div');
-        horasContainer.className = 'fichas-horas-container';
-        [...(datos.horas || [])].reverse().forEach(h => {
-            horasContainer.appendChild(crearHoraCard(h, datos, panel));
-        });
-        secCambios.appendChild(horasContainer);
+        // Add form: [hora] [monto] [Agregar]
+        const addForm = document.createElement('div');
+        addForm.className = 'fichas-add-form';
+        addForm.innerHTML =
+            `<input type="time" class="fichas-form-hora">` +
+            `<input type="text" class="fichas-form-monto" placeholder="Cambios $" inputmode="numeric">` +
+            `<button class="fichas-form-agregar">Agregar</button>`;
+        setupMoneyInput(addForm.querySelector('.fichas-form-monto'));
+        secCambios.appendChild(addForm);
 
-        cambiosTitleRow.querySelector('.fichas-nueva-hora-btn').addEventListener('click', () => {
-            const now = new Date();
-            const newH = {
-                id: genId(),
-                hora: `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`,
-                cambios: 0,
-                drops: []
-            };
+        // List of hour entries
+        const lista = document.createElement('div');
+        lista.className = 'fichas-horas-lista';
+        [...(datos.horas || [])].sort((a, b) => (b.hora || '').localeCompare(a.hora || '')).forEach(h => {
+            lista.appendChild(crearHoraRow(h, datos, panel));
+        });
+        secCambios.appendChild(lista);
+
+        addForm.querySelector('.fichas-form-agregar').addEventListener('click', () => {
+            const horaVal  = addForm.querySelector('.fichas-form-hora').value;
+            const montoVal = parseInt(addForm.querySelector('.fichas-form-monto').value.replace(/\D/g, '')) || 0;
+            if (!horaVal && !montoVal) return;
+            const newH = { id: genId(), hora: horaVal, cambios: montoVal, drops: [] };
             datos.horas.push(newH);
             guardarFichasData();
             actualizarSummaryPanel(panel);
-            horasContainer.insertBefore(crearHoraCard(newH, datos, panel), horasContainer.firstChild);
+            const newRow = crearHoraRow(newH, datos, panel);
+            const existing = lista.querySelectorAll('.fichas-hora-row');
+            let placed = false;
+            for (const r of existing) {
+                if ((newH.hora || '') >= (r.dataset.hora || '')) { lista.insertBefore(newRow, r); placed = true; break; }
+            }
+            if (!placed) lista.appendChild(newRow);
+            addForm.querySelector('.fichas-form-hora').value = '';
+            addForm.querySelector('.fichas-form-monto').value = '';
         });
 
         panel.appendChild(secCambios);
         return panel;
     }
 
-    function crearHoraCard(horaObj, datos, panel) {
-        const card = document.createElement('div');
-        card.className = 'fichas-hora-card';
-        card.dataset.horaId = horaObj.id;
+    function setupMoneyInput(input) {
+        input.addEventListener('input', () => {
+            const raw = input.value.replace(/\D/g, '');
+            const num = parseInt(raw) || 0;
+            input.value = num > 0 ? num.toLocaleString('es-AR') : '';
+        });
+    }
 
-        function actualizarNeto() {
-            const n = calcNetoHora(horaObj);
-            const badge = card.querySelector('.fichas-hora-neto-badge');
-            if (badge) {
-                badge.textContent = `Neto: $${fmtFichas(Math.abs(n))}${n < 0 ? ' ▼' : ''}`;
-                badge.className = 'fichas-hora-neto-badge' + (n < 0 ? ' neto-negativo' : '');
+    function crearHoraRow(horaObj, datos, panel) {
+        const row = document.createElement('div');
+        row.className = 'fichas-hora-row';
+        row.dataset.hora   = horaObj.hora || '';
+        row.dataset.horaId = horaObj.id;
+
+        function dropTotal() { return (horaObj.drops || []).reduce((s, d) => s + (parseInt(d.monto) || 0), 0); }
+
+        function actualizarRowNeto() {
+            const n  = calcNetoHora(horaObj);
+            const dt = dropTotal();
+            const netoBadge = row.querySelector('.fichas-row-neto');
+            const dropBadge = row.querySelector('.fichas-row-drop-tot');
+            if (netoBadge) {
+                netoBadge.textContent = `Neto: $${fmtFichas(Math.abs(n))}`;
+                netoBadge.className   = 'fichas-row-neto' + (n < 0 ? ' neto-negativo' : '');
+            }
+            if (dropBadge) {
+                dropBadge.textContent = dt > 0 ? `Drop: $${fmtFichas(dt)}` : '';
+                dropBadge.className   = 'fichas-row-drop-tot' + (dt > 0 ? ' has-drop' : '');
             }
             actualizarSummaryPanel(panel);
         }
 
-        // Header
         const neto = calcNetoHora(horaObj);
-        card.innerHTML =
-            `<div class="fichas-hora-header">` +
-            `<input type="time" class="fichas-hora-time" value="${horaObj.hora || ''}">` +
-            `<span class="fichas-hora-neto-badge${neto < 0 ? ' neto-negativo' : ''}">Neto: $${fmtFichas(Math.abs(neto))}${neto < 0 ? ' ▼' : ''}</span>` +
-            `<button class="fichas-hora-del" title="Eliminar hora">×</button>` +
+        const dt   = dropTotal();
+        row.innerHTML =
+            `<div class="fichas-row-main">` +
+                `<span class="fichas-row-hora">${horaObj.hora || '—'}</span>` +
+                `<span class="fichas-row-cambios">$${fmtFichas(horaObj.cambios || 0)}</span>` +
+                `<span class="fichas-row-drop-tot${dt > 0 ? ' has-drop' : ''}">${dt > 0 ? `Drop: $${fmtFichas(dt)}` : ''}</span>` +
+                `<span class="fichas-row-neto${neto < 0 ? ' neto-negativo' : ''}">Neto: $${fmtFichas(Math.abs(neto))}</span>` +
+                `<button class="fichas-row-drop-btn" title="Agregar ficha drop">🪙 Drop</button>` +
+                `<button class="fichas-row-del" title="Eliminar">×</button>` +
             `</div>` +
-            `<div class="fichas-cambio-row">` +
-            `<label class="fichas-campo-label">💵 Cambios:</label>` +
-            `<input type="number" class="fichas-cambios-input" min="0" value="${horaObj.cambios || ''}" placeholder="0">` +
-            `<span class="fichas-cambios-fmt">${horaObj.cambios > 0 ? fmtFichas(horaObj.cambios) : '—'}</span>` +
-            `</div>` +
-            `<div class="fichas-drops-section">` +
-            `<div class="fichas-drops-list"></div>` +
-            `<div class="fichas-add-drop-row">` +
-            `<button class="fichas-add-drop-btn">🪙 + Ficha Drop</button>` +
-            `<span class="fichas-drop-input-wrap" style="display:none">` +
-            `<input type="number" class="fichas-new-drop-input" min="1" placeholder="Monto drop">` +
-            `<button class="fichas-drop-confirm">✓</button>` +
-            `<button class="fichas-drop-cancel">✕</button>` +
-            `</span>` +
-            `</div>` +
+            `<div class="fichas-drops-sub" style="display:none">` +
+                `<div class="fichas-drops-list"></div>` +
+                `<div class="fichas-inline-form" style="display:none">` +
+                    `<input type="text" class="fichas-inline-monto" placeholder="Monto drop" inputmode="numeric">` +
+                    `<button class="fichas-inline-ok">✓</button>` +
+                    `<button class="fichas-inline-cancel">✕</button>` +
+                `</div>` +
             `</div>`;
 
-        const dropsList = card.querySelector('.fichas-drops-list');
-        (horaObj.drops || []).forEach(dr => dropsList.appendChild(crearDropItem(dr, horaObj, card, actualizarNeto)));
+        const dropsSub  = row.querySelector('.fichas-drops-sub');
+        const dropsList = row.querySelector('.fichas-drops-list');
+        if ((horaObj.drops || []).length > 0) {
+            dropsSub.style.display = 'block';
+            horaObj.drops.forEach(dr => dropsList.appendChild(crearMiniDrop(dr, horaObj, row, actualizarRowNeto)));
+        }
 
-        // Time input
-        card.querySelector('.fichas-hora-time').addEventListener('change', e => {
-            horaObj.hora = e.target.value;
-            guardarFichasData();
-        });
-
-        // Delete hour
-        card.querySelector('.fichas-hora-del').addEventListener('click', () => {
+        row.querySelector('.fichas-row-del').addEventListener('click', () => {
             datos.horas = datos.horas.filter(h => h.id !== horaObj.id);
             guardarFichasData();
             actualizarSummaryPanel(panel);
-            card.remove();
+            row.remove();
         });
 
-        // Cambios input
-        const cambiosInput = card.querySelector('.fichas-cambios-input');
-        const cambiosFmt   = card.querySelector('.fichas-cambios-fmt');
-        cambiosInput.addEventListener('input', () => {
-            const v = Math.max(0, parseInt(cambiosInput.value) || 0);
-            cambiosFmt.textContent = v > 0 ? fmtFichas(v) : '—';
-            horaObj.cambios = v;
-            guardarFichasData();
-            actualizarNeto();
-        });
+        const inlineForm  = row.querySelector('.fichas-inline-form');
+        const inlineMonto = row.querySelector('.fichas-inline-monto');
+        setupMoneyInput(inlineMonto);
 
-        // Add drop
-        const addBtn    = card.querySelector('.fichas-add-drop-btn');
-        const inputWrap = card.querySelector('.fichas-drop-input-wrap');
-        const dropInput = card.querySelector('.fichas-new-drop-input');
-        const confirmBtn = card.querySelector('.fichas-drop-confirm');
-        const cancelBtn  = card.querySelector('.fichas-drop-cancel');
-
-        addBtn.addEventListener('click', () => {
-            addBtn.style.display = 'none';
-            inputWrap.style.display = 'inline-flex';
-            dropInput.value = '';
-            dropInput.focus();
+        row.querySelector('.fichas-row-drop-btn').addEventListener('click', () => {
+            dropsSub.style.display = 'block';
+            inlineForm.style.display = 'flex';
+            inlineMonto.value = '';
+            inlineMonto.focus();
         });
 
         const confirmarDrop = () => {
-            const monto = parseInt(dropInput.value);
-            if (!monto || monto <= 0) { dropInput.focus(); return; }
+            const monto = parseInt(inlineMonto.value.replace(/\D/g, '')) || 0;
+            if (!monto) { inlineMonto.focus(); return; }
             const newDrop = { id: genId(), monto };
             horaObj.drops = horaObj.drops || [];
             horaObj.drops.push(newDrop);
             guardarFichasData();
-            dropsList.appendChild(crearDropItem(newDrop, horaObj, card, actualizarNeto));
-            actualizarNeto();
-            addBtn.style.display = '';
-            inputWrap.style.display = 'none';
+            dropsList.appendChild(crearMiniDrop(newDrop, horaObj, row, actualizarRowNeto));
+            actualizarRowNeto();
+            inlineForm.style.display = 'none';
+            inlineMonto.value = '';
         };
-        confirmBtn.addEventListener('click', confirmarDrop);
-        dropInput.addEventListener('keydown', e => { if (e.key === 'Enter') confirmarDrop(); if (e.key === 'Escape') cancelBtn.click(); });
-        cancelBtn.addEventListener('click', () => { addBtn.style.display = ''; inputWrap.style.display = 'none'; });
+        row.querySelector('.fichas-inline-ok').addEventListener('click', confirmarDrop);
+        inlineMonto.addEventListener('keydown', e => {
+            if (e.key === 'Enter') confirmarDrop();
+            if (e.key === 'Escape') row.querySelector('.fichas-inline-cancel').click();
+        });
+        row.querySelector('.fichas-inline-cancel').addEventListener('click', () => {
+            inlineForm.style.display = 'none';
+        });
 
-        return card;
+        return row;
     }
 
-    function crearDropItem(dr, horaObj, card, actualizarNeto) {
+    function crearMiniDrop(dr, horaObj, row, actualizarRowNeto) {
         const item = document.createElement('div');
-        item.className = 'fichas-drop-item';
+        item.className = 'fichas-mini-drop';
         item.innerHTML =
-            `<span class="fichas-drop-chip">🪙</span>` +
+            `<span>🪙</span>` +
             `<span class="fichas-drop-amt">$${fmtFichas(dr.monto)}</span>` +
             `<span class="fichas-drop-badge">Drop ingresado</span>` +
-            `<button class="fichas-drop-del" title="Eliminar">×</button>`;
+            `<button class="fichas-drop-del">×</button>`;
         item.querySelector('.fichas-drop-del').addEventListener('click', () => {
             horaObj.drops = horaObj.drops.filter(d => d.id !== dr.id);
             guardarFichasData();
-            actualizarNeto();
+            actualizarRowNeto();
             item.remove();
+            if ((horaObj.drops || []).length === 0) {
+                const sub = row.querySelector('.fichas-drops-sub');
+                if (sub) sub.style.display = 'none';
+            }
         });
         return item;
     }
+
 
     function setupEventListeners() {
         DOM.btnAplicarColor.addEventListener('click', aplicarColor);
