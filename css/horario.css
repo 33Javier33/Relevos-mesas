@@ -631,3 +631,98 @@ footer {
     transform-origin: center top;
     filter: drop-shadow(0 0 4px var(--danger-color));
 }
+
+/* ── Fichas de Mesa ─────────────────────────────────────── */
+.fichas-modal-content { max-width: 460px; }
+#fichas-content { max-height: 65vh; overflow-y: auto; padding-right: 2px; }
+.fichas-mesa-panel {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 14px;
+    overflow: hidden;
+}
+.fichas-mesa-header {
+    padding: 9px 14px;
+    background: var(--hover-bg-color);
+    font-weight: 700;
+    font-size: 0.95em;
+    border-bottom: 1px solid var(--border-color);
+}
+.fichas-tabla { padding: 5px 0 2px; }
+.fichas-row {
+    display: grid;
+    grid-template-columns: 1fr 16px 54px 16px 1fr;
+    align-items: center;
+    gap: 2px;
+    padding: 3px 12px;
+}
+.fichas-den {
+    text-align: right;
+    font-size: 0.82em;
+    color: var(--text-secondary-color);
+    font-variant-numeric: tabular-nums;
+}
+.fichas-sep {
+    text-align: center;
+    color: var(--border-color);
+    font-size: 0.75em;
+    user-select: none;
+}
+.fichas-cantidad {
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+    padding: 3px 4px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-family: inherit;
+    font-size: 0.88em;
+    -moz-appearance: textfield;
+}
+.fichas-cantidad::-webkit-outer-spin-button,
+.fichas-cantidad::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.fichas-cantidad:focus { outline: none; border-color: var(--primary-color); }
+.fichas-total {
+    text-align: right;
+    font-size: 0.82em;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+.fichas-total-row {
+    border-top: 1px solid var(--border-color);
+    margin-top: 5px;
+    padding-top: 5px;
+}
+.fichas-lbl-total {
+    text-align: right;
+    font-size: 0.75em;
+    font-weight: 700;
+    color: var(--text-secondary-color);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+.fichas-grand-total {
+    text-align: right;
+    font-weight: 700;
+    font-size: 0.9em;
+    color: var(--primary-color);
+    font-variant-numeric: tabular-nums;
+}
+.fichas-clear-row {
+    display: flex;
+    justify-content: flex-end;
+    padding: 4px 12px 8px;
+}
+.fichas-clear-btn {
+    padding: 3px 9px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background: none;
+    color: var(--text-secondary-color);
+    font-family: inherit;
+    font-size: 0.75em;
+    cursor: pointer;
+}
+.fichas-clear-btn:hover { border-color: var(--danger-color); color: var(--danger-color); }

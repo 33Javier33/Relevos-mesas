@@ -6,6 +6,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const URL_DEL_SCRIPT_DE_HORARIOS = 'https://script.google.com/macros/s/AKfycbw1kBHYt37_X5K7UdBZlJNTgNT2B2P0t4F6uVrCKK_hDgZ7j09cwSzNx5l9CvHwFCTDQg/exec';
 
     let croupiersData = [], croupiersEnEspera = [], horarios = [], mesasDeJuego = [], mesasHabilitadas = [], datosRelevos = {}, croupierColors = {}, croupierSalidas = {}, horarioColors = {};
+    let fichasData = {};
+    const DENOMINACIONES = [1000000, 500000, 200000, 100000, 50000, 20000, 10000, 5000, 1000, 500];
+    const fmtFichas = n => n.toLocaleString('es-AR');
     let cronometroIntervals = {}, cronometroStartTime = {}, cronometroCurrentStartTime = {};
     let fechaVisible = new Date(), celdaActiva = { croupier: null, horario: null }, croupierCronoActivo = null, croupierSalidaActivo = null, quickAddCurrentFilter = 'todos';
 
@@ -1285,6 +1288,105 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.textContent = 'Guardar';
     }
 
+    function abrirFichasModal() {
+        try { fichasData = JSON.parse(localStorage.getItem('fichasData') || '{}'); } catch { fichasData = {}; }
+        const mesas = mesasHabilitadas.length > 0 ? mesasHabilitadas : mesasDeJuego;
+        const content = document.getElementById('fichas-content');
+        content.innerHTML = '';
+        if (!mesas.length) {
+            content.innerHTML = '<p style="text-align:center;color:var(--text-secondary-color);padding:24px 0">No hay mesas configuradas. Usá "Mesas del turno" para activarlas.</p>';
+        } else {
+            mesas.forEach(mesa => content.appendChild(crearPanelFichas(mesa)));
+        }
+        document.getElementById('fichas-modal').style.display = 'flex';
+    }
+
+    function crearPanelFichas(mesa) {
+        const datos = fichasData[mesa] || {};
+        const panel = document.createElement('div');
+        panel.className = 'fichas-mesa-panel';
+
+        const header = document.createElement('div');
+        header.className = 'fichas-mesa-header';
+        header.textContent = `🎰 ${mesa}`;
+        panel.appendChild(header);
+
+        const tabla = document.createElement('div');
+        tabla.className = 'fichas-tabla';
+
+        DENOMINACIONES.forEach(den => {
+            const qty = parseInt(datos[String(den)]) || 0;
+            const row = document.createElement('div');
+            row.className = 'fichas-row';
+
+            const denSpan = document.createElement('span');
+            denSpan.className = 'fichas-den';
+            denSpan.textContent = fmtFichas(den);
+
+            const sep1 = document.createElement('span');
+            sep1.className = 'fichas-sep';
+            sep1.textContent = '—';
+
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.className = 'fichas-cantidad';
+            input.min = '0';
+            input.value = qty || '';
+            input.placeholder = '0';
+            input.dataset.mesa = mesa;
+            input.dataset.den = String(den);
+
+            const sep2 = document.createElement('span');
+            sep2.className = 'fichas-sep';
+            sep2.textContent = '—';
+
+            const totalSpan = document.createElement('span');
+            totalSpan.className = 'fichas-total';
+            totalSpan.textContent = qty > 0 ? fmtFichas(den * qty) : '—';
+
+            row.appendChild(denSpan);
+            row.appendChild(sep1);
+            row.appendChild(input);
+            row.appendChild(sep2);
+            row.appendChild(totalSpan);
+            tabla.appendChild(row);
+
+            input.addEventListener('input', () => {
+                const q = Math.max(0, parseInt(input.value) || 0);
+                totalSpan.textContent = q > 0 ? fmtFichas(den * q) : '—';
+                if (!fichasData[mesa]) fichasData[mesa] = {};
+                fichasData[mesa][String(den)] = q;
+                const grand = DENOMINACIONES.reduce((s, d) => s + d * (fichasData[mesa]?.[String(d)] || 0), 0);
+                panel.querySelector('.fichas-grand-total').textContent = grand > 0 ? fmtFichas(grand) : '—';
+                localStorage.setItem('fichasData', JSON.stringify(fichasData));
+            });
+        });
+
+        const grandTotal = DENOMINACIONES.reduce((s, d) => s + d * (parseInt(datos[String(d)]) || 0), 0);
+        const totalRow = document.createElement('div');
+        totalRow.className = 'fichas-row fichas-total-row';
+        totalRow.innerHTML = `<span></span><span></span><span class="fichas-lbl-total">TOTAL</span><span></span><span class="fichas-grand-total">${grandTotal > 0 ? fmtFichas(grandTotal) : '—'}</span>`;
+        tabla.appendChild(totalRow);
+
+        const clearRow = document.createElement('div');
+        clearRow.className = 'fichas-clear-row';
+        const clearBtn = document.createElement('button');
+        clearBtn.className = 'fichas-clear-btn';
+        clearBtn.textContent = '🗑️ Limpiar';
+        clearBtn.addEventListener('click', () => {
+            fichasData[mesa] = {};
+            localStorage.setItem('fichasData', JSON.stringify(fichasData));
+            tabla.querySelectorAll('.fichas-cantidad').forEach(inp => { inp.value = ''; });
+            tabla.querySelectorAll('.fichas-total').forEach(s => { s.textContent = '—'; });
+            panel.querySelector('.fichas-grand-total').textContent = '—';
+        });
+        clearRow.appendChild(clearBtn);
+        tabla.appendChild(clearRow);
+
+        panel.appendChild(tabla);
+        return panel;
+    }
+
     function setupEventListeners() {
         DOM.btnAplicarColor.addEventListener('click', aplicarColor);
         DOM.fechaDisplay.addEventListener('click', abrirFechaModal);
@@ -1360,6 +1462,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('btn-cerrar-sesion').addEventListener('click', cerrarSesion);
         document.getElementById('btn-config-passwords').addEventListener('click', abrirConfigPasswordsModal);
         document.getElementById('btn-guardar-passwords').addEventListener('click', guardarConfigPasswords);
+        document.getElementById('btn-fichas-mesa').addEventListener('click', abrirFichasModal);
+        document.getElementById('btn-fichas-cerrar').addEventListener('click', cerrarModales);
     }
 
     function calcularEstadisticas() {
