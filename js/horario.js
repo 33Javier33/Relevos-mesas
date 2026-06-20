@@ -1320,22 +1320,26 @@ document.addEventListener('DOMContentLoaded', () => {
     function calcTotalInventario(inv) {
         return DENOMINACIONES.reduce((s, d) => s + d * (parseInt(inv[String(d)]) || 0), 0);
     }
-    function calcNetoHora(h) {
-        return (parseInt(h.cambios) || 0) - (h.drops || []).reduce((s, dr) => s + (parseInt(dr.monto) || 0), 0);
+    function calcDropHora(h) {
+        return (h.drops || []).reduce((s, dr) => s + (parseInt(dr.monto) || 0), 0);
     }
+    function calcEfectivoHora(h) {
+        return (parseInt(h.cambios) || 0) - calcDropHora(h);
+    }
+    function calcNetoHora(h) { return calcEfectivoHora(h); }
     function calcNetoMesa(datos) {
-        return (datos.horas || []).reduce((s, h) => s + calcNetoHora(h), 0);
+        return (datos.horas || []).reduce((s, h) => s + calcEfectivoHora(h), 0);
     }
 
     function actualizarSummaryPanel(panel) {
         const mesa = panel.dataset.mesa;
         const datos = getMesaData(mesa);
         const chips = calcTotalInventario(datos.inventario);
-        const neto = calcNetoMesa(datos);
+        const efectivo = calcNetoMesa(datos);
         const chipsEl = panel.querySelector('.fichas-summary-chips');
         const netEl   = panel.querySelector('.fichas-summary-net');
         if (chipsEl) chipsEl.textContent = chips > 0 ? `Chips: $${fmtFichas(chips)}` : 'Sin fichas';
-        if (netEl)   netEl.textContent   = neto  > 0 ? `Neto: $${fmtFichas(neto)}`  : '';
+        if (netEl)   netEl.textContent   = efectivo > 0 ? `Efectivo: $${fmtFichas(efectivo)}` : '';
     }
 
     function abrirFichasModal() {
@@ -1438,15 +1442,85 @@ document.addEventListener('DOMContentLoaded', () => {
         cambiosTitleRow.innerHTML = '<span class="fichas-section-title">Cambios y Fichas Drop</span>';
         secCambios.appendChild(cambiosTitleRow);
 
-        // Add form: [hora] [monto] [Agregar]
+        // Add form: [hora] [Total de cambio] [Agregar]
         const addForm = document.createElement('div');
         addForm.className = 'fichas-add-form';
         addForm.innerHTML =
             `<input type="time" class="fichas-form-hora">` +
-            `<input type="text" class="fichas-form-monto" placeholder="Cambios $" inputmode="numeric">` +
+            `<input type="text" class="fichas-form-monto" placeholder="Total de cambio $" inputmode="numeric">` +
             `<button class="fichas-form-agregar">Agregar</button>`;
         setupMoneyInput(addForm.querySelector('.fichas-form-monto'));
         secCambios.appendChild(addForm);
+
+        // Quick drop: add ficha drop without needing a cambio entry first
+        const quickDropBar = document.createElement('div');
+        quickDropBar.className = 'fichas-quick-drop-bar';
+        quickDropBar.innerHTML =
+            `<button class="fichas-quick-drop-btn">🪙 Agregar Ficha Drop</button>` +
+            `<div class="fichas-quick-drop-form" style="display:none">` +
+                `<input type="time" class="fichas-qdrop-hora">` +
+                `<input type="text" class="fichas-qdrop-monto" placeholder="Monto drop $" inputmode="numeric">` +
+                `<button class="fichas-qdrop-ok">✓</button>` +
+                `<button class="fichas-qdrop-cancel">✕</button>` +
+            `</div>`;
+        setupMoneyInput(quickDropBar.querySelector('.fichas-qdrop-monto'));
+
+        quickDropBar.querySelector('.fichas-quick-drop-btn').addEventListener('click', () => {
+            quickDropBar.querySelector('.fichas-quick-drop-form').style.display = 'flex';
+            quickDropBar.querySelector('.fichas-qdrop-hora').value = '';
+            quickDropBar.querySelector('.fichas-qdrop-monto').value = '';
+            quickDropBar.querySelector('.fichas-qdrop-hora').focus();
+        });
+        quickDropBar.querySelector('.fichas-qdrop-cancel').addEventListener('click', () => {
+            quickDropBar.querySelector('.fichas-quick-drop-form').style.display = 'none';
+        });
+
+        const confirmarQuickDrop = () => {
+            const horaVal  = quickDropBar.querySelector('.fichas-qdrop-hora').value;
+            const montoVal = parseInt(quickDropBar.querySelector('.fichas-qdrop-monto').value.replace(/\D/g, '')) || 0;
+            if (!montoVal) { quickDropBar.querySelector('.fichas-qdrop-monto').focus(); return; }
+            // find existing hora entry or create one with cambio=0
+            let horaObj = datos.horas.find(h => h.hora === horaVal);
+            let rowEl = horaVal ? lista.querySelector(`.fichas-hora-row[data-hora="${horaVal}"]`) : null;
+            if (!horaObj) {
+                horaObj = { id: genId(), hora: horaVal, cambios: 0, drops: [] };
+                datos.horas.push(horaObj);
+                const newRow = crearHoraRow(horaObj, datos, panel);
+                const existing = lista.querySelectorAll('.fichas-hora-row');
+                let placed = false;
+                for (const r of existing) {
+                    if ((horaVal || '') >= (r.dataset.hora || '')) { lista.insertBefore(newRow, r); placed = true; break; }
+                }
+                if (!placed) lista.appendChild(newRow);
+                rowEl = newRow;
+            }
+            const newDrop = { id: genId(), monto: montoVal };
+            horaObj.drops = horaObj.drops || [];
+            horaObj.drops.push(newDrop);
+            guardarFichasData();
+            actualizarSummaryPanel(panel);
+            // trigger row to add the drop visually
+            if (rowEl) {
+                const dropBtn = rowEl.querySelector('.fichas-row-drop-btn');
+                if (dropBtn) {
+                    const sub = rowEl.querySelector('.fichas-drops-sub');
+                    const dlist = rowEl.querySelector('.fichas-drops-list');
+                    const actualizarRowNeto = rowEl._actualizarRowNeto;
+                    if (sub) sub.style.display = 'block';
+                    if (dlist && actualizarRowNeto) {
+                        dlist.appendChild(crearMiniDrop(newDrop, horaObj, rowEl, actualizarRowNeto));
+                        actualizarRowNeto();
+                    }
+                }
+            }
+            quickDropBar.querySelector('.fichas-quick-drop-form').style.display = 'none';
+        };
+        quickDropBar.querySelector('.fichas-qdrop-ok').addEventListener('click', confirmarQuickDrop);
+        quickDropBar.querySelector('.fichas-qdrop-monto').addEventListener('keydown', e => {
+            if (e.key === 'Enter') confirmarQuickDrop();
+            if (e.key === 'Escape') quickDropBar.querySelector('.fichas-qdrop-cancel').click();
+        });
+        secCambios.appendChild(quickDropBar);
 
         // List of hour entries
         const lista = document.createElement('div');
@@ -1493,32 +1567,41 @@ document.addEventListener('DOMContentLoaded', () => {
         row.dataset.hora   = horaObj.hora || '';
         row.dataset.horaId = horaObj.id;
 
-        function dropTotal() { return (horaObj.drops || []).reduce((s, d) => s + (parseInt(d.monto) || 0), 0); }
+        function dropTotal() { return calcDropHora(horaObj); }
 
         function actualizarRowNeto() {
-            const n  = calcNetoHora(horaObj);
-            const dt = dropTotal();
-            const netoBadge = row.querySelector('.fichas-row-neto');
-            const dropBadge = row.querySelector('.fichas-row-drop-tot');
-            if (netoBadge) {
-                netoBadge.textContent = `Neto: $${fmtFichas(Math.abs(n))}`;
-                netoBadge.className   = 'fichas-row-neto' + (n < 0 ? ' neto-negativo' : '');
-            }
+            const total = parseInt(horaObj.cambios) || 0;
+            const dt    = dropTotal();
+            const efect = total - dt;
+            const totalBadge = row.querySelector('.fichas-row-cambios');
+            const dropBadge  = row.querySelector('.fichas-row-drop-tot');
+            const efectBadge = row.querySelector('.fichas-row-neto');
+            if (totalBadge) totalBadge.textContent = `Total: $${fmtFichas(total)}`;
             if (dropBadge) {
                 dropBadge.textContent = dt > 0 ? `Drop: $${fmtFichas(dt)}` : '';
                 dropBadge.className   = 'fichas-row-drop-tot' + (dt > 0 ? ' has-drop' : '');
             }
+            if (efectBadge) {
+                if (dt > 0) {
+                    efectBadge.textContent = `Efectivo: $${fmtFichas(efect)}`;
+                    efectBadge.className   = 'fichas-row-neto' + (efect < 0 ? ' neto-negativo' : '');
+                    efectBadge.style.display = '';
+                } else {
+                    efectBadge.style.display = 'none';
+                }
+            }
             actualizarSummaryPanel(panel);
         }
 
-        const neto = calcNetoHora(horaObj);
+        const total0 = parseInt(horaObj.cambios) || 0;
         const dt   = dropTotal();
+        const efect0 = total0 - dt;
         row.innerHTML =
             `<div class="fichas-row-main">` +
                 `<span class="fichas-row-hora">${horaObj.hora || '—'}</span>` +
-                `<span class="fichas-row-cambios">$${fmtFichas(horaObj.cambios || 0)}</span>` +
+                `<span class="fichas-row-cambios">Total: $${fmtFichas(total0)}</span>` +
                 `<span class="fichas-row-drop-tot${dt > 0 ? ' has-drop' : ''}">${dt > 0 ? `Drop: $${fmtFichas(dt)}` : ''}</span>` +
-                `<span class="fichas-row-neto${neto < 0 ? ' neto-negativo' : ''}">Neto: $${fmtFichas(Math.abs(neto))}</span>` +
+                `<span class="fichas-row-neto${efect0 < 0 ? ' neto-negativo' : ''}" style="${dt === 0 ? 'display:none' : ''}">Efectivo: $${fmtFichas(efect0)}</span>` +
                 `<button class="fichas-row-drop-btn" title="Agregar ficha drop">🪙 Drop</button>` +
                 `<button class="fichas-row-del" title="Eliminar">×</button>` +
             `</div>` +
@@ -1530,6 +1613,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     `<button class="fichas-inline-cancel">✕</button>` +
                 `</div>` +
             `</div>`;
+
+        row._actualizarRowNeto = actualizarRowNeto;
 
         const dropsSub  = row.querySelector('.fichas-drops-sub');
         const dropsList = row.querySelector('.fichas-drops-list');

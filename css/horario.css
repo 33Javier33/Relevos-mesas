@@ -788,3 +788,20 @@ footer {
 .fichas-inline-monto:focus { outline: none; }
 .fichas-inline-ok     { background: var(--success-color); color: white; border: none; border-radius: 4px; padding: 3px 7px; font-size: 0.8em; cursor: pointer; }
 .fichas-inline-cancel { background: var(--neutral-color); color: white; border: none; border-radius: 4px; padding: 3px 7px; font-size: 0.8em; cursor: pointer; }
+
+/* ── Quick drop bar ──────────────────────────────────────── */
+.fichas-quick-drop-bar { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 6px; }
+.fichas-quick-drop-btn {
+    align-self: flex-start;
+    background: #6b3fa0; color: white; border: none; border-radius: 5px;
+    padding: 4px 10px; font-size: 0.82em; cursor: pointer; font-weight: 600;
+}
+.fichas-quick-drop-btn:hover { background: #7d52b3; }
+.fichas-quick-drop-form {
+    display: none; align-items: center; gap: 5px; flex-wrap: wrap;
+    background: rgba(107,63,160,0.08); border-radius: 5px; padding: 5px 8px;
+}
+.fichas-qdrop-hora { width: 80px; padding: 3px 5px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg); color: var(--text-color); font-size: 0.85em; }
+.fichas-qdrop-monto { width: 130px; padding: 3px 6px; text-align: right; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg); color: var(--text-color); font-size: 0.85em; }
+.fichas-qdrop-ok     { background: var(--success-color); color: white; border: none; border-radius: 4px; padding: 3px 7px; font-size: 0.8em; cursor: pointer; }
+.fichas-qdrop-cancel { background: var(--neutral-color); color: white; border: none; border-radius: 4px; padding: 3px 7px; font-size: 0.8em; cursor: pointer; }
