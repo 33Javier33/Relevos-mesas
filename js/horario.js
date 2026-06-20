@@ -1309,10 +1309,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function getMesaData(mesa) {
-        if (!fichasData[mesa] || typeof fichasData[mesa] !== 'object') fichasData[mesa] = { inventario: {}, horas: [], snapshots: [] };
+        if (!fichasData[mesa] || typeof fichasData[mesa] !== 'object') fichasData[mesa] = { inventario: {}, horas: [], snapshots: [], recuentos: [] };
         if (!fichasData[mesa].inventario) fichasData[mesa].inventario = {};
         if (!fichasData[mesa].horas) fichasData[mesa].horas = [];
         if (!fichasData[mesa].snapshots) fichasData[mesa].snapshots = [];
+        if (!fichasData[mesa].recuentos) fichasData[mesa].recuentos = [];
         return fichasData[mesa];
     }
 
@@ -1389,6 +1390,9 @@ document.addEventListener('DOMContentLoaded', () => {
             `<span class="fichas-summary-chips">${chips > 0 ? `Chips: $${fmtFichas(chips)}` : 'Sin fichas'}</span>` +
             `<span class="fichas-summary-net">${neto > 0 ? `Neto: $${fmtFichas(neto)}` : ''}</span>`;
         panel.appendChild(summary);
+
+        // ── Section 0: Recuento ────────────────────────────────
+        panel.appendChild(crearSeccionRecuento(datos, panel));
 
         // ── Section 1: Inventario de Fichas ───────────────────
         const secInv = document.createElement('div');
@@ -1618,6 +1622,105 @@ document.addEventListener('DOMContentLoaded', () => {
         panel.appendChild(secBalance);
 
         return panel;
+    }
+
+    function crearSeccionRecuento(datos, panel) {
+        const sec = document.createElement('div');
+        sec.className = 'fichas-section fichas-recuento-section';
+
+        sec.innerHTML = '<div class="fichas-section-title-row"><span class="fichas-section-title">📋 Recuento</span></div>';
+
+        // Form
+        const now = new Date();
+        const fechaDefault = now.toISOString().slice(0, 16); // "YYYY-MM-DDTHH:MM"
+        const form = document.createElement('div');
+        form.className = 'fichas-rec-form';
+        form.innerHTML =
+            `<input type="datetime-local" class="fichas-rec-dt" value="${fechaDefault}">` +
+            `<div class="fichas-rec-inputs">` +
+                `<label class="fichas-rec-label">Billetes<input type="text" class="fichas-rec-billetes" placeholder="$ entrados" inputmode="numeric"></label>` +
+                `<label class="fichas-rec-label">Inventario<input type="text" class="fichas-rec-inv" placeholder="$ en fichas" inputmode="numeric"></label>` +
+            `</div>` +
+            `<button class="fichas-rec-guardar">Guardar recuento</button>`;
+        setupMoneyInput(form.querySelector('.fichas-rec-billetes'));
+        setupMoneyInput(form.querySelector('.fichas-rec-inv'));
+        sec.appendChild(form);
+
+        const lista = document.createElement('div');
+        lista.className = 'fichas-rec-lista';
+        renderRecuentoLista(datos, lista);
+        sec.appendChild(lista);
+
+        form.querySelector('.fichas-rec-guardar').addEventListener('click', () => {
+            const dt        = form.querySelector('.fichas-rec-dt').value;
+            const billetes  = parseInt(form.querySelector('.fichas-rec-billetes').value.replace(/\D/g, '')) || 0;
+            const inventario = parseInt(form.querySelector('.fichas-rec-inv').value.replace(/\D/g, '')) || 0;
+            if (!billetes && !inventario) return;
+            datos.recuentos.push({ id: genId(), dt, billetes, inventario });
+            datos.recuentos.sort((a, b) => (a.dt || '').localeCompare(b.dt || ''));
+            guardarFichasData();
+            renderRecuentoLista(datos, lista);
+            // reset fields, advance datetime by 1h
+            form.querySelector('.fichas-rec-billetes').value = '';
+            form.querySelector('.fichas-rec-inv').value = '';
+            const nextDt = new Date(dt);
+            nextDt.setHours(nextDt.getHours() + 1);
+            form.querySelector('.fichas-rec-dt').value = nextDt.toISOString().slice(0, 16);
+        });
+
+        return sec;
+    }
+
+    function renderRecuentoLista(datos, lista) {
+        lista.innerHTML = '';
+        const recs = datos.recuentos || [];
+        if (!recs.length) {
+            lista.innerHTML = '<p class="fichas-rec-empty">Sin recuentos guardados</p>';
+            return;
+        }
+        recs.forEach((rec, idx) => {
+            const prev  = idx > 0 ? recs[idx - 1] : null;
+            const total = rec.billetes + rec.inventario;
+            const prevTotal = prev ? prev.billetes + prev.inventario : null;
+            const delta = prevTotal !== null ? total - prevTotal : null;
+
+            const dtLabel = rec.dt
+                ? new Date(rec.dt).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+                : '—';
+
+            let deltaHtml = '';
+            if (delta !== null) {
+                const sign  = delta >= 0 ? '+' : '';
+                const cls   = delta >= 0 ? 'rec-delta-pos' : 'rec-delta-neg';
+                const arrow = delta >= 0 ? '▲' : '▼';
+                deltaHtml = `<span class="rec-delta ${cls}">${arrow} ${sign}$${fmtFichas(Math.abs(delta))}</span>`;
+            } else {
+                deltaHtml = `<span class="rec-delta rec-delta-base">BASE</span>`;
+            }
+
+            const item = document.createElement('div');
+            item.className = 'fichas-rec-item';
+            item.innerHTML =
+                `<div class="fichas-rec-main">` +
+                    `<span class="rec-dt">${dtLabel}</span>` +
+                    `<span class="rec-total">$${fmtFichas(total)}</span>` +
+                    deltaHtml +
+                    `<button class="rec-del" title="Eliminar">×</button>` +
+                `</div>` +
+                `<div class="fichas-rec-detail">` +
+                    `<span class="rec-d-lbl">Billetes</span><span class="rec-d-val">$${fmtFichas(rec.billetes)}</span>` +
+                    `<span class="rec-d-sep">+</span>` +
+                    `<span class="rec-d-lbl">Inventario</span><span class="rec-d-val">$${fmtFichas(rec.inventario)}</span>` +
+                `</div>`;
+
+            item.querySelector('.rec-del').addEventListener('click', () => {
+                datos.recuentos = datos.recuentos.filter(r => r.id !== rec.id);
+                guardarFichasData();
+                renderRecuentoLista(datos, lista);
+            });
+
+            lista.appendChild(item);
+        });
     }
 
     function calcCambiosHasta(datos, hora) {
