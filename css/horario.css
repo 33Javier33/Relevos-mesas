@@ -894,6 +894,10 @@ footer {
 .fichas-repo-details[open] > .fichas-repo-summary::before { transform: rotate(90deg); }
 .fichas-repo-summary::-webkit-details-marker { display: none; }
 .fichas-repo-form { display: flex; align-items: center; gap: 6px; padding: 4px 6px 8px; flex-wrap: wrap; }
+.fichas-repo-dt {
+    padding: 4px 6px; border: 1px solid var(--border-color); border-radius: 5px;
+    background: var(--input-bg); color: var(--text-color); font-size: 0.82em; flex: 0 0 auto;
+}
 .fichas-repo-den {
     padding: 4px 6px; border: 1px solid var(--border-color); border-radius: 5px;
     background: var(--input-bg); color: var(--text-color); font-size: 0.88em; flex: 1; min-width: 100px;

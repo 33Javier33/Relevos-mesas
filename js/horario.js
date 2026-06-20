@@ -1592,15 +1592,22 @@ document.addEventListener('DOMContentLoaded', () => {
     function crearSeccionReposicion(datos, panel, tabla) {
         const sec = document.createElement('details');
         sec.className = 'fichas-section fichas-repo-details';
+        sec.open = true;
 
         const summ = document.createElement('summary');
         summ.className = 'fichas-repo-summary';
         summ.textContent = '📦 Reposición de fichas';
         sec.appendChild(summ);
 
-        // Form: [denominación select] [cantidad] [Agregar]
+        // Form: [fecha/hora] [denominación select] [cantidad] [Agregar]
         const form = document.createElement('div');
         form.className = 'fichas-repo-form';
+
+        const dtInp = document.createElement('input');
+        dtInp.type = 'datetime-local';
+        dtInp.className = 'fichas-repo-dt';
+        const nowLocal = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        dtInp.value = nowLocal;
 
         const denSel = document.createElement('select');
         denSel.className = 'fichas-repo-den';
@@ -1621,6 +1628,7 @@ document.addEventListener('DOMContentLoaded', () => {
         addBtn.className   = 'fichas-repo-add';
         addBtn.textContent = '+ Agregar';
 
+        form.appendChild(dtInp);
         form.appendChild(denSel);
         form.appendChild(cantInp);
         form.appendChild(addBtn);
@@ -1629,7 +1637,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // History
         const repoLista = document.createElement('div');
         repoLista.className = 'fichas-repo-lista';
-        renderReposicionLista(datos.reposiciones || [], repoLista);
+        renderReposicionLista(datos, repoLista, tabla);
         sec.appendChild(repoLista);
 
         const confirmarRepo = () => {
@@ -1654,11 +1662,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (gtEl) gtEl.textContent = fmtFichas(calcTotalInventario(datos.inventario));
 
             // Log
-            const entry = { id: genId(), dt: new Date().toISOString(), den, cantidad: cant, valor: den * cant };
+            const dtVal = dtInp.value ? new Date(dtInp.value).toISOString() : new Date().toISOString();
+            const entry = { id: genId(), dt: dtVal, den, cantidad: cant, valor: den * cant };
             datos.reposiciones = datos.reposiciones || [];
             datos.reposiciones.unshift(entry);
             guardarFichasData();
-            renderReposicionLista(datos.reposiciones, repoLista);
+            renderReposicionLista(datos, repoLista, tabla);
             cantInp.value = '';
             cantInp.focus();
         };
@@ -1669,7 +1678,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return sec;
     }
 
-    function renderReposicionLista(reposiciones, lista) {
+    function renderReposicionLista(datos, lista, tabla) {
+        const reposiciones = datos.reposiciones || [];
         lista.innerHTML = '';
         if (!reposiciones.length) {
             lista.innerHTML = '<p class="fichas-repo-empty">Sin reposiciones registradas</p>';
@@ -1702,7 +1712,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const gt = calcTotalInventario(datos.inventario);
                 if (gtEl) gtEl.textContent = gt > 0 ? fmtFichas(gt) : '—';
                 guardarFichasData();
-                renderReposicionLista(datos.reposiciones, lista);
+                renderReposicionLista(datos, lista, tabla);
             });
             lista.appendChild(item);
         });
