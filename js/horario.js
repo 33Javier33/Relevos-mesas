@@ -1387,6 +1387,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function abrirFichasModal() {
         cargarFichasData();
+        refreshFichasContent();
+        document.getElementById('fichas-modal').style.display = 'flex';
+    }
+
+    function refreshFichasContent() {
         const mesas = mesasHabilitadas.length > 0 ? mesasHabilitadas : mesasDeJuego;
         const content = document.getElementById('fichas-content');
         content.innerHTML = '';
@@ -1396,7 +1401,6 @@ document.addEventListener('DOMContentLoaded', () => {
             content.appendChild(crearResumenGeneral(mesas));
             mesas.forEach(mesa => content.appendChild(crearPanelFichas(mesa)));
         }
-        document.getElementById('fichas-modal').style.display = 'flex';
     }
 
     function crearResumenGeneral(mesas) {
@@ -1465,22 +1469,62 @@ document.addEventListener('DOMContentLoaded', () => {
         const lastTotal = last ? last.billetes + last.inventario : 0;
         const pct   = calcRetencionMesa(recs);
 
-        const panel = document.createElement('details');
-        panel.className = 'fichas-mesa-panel';
-        panel.dataset.mesa = mesa;
-        panel.open = true;
+        const card = document.createElement('div');
+        card.className = 'fichas-mesa-card';
+        card.dataset.mesa = mesa;
 
-        const summary = document.createElement('summary');
-        summary.className = 'fichas-mesa-summary';
-        summary.innerHTML =
+        card.innerHTML =
             `<span class="fichas-summary-name">🎰 ${mesa}</span>` +
-            `<span class="fichas-summary-chips">${lastTotal > 0 ? `$${fmtFichas(lastTotal)}` : 'Sin recuentos'}</span>` +
-            `<span class="fichas-summary-ret ${pct !== null ? (pct >= 0 ? 'summary-ret-pos' : 'summary-ret-neg') : ''}" style="${pct === null ? 'display:none' : ''}">${pct !== null ? (pct >= 0 ? '+' : '') + pct + '%' : ''}</span>`;
-        panel.appendChild(summary);
+            `<span class="fichas-summary-chips">${lastTotal > 0 ? '$' + fmtFichas(lastTotal) : 'Sin recuentos'}</span>` +
+            `<span class="fichas-summary-ret ${pct !== null ? (pct >= 0 ? 'summary-ret-pos' : 'summary-ret-neg') : ''}" style="${pct === null ? 'display:none' : ''}">${pct !== null ? (pct >= 0 ? '+' : '') + pct + '%' : ''}</span>` +
+            `<button class="fichas-card-open-btn">Ver →</button>`;
 
-        panel.appendChild(crearSeccionInventario(datos, panel));
+        card.querySelector('.fichas-card-open-btn').addEventListener('click', () => {
+            abrirMesaModal(mesa);
+        });
 
-        return panel;
+        return card;
+    }
+
+    function abrirMesaModal(mesa) {
+        const datos = getMesaData(mesa);
+
+        const overlay = document.createElement('div');
+        overlay.className = 'fichas-sub-overlay';
+
+        const modal = document.createElement('div');
+        modal.className = 'fichas-sub-modal';
+        modal.dataset.mesa = mesa;
+
+        const header = document.createElement('div');
+        header.className = 'fichas-sub-modal-header';
+        header.innerHTML =
+            `<div class="fichas-sub-modal-title">` +
+                `<span>🎰 ${mesa}</span>` +
+                `<span class="fichas-summary-chips"></span>` +
+                `<span class="fichas-summary-ret" style="display:none"></span>` +
+            `</div>` +
+            `<button class="fichas-sub-modal-close">×</button>`;
+        modal.appendChild(header);
+
+        const body = document.createElement('div');
+        body.className = 'fichas-sub-modal-body';
+        body.appendChild(crearSeccionInventario(datos, modal));
+        modal.appendChild(body);
+
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        actualizarSummaryPanel(modal);
+
+        const cerrar = () => {
+            document.body.removeChild(overlay);
+            document.removeEventListener('keydown', escHandler);
+            refreshFichasContent();
+        };
+        const escHandler = e => { if (e.key === 'Escape') cerrar(); };
+        header.querySelector('.fichas-sub-modal-close').addEventListener('click', cerrar);
+        overlay.addEventListener('click', e => { if (e.target === overlay) cerrar(); });
+        document.addEventListener('keydown', escHandler);
     }
 
     function crearSeccionInventario(datos, panel) {

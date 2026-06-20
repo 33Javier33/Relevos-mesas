@@ -636,38 +636,50 @@ footer {
 .fichas-modal-content { max-width: 480px; }
 #fichas-content { max-height: 70vh; overflow-y: auto; padding-right: 2px; }
 
-/* Collapsible mesa panel */
-.fichas-mesa-panel {
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
-    margin-bottom: 8px;
-    overflow: hidden;
+/* Compact mesa card in main fichas modal */
+.fichas-mesa-card {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px; background: var(--hover-bg-color);
+    border: 1px solid var(--border-color); border-radius: 10px;
+    margin-bottom: 6px;
 }
-.fichas-mesa-summary {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 14px;
-    cursor: pointer;
-    background: var(--hover-bg-color);
-    list-style: none;
-    user-select: none;
+.fichas-card-open-btn {
+    margin-left: auto; background: var(--primary-color); color: white;
+    border: none; border-radius: 6px; padding: 5px 12px;
+    font-size: 0.82em; font-weight: 700; cursor: pointer; flex-shrink: 0;
 }
-.fichas-mesa-summary::-webkit-details-marker { display: none; }
-.fichas-mesa-summary::before {
-    content: '▶';
-    font-size: 0.65em;
-    color: var(--text-secondary-color);
-    transition: transform 0.15s;
-    flex-shrink: 0;
-}
-.fichas-mesa-panel[open] > .fichas-mesa-summary::before { transform: rotate(90deg); }
+.fichas-card-open-btn:hover { background: var(--primary-hover-color); }
 .fichas-summary-name { font-weight: 700; font-size: 0.93em; flex-shrink: 0; }
-.fichas-summary-chips { font-size: 0.78em; color: var(--text-secondary-color); margin-left: auto; white-space: nowrap; }
+.fichas-summary-chips { font-size: 0.78em; color: var(--text-secondary-color); white-space: nowrap; }
 .fichas-summary-net { font-size: 0.78em; font-weight: 700; color: var(--primary-color); white-space: nowrap; }
 .fichas-summary-ret { font-size: 0.78em; font-weight: 800; white-space: nowrap; padding: 1px 6px; border-radius: 4px; margin-left: 4px; }
 .summary-ret-pos { background: rgba(46,204,113,0.15); color: #27ae60; }
 .summary-ret-neg { background: rgba(231,76,60,0.13); color: #e74c3c; }
+
+/* Sub-modal por mesa */
+.fichas-sub-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+    display: flex; align-items: flex-start; justify-content: center;
+    z-index: 1200; padding: 20px 10px; overflow-y: auto; box-sizing: border-box;
+}
+.fichas-sub-modal {
+    background: var(--surface-color); border-radius: 14px;
+    width: min(480px, 100%); min-height: min-content;
+    display: flex; flex-direction: column;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.3); margin: auto;
+}
+.fichas-sub-modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px 10px; border-bottom: 1px solid var(--border-color);
+    position: sticky; top: 0; background: var(--surface-color); z-index: 1;
+    border-radius: 14px 14px 0 0;
+}
+.fichas-sub-modal-title { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.95em; }
+.fichas-sub-modal-close {
+    background: none; border: none; font-size: 1.5rem; line-height: 1;
+    cursor: pointer; color: var(--text-secondary-color); padding: 0 4px; margin-left: 8px;
+}
+.fichas-sub-modal-body { overflow-y: auto; flex: 1; }
 
 /* Sections inside panel */
 .fichas-section { border-top: 1px solid var(--border-color); padding: 10px 14px 8px; }
