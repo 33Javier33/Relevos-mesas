@@ -1384,9 +1384,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderResumenGeneral(mesas, div) {
-        let totalInv  = 0;
-        let totalCirc = 0;
-        let mesasCirc = 0;
+        let totalInv    = 0;
+        let totalCirc   = 0;
+        let mesasCirc   = 0;
+        let sumDelta    = 0;
+        let sumDeltaBill = 0;
+        let mesasRet    = 0;
 
         mesas.forEach(mesa => {
             const datos = getMesaData(mesa);
@@ -1397,7 +1400,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 totalCirc += last.billetes + last.inventario;
                 mesasCirc++;
             }
+            if (recs.length >= 2) {
+                const last = recs[recs.length - 1];
+                const prev = recs[recs.length - 2];
+                const dBill = last.billetes - prev.billetes;
+                const dTot  = (last.billetes + last.inventario) - (prev.billetes + prev.inventario);
+                if (dBill > 0) {
+                    sumDelta     += dTot;
+                    sumDeltaBill += dBill;
+                    mesasRet++;
+                }
+            }
         });
+
+        const pct = sumDeltaBill > 0 ? Math.round(sumDelta / sumDeltaBill * 100) : null;
+        const retHtml = pct !== null
+            ? `<div class="fichas-resumen-fila">` +
+                  `<span class="fichas-resumen-lbl">% Retención general (${mesasRet} mesas)</span>` +
+                  `<span class="fichas-resumen-val fichas-resumen-ret ${pct >= 0 ? 'ret-pos' : 'ret-neg'}">${pct >= 0 ? '+' : ''}${pct}%</span>` +
+              `</div>`
+            : '';
 
         div.innerHTML =
             `<div class="fichas-resumen-titulo">📊 Total General · ${mesas.length} mesas activas</div>` +
@@ -1409,7 +1431,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 `<div class="fichas-resumen-fila">` +
                     `<span class="fichas-resumen-lbl">Total en circulación (${mesasCirc} mesas)</span>` +
                     `<span class="fichas-resumen-val fichas-resumen-circ">$${fmtFichas(totalCirc)}</span>` +
-                `</div>` : '');
+                `</div>` : '') +
+            retHtml;
     }
 
     function crearPanelFichas(mesa) {
