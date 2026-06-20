@@ -1350,14 +1350,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function actualizarSummaryPanel(panel) {
         const mesa = panel.dataset.mesa;
         const datos = getMesaData(mesa);
-        const chips = calcTotalInventario(datos.inventario);
-        const efectivo = calcNetoMesa(datos);
+        const recs  = datos.recuentos || [];
+        const last  = recs.length ? recs[recs.length - 1] : null;
+        const lastTotal = last ? last.billetes + last.inventario : 0;
         const chipsEl = panel.querySelector('.fichas-summary-chips');
-        const netEl   = panel.querySelector('.fichas-summary-net');
-        if (chipsEl) chipsEl.textContent = chips > 0 ? `Chips: $${fmtFichas(chips)}` : 'Sin fichas';
-        if (netEl)   netEl.textContent   = efectivo > 0 ? `Efectivo: $${fmtFichas(efectivo)}` : '';
-        const balContent = panel.querySelector('.fichas-balance-content');
-        if (balContent) renderBalance(datos, balContent);
+        if (chipsEl) chipsEl.textContent = lastTotal > 0 ? `$${fmtFichas(lastTotal)}` : 'Sin recuentos';
     }
 
     function abrirFichasModal() {
@@ -1375,251 +1372,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function crearPanelFichas(mesa) {
         const datos = getMesaData(mesa);
-        const chips  = calcTotalInventario(datos.inventario);
-        const neto   = calcNetoMesa(datos);
+        const recs  = datos.recuentos || [];
+        const last  = recs.length ? recs[recs.length - 1] : null;
+        const lastTotal = last ? last.billetes + last.inventario : 0;
 
         const panel = document.createElement('details');
         panel.className = 'fichas-mesa-panel';
         panel.dataset.mesa = mesa;
 
-        // ── Summary (collapsed header) ─────────────────────────
         const summary = document.createElement('summary');
         summary.className = 'fichas-mesa-summary';
         summary.innerHTML =
             `<span class="fichas-summary-name">🎰 ${mesa}</span>` +
-            `<span class="fichas-summary-chips">${chips > 0 ? `Chips: $${fmtFichas(chips)}` : 'Sin fichas'}</span>` +
-            `<span class="fichas-summary-net">${neto > 0 ? `Neto: $${fmtFichas(neto)}` : ''}</span>`;
+            `<span class="fichas-summary-chips">${lastTotal > 0 ? `$${fmtFichas(lastTotal)}` : 'Sin recuentos'}</span>`;
         panel.appendChild(summary);
 
-        // ── Section 0: Recuento ────────────────────────────────
         panel.appendChild(crearSeccionRecuento(datos, panel));
-
-        // ── Section 1: Inventario de Fichas ───────────────────
-        const secInv = document.createElement('div');
-        secInv.className = 'fichas-section';
-
-        const invTitleRow = document.createElement('div');
-        invTitleRow.className = 'fichas-section-title-row';
-        invTitleRow.innerHTML = '<span class="fichas-section-title">Inventario de Fichas</span>';
-        secInv.appendChild(invTitleRow);
-
-        const tabla = document.createElement('div');
-        tabla.className = 'fichas-tabla';
-
-        DENOMINACIONES.forEach(den => {
-            const qty = parseInt(datos.inventario[String(den)]) || 0;
-            const row = document.createElement('div');
-            row.className = 'fichas-row';
-            row.innerHTML =
-                `<span class="fichas-den">${fmtFichas(den)}</span>` +
-                `<span class="fichas-sep">—</span>` +
-                `<input type="number" class="fichas-cantidad" min="0" value="${qty || ''}" placeholder="0">` +
-                `<span class="fichas-sep">—</span>` +
-                `<span class="fichas-total">${qty > 0 ? fmtFichas(den * qty) : '—'}</span>`;
-            const input     = row.querySelector('.fichas-cantidad');
-            const totalSpan = row.querySelector('.fichas-total');
-            input.addEventListener('input', () => {
-                const q = Math.max(0, parseInt(input.value) || 0);
-                totalSpan.textContent = q > 0 ? fmtFichas(den * q) : '—';
-                datos.inventario[String(den)] = q;
-                const gt = calcTotalInventario(datos.inventario);
-                tabla.querySelector('.fichas-grand-total').textContent = gt > 0 ? fmtFichas(gt) : '—';
-                actualizarSummaryPanel(panel);
-                guardarFichasData();
-            });
-            tabla.appendChild(row);
-        });
-
-        const gt = calcTotalInventario(datos.inventario);
-        const totalRow = document.createElement('div');
-        totalRow.className = 'fichas-row fichas-total-row';
-        totalRow.innerHTML = `<span></span><span></span><span class="fichas-lbl-total">TOTAL</span><span></span><span class="fichas-grand-total">${gt > 0 ? fmtFichas(gt) : '—'}</span>`;
-        tabla.appendChild(totalRow);
-
-        const clearRow = document.createElement('div');
-        clearRow.className = 'fichas-clear-row';
-        const clearBtn = document.createElement('button');
-        clearBtn.className = 'fichas-clear-btn';
-        clearBtn.textContent = '🗑️ Limpiar fichas';
-        clearBtn.addEventListener('click', () => {
-            datos.inventario = {};
-            tabla.querySelectorAll('.fichas-cantidad').forEach(inp => { inp.value = ''; });
-            tabla.querySelectorAll('.fichas-total').forEach(s => { s.textContent = '—'; });
-            tabla.querySelector('.fichas-grand-total').textContent = '—';
-            actualizarSummaryPanel(panel);
-            guardarFichasData();
-        });
-        clearRow.appendChild(clearBtn);
-        tabla.appendChild(clearRow);
-        secInv.appendChild(tabla);
-
-        // ── Guardar snapshot del inventario ───────────────────
-        const snapBar = document.createElement('div');
-        snapBar.className = 'fichas-snap-bar';
-        const snapHoraInput = document.createElement('input');
-        snapHoraInput.type  = 'time';
-        snapHoraInput.className = 'fichas-snap-hora';
-        const snapNow = new Date();
-        snapHoraInput.value = `${String(snapNow.getHours()).padStart(2,'0')}:${String(snapNow.getMinutes()).padStart(2,'0')}`;
-        const snapBtn = document.createElement('button');
-        snapBtn.className = 'fichas-snap-btn';
-        snapBtn.textContent = '📸 Guardar inventario';
-        snapBar.appendChild(snapHoraInput);
-        snapBar.appendChild(snapBtn);
-        secInv.appendChild(snapBar);
-
-        const snapLista = document.createElement('div');
-        snapLista.className = 'fichas-snap-lista';
-        renderSnapshotLista(datos, snapLista, panel);
-        secInv.appendChild(snapLista);
-
-        snapBtn.addEventListener('click', () => {
-            const hora = snapHoraInput.value;
-            const fichasCopy = {};
-            DENOMINACIONES.forEach(d => {
-                const q = parseInt(datos.inventario[String(d)]) || 0;
-                if (q > 0) fichasCopy[String(d)] = q;
-            });
-            const snap = { id: genId(), hora, fichas: fichasCopy };
-            datos.snapshots.push(snap);
-            datos.snapshots.sort((a, b) => (a.hora || '').localeCompare(b.hora || ''));
-            guardarFichasData();
-            renderSnapshotLista(datos, snapLista, panel);
-            // auto-advance hora by 1h for next snapshot
-            const [hh, mm] = hora.split(':').map(Number);
-            const next = new Date(2000, 0, 1, hh + 1, mm);
-            snapHoraInput.value = `${String(next.getHours()).padStart(2,'0')}:${String(next.getMinutes()).padStart(2,'0')}`;
-        });
-
-        panel.appendChild(secInv);
-
-        // ── Section 2: Cambios y Fichas Drop ──────────────────
-        const secCambios = document.createElement('div');
-        secCambios.className = 'fichas-section fichas-cambios-section';
-
-        const cambiosTitleRow = document.createElement('div');
-        cambiosTitleRow.className = 'fichas-section-title-row';
-        cambiosTitleRow.innerHTML = '<span class="fichas-section-title">Cambios y Fichas Drop</span>';
-        secCambios.appendChild(cambiosTitleRow);
-
-        // Add form: [hora] [Total de cambio] [Agregar]
-        const addForm = document.createElement('div');
-        addForm.className = 'fichas-add-form';
-        addForm.innerHTML =
-            `<input type="time" class="fichas-form-hora">` +
-            `<input type="text" class="fichas-form-monto" placeholder="Total de cambio $" inputmode="numeric">` +
-            `<button class="fichas-form-agregar">Agregar</button>`;
-        setupMoneyInput(addForm.querySelector('.fichas-form-monto'));
-        secCambios.appendChild(addForm);
-
-        // Quick drop: add ficha drop without needing a cambio entry first
-        const quickDropBar = document.createElement('div');
-        quickDropBar.className = 'fichas-quick-drop-bar';
-        quickDropBar.innerHTML =
-            `<button class="fichas-quick-drop-btn">🪙 Agregar Ficha Drop</button>` +
-            `<div class="fichas-quick-drop-form" style="display:none">` +
-                `<input type="time" class="fichas-qdrop-hora">` +
-                `<input type="text" class="fichas-qdrop-monto" placeholder="Monto drop $" inputmode="numeric">` +
-                `<button class="fichas-qdrop-ok">✓</button>` +
-                `<button class="fichas-qdrop-cancel">✕</button>` +
-            `</div>`;
-        setupMoneyInput(quickDropBar.querySelector('.fichas-qdrop-monto'));
-
-        quickDropBar.querySelector('.fichas-quick-drop-btn').addEventListener('click', () => {
-            quickDropBar.querySelector('.fichas-quick-drop-form').style.display = 'flex';
-            quickDropBar.querySelector('.fichas-qdrop-hora').value = '';
-            quickDropBar.querySelector('.fichas-qdrop-monto').value = '';
-            quickDropBar.querySelector('.fichas-qdrop-hora').focus();
-        });
-        quickDropBar.querySelector('.fichas-qdrop-cancel').addEventListener('click', () => {
-            quickDropBar.querySelector('.fichas-quick-drop-form').style.display = 'none';
-        });
-
-        const confirmarQuickDrop = () => {
-            const horaVal  = quickDropBar.querySelector('.fichas-qdrop-hora').value;
-            const montoVal = parseInt(quickDropBar.querySelector('.fichas-qdrop-monto').value.replace(/\D/g, '')) || 0;
-            if (!montoVal) { quickDropBar.querySelector('.fichas-qdrop-monto').focus(); return; }
-            // find existing hora entry or create one with cambio=0
-            let horaObj = datos.horas.find(h => h.hora === horaVal);
-            let rowEl = horaVal ? lista.querySelector(`.fichas-hora-row[data-hora="${horaVal}"]`) : null;
-            if (!horaObj) {
-                horaObj = { id: genId(), hora: horaVal, cambios: 0, drops: [] };
-                datos.horas.push(horaObj);
-                const newRow = crearHoraRow(horaObj, datos, panel);
-                const existing = lista.querySelectorAll('.fichas-hora-row');
-                let placed = false;
-                for (const r of existing) {
-                    if ((horaVal || '') >= (r.dataset.hora || '')) { lista.insertBefore(newRow, r); placed = true; break; }
-                }
-                if (!placed) lista.appendChild(newRow);
-                rowEl = newRow;
-            }
-            const newDrop = { id: genId(), monto: montoVal };
-            horaObj.drops = horaObj.drops || [];
-            horaObj.drops.push(newDrop);
-            guardarFichasData();
-            actualizarSummaryPanel(panel);
-            // trigger row to add the drop visually
-            if (rowEl) {
-                const dropBtn = rowEl.querySelector('.fichas-row-drop-btn');
-                if (dropBtn) {
-                    const sub = rowEl.querySelector('.fichas-drops-sub');
-                    const dlist = rowEl.querySelector('.fichas-drops-list');
-                    const actualizarRowNeto = rowEl._actualizarRowNeto;
-                    if (sub) sub.style.display = 'block';
-                    if (dlist && actualizarRowNeto) {
-                        dlist.appendChild(crearMiniDrop(newDrop, horaObj, rowEl, actualizarRowNeto));
-                        actualizarRowNeto();
-                    }
-                }
-            }
-            quickDropBar.querySelector('.fichas-quick-drop-form').style.display = 'none';
-        };
-        quickDropBar.querySelector('.fichas-qdrop-ok').addEventListener('click', confirmarQuickDrop);
-        quickDropBar.querySelector('.fichas-qdrop-monto').addEventListener('keydown', e => {
-            if (e.key === 'Enter') confirmarQuickDrop();
-            if (e.key === 'Escape') quickDropBar.querySelector('.fichas-qdrop-cancel').click();
-        });
-        secCambios.appendChild(quickDropBar);
-
-        // List of hour entries
-        const lista = document.createElement('div');
-        lista.className = 'fichas-horas-lista';
-        [...(datos.horas || [])].sort((a, b) => (b.hora || '').localeCompare(a.hora || '')).forEach(h => {
-            lista.appendChild(crearHoraRow(h, datos, panel));
-        });
-        secCambios.appendChild(lista);
-
-        addForm.querySelector('.fichas-form-agregar').addEventListener('click', () => {
-            const horaVal  = addForm.querySelector('.fichas-form-hora').value;
-            const montoVal = parseInt(addForm.querySelector('.fichas-form-monto').value.replace(/\D/g, '')) || 0;
-            if (!horaVal && !montoVal) return;
-            const newH = { id: genId(), hora: horaVal, cambios: montoVal, drops: [] };
-            datos.horas.push(newH);
-            guardarFichasData();
-            actualizarSummaryPanel(panel);
-            const newRow = crearHoraRow(newH, datos, panel);
-            const existing = lista.querySelectorAll('.fichas-hora-row');
-            let placed = false;
-            for (const r of existing) {
-                if ((newH.hora || '') >= (r.dataset.hora || '')) { lista.insertBefore(newRow, r); placed = true; break; }
-            }
-            if (!placed) lista.appendChild(newRow);
-            addForm.querySelector('.fichas-form-hora').value = '';
-            addForm.querySelector('.fichas-form-monto').value = '';
-        });
-
-        panel.appendChild(secCambios);
-
-        // ── Section 3: Balance ─────────────────────────────────
-        const secBalance = document.createElement('div');
-        secBalance.className = 'fichas-section fichas-balance-section';
-        secBalance.innerHTML = '<div class="fichas-section-title-row"><span class="fichas-section-title">📊 Balance</span></div>';
-        const balContent = document.createElement('div');
-        balContent.className = 'fichas-balance-content';
-        secBalance.appendChild(balContent);
-        renderBalance(datos, balContent);
-        panel.appendChild(secBalance);
 
         return panel;
     }
