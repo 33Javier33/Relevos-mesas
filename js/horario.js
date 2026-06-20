@@ -5,12 +5,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const URL_DEL_SCRIPT_DE_MAESTROS = 'https://script.google.com/macros/s/AKfycbzjaL7OKe1_doagry1eo0w15vXOJy_-oEtWreLTzj1GoQgxyE8cDI7jTgWm7qqThB7M/exec';
     const URL_DEL_SCRIPT_DE_HORARIOS = 'https://script.google.com/macros/s/AKfycbw1kBHYt37_X5K7UdBZlJNTgNT2B2P0t4F6uVrCKK_hDgZ7j09cwSzNx5l9CvHwFCTDQg/exec';
 
-    let croupiersData = [], croupiersEnEspera = [], horarios = [], mesasDeJuego = [], mesasHabilitadas = [], datosRelevos = {}, croupierColors = {}, croupierSalidas = {}, horarioColors = {};
+    let croupiersData = [], croupiersEnEspera = [], horarios = [], mesasDeJuego = [], mesasHabilitadas = [], datosRelevos = {}, croupierColors = {}, croupierSalidas = {}, croupierEntradas = {}, horarioColors = {};
     let fichasData = {};
     const DENOMINACIONES = [1000000, 500000, 200000, 100000, 50000, 20000, 10000, 5000, 1000, 500];
     const fmtFichas = n => n.toLocaleString('es-AR');
     let cronometroIntervals = {}, cronometroStartTime = {}, cronometroCurrentStartTime = {};
-    let fechaVisible = new Date(), celdaActiva = { croupier: null, horario: null }, croupierCronoActivo = null, croupierSalidaActivo = null, quickAddCurrentFilter = 'todos';
+    let fechaVisible = new Date(), celdaActiva = { croupier: null, horario: null }, croupierCronoActivo = null, croupierSalidaActivo = null, croupierEntradaActivo = null, quickAddCurrentFilter = 'todos';
 
     let saveTimeout;
     let isSaving = false;
@@ -69,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
         relevoModal: document.getElementById('relevo-modal'),
         agregarHorarioModal: document.getElementById('agregar-horario-modal'),
         salidaModal: document.getElementById('salida-modal'),
+        entradaModal: document.getElementById('entrada-modal'),
         fechaModal: document.getElementById('fecha-modal'),
         cronoModal: document.getElementById('crono-modal'),
         quickAddModal: document.getElementById('quick-add-modal'),
@@ -84,6 +85,8 @@ document.addEventListener('DOMContentLoaded', () => {
         inputNuevoHorario: document.getElementById('input-nuevo-horario'),
         salidaModalTitle: document.getElementById('salida-modal-title').querySelector('span'),
         inputSalidaTime: document.getElementById('input-salida-time'),
+        entradaModalTitle: document.getElementById('entrada-modal-title'),
+        inputEntradaTime: document.getElementById('input-entrada-time'),
         inputNuevaFecha: document.getElementById('input-nueva-fecha'),
         cronoModalTitle: document.getElementById('crono-modal-title').querySelector('span'),
         cronoModalTimer: document.getElementById('crono-modal-timer'),
@@ -142,6 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 croupiersEnTabla: croupiersData.map(c => c.nombreCompleto),
                 croupierColors, horarioColors,
                 horasSalida: croupierSalidas,
+                horasEntrada: croupierEntradas,
                 cronometros: cronometroStartTime,
                 mesasHabilitadas
             };
@@ -167,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function guardarDatosEnLocalStorage(skipSheetsSync = false) {
         const dataToStore = {
             croupiersEnTabla: croupiersData.map(c => c.nombreCompleto),
-            horarios, datosRelevos, croupierColors, croupierSalidas, horarioColors,
+            horarios, datosRelevos, croupierColors, croupierSalidas, croupierEntradas, horarioColors,
             cronometroState: cronometroStartTime,
             mesasHabilitadas,
         };
@@ -184,6 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
         datosRelevos = datos.datosRelevos || {};
         croupierColors = datos.croupierColors || {};
         croupierSalidas = datos.croupierSalidas || {};
+        croupierEntradas = datos.croupierEntradas || {};
         horarioColors = datos.horarioColors || {};
         horarios = datos.horarios || [];
         cronometroStartTime = datos.cronometroState || {};
@@ -198,13 +203,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=load&fecha=${fechaISO}&t=${new Date().getTime()}`);
             const data = await response.json();
             if (data.found) {
-                const currentDataString = JSON.stringify({ horarios, datosRelevos, croupierColors, horarioColors, croupierSalidas, cronometroStartTime });
+                const currentDataString = JSON.stringify({ horarios, datosRelevos, croupierColors, horarioColors, croupierSalidas, croupierEntradas, cronometroStartTime });
                 const newDataString = JSON.stringify({
                     horarios: data.horarios || [],
                     datosRelevos: data.datosRelevos || {},
                     croupierColors: data.croupierColors || {},
                     horarioColors: data.horarioColors || {},
                     croupierSalidas: data.horasSalida || {},
+                    croupierEntradas: data.horasEntrada || {},
                     cronometroStartTime: data.cronometros || {},
                 });
                 if (forceRender || currentDataString !== newDataString) {
@@ -220,6 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     croupierColors = data.croupierColors || {};
                     horarioColors = data.horarioColors || {};
                     croupierSalidas = data.horasSalida || {};
+                    croupierEntradas = data.horasEntrada || {};
                     cronometroStartTime = data.cronometros || {};
                     guardarDatosEnLocalStorage(true);
                     renderizarHorario();
@@ -461,6 +468,27 @@ document.addEventListener('DOMContentLoaded', () => {
         cerrarModales();
     }
 
+    function abrirEntradaModal(croupier) {
+        croupierEntradaActivo = croupier;
+        DOM.entradaModalTitle.textContent = generarAlias(croupier);
+        DOM.inputEntradaTime.value = croupierEntradas[croupier] || '';
+        DOM.entradaModal.style.display = 'flex';
+    }
+
+    function guardarEntrada() {
+        croupierEntradas[croupierEntradaActivo] = DOM.inputEntradaTime.value;
+        guardarDatosEnLocalStorage();
+        renderizarHorario();
+        cerrarModales();
+    }
+
+    function borrarEntrada() {
+        delete croupierEntradas[croupierEntradaActivo];
+        guardarDatosEnLocalStorage();
+        renderizarHorario();
+        cerrarModales();
+    }
+
     function abrirSalidaModal(croupier) {
         croupierSalidaActivo = croupier;
         DOM.salidaModalTitle.textContent = generarAlias(croupier);
@@ -634,7 +662,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const tdNombre = document.createElement('td');
             const croupierColor = croupierColors[croupierObj.nombreCompleto];
             if (croupierColor) tdNombre.style.backgroundColor = croupierColor;
-            tdNombre.innerHTML = `<div class="croupier-cell-content"><button class="delete-croupier">×</button><div><input type="checkbox" class="croupier-checkbox"><span class="croupier-name">${generarAlias(croupierObj.nombreCompleto)}</span></div><div class="salida-card" data-croupier-salida="${croupierObj.nombreCompleto}"><span>⏰</span><span class="salida-time">${croupierSalidas[croupierObj.nombreCompleto] || '--:--'}</span></div></div>`;
+            tdNombre.innerHTML = `<div class="croupier-cell-content"><button class="delete-croupier">×</button><div><input type="checkbox" class="croupier-checkbox"><span class="croupier-name">${generarAlias(croupierObj.nombreCompleto)}</span></div><div class="horario-turno-cards"><div class="entrada-card" data-croupier-entrada="${croupierObj.nombreCompleto}"><span class="turno-lbl">ENT</span><span class="entrada-time">${croupierEntradas[croupierObj.nombreCompleto] || '--:--'}</span></div><div class="salida-card" data-croupier-salida="${croupierObj.nombreCompleto}"><span class="turno-lbl">SAL</span><span class="salida-time">${croupierSalidas[croupierObj.nombreCompleto] || '--:--'}</span></div></div></div>`;
             tr.appendChild(tdNombre);
             const tdCrono = document.createElement('td');
             tdCrono.className = 'cronometro-cell';
@@ -661,6 +689,7 @@ document.addEventListener('DOMContentLoaded', () => {
         DOM.tbody.querySelectorAll('.croupier-row').forEach(tr => {
             const nombre = tr.dataset.croupier;
             tr.querySelector('.delete-croupier').addEventListener('click', e => { e.stopPropagation(); borrarCroupier(nombre); });
+            tr.querySelector('.entrada-card').addEventListener('click', e => { e.stopPropagation(); abrirEntradaModal(nombre); });
             tr.querySelector('.salida-card').addEventListener('click', e => { e.stopPropagation(); abrirSalidaModal(nombre); });
             tr.querySelector('.cronometro-cell').addEventListener('click', e => { e.stopPropagation(); openCronoModal(nombre); });
             tr.querySelector('.croupier-checkbox').addEventListener('change', e => tr.classList.toggle('row-selected', e.target.checked));
@@ -692,6 +721,7 @@ document.addEventListener('DOMContentLoaded', () => {
             delete datosRelevos[nombre];
             delete croupierColors[nombre];
             delete croupierSalidas[nombre];
+            delete croupierEntradas[nombre];
             detenerCronometro(nombre, true, true);
             guardarDatosEnLocalStorage();
             renderizarHorario();
@@ -716,7 +746,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showModal('Confirmar Acción', '¿Está seguro de que desea eliminar a TODOS los croupiers de la tabla? Esta acción no se puede deshacer.', 'confirm', () => {
             Object.keys(cronometroIntervals).forEach(croupier => { detenerCronometro(croupier, true, false); });
             croupiersData = []; datosRelevos = {}; croupierColors = {};
-            croupierSalidas = {}; cronometroStartTime = {};
+            croupierSalidas = {}; croupierEntradas = {}; cronometroStartTime = {};
             cronometroCurrentStartTime = {}; cronometroIntervals = {};
             guardarDatosEnLocalStorage();
             renderizarHorario();
@@ -2173,6 +2203,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('btn-guardar-nuevo-horario').addEventListener('click', guardarNuevoHorario);
         document.getElementById('btn-guardar-salida').addEventListener('click', guardarSalida);
         document.getElementById('btn-borrar-salida').addEventListener('click', borrarSalida);
+        document.getElementById('btn-guardar-entrada').addEventListener('click', guardarEntrada);
+        document.getElementById('btn-borrar-entrada').addEventListener('click', borrarEntrada);
         document.getElementById('btn-guardar-nueva-fecha').addEventListener('click', guardarNuevaFecha);
         DOM.opcionRelevo.addEventListener('change', () => toggleRelevoControls('releva'));
         DOM.opcionAyudante.addEventListener('change', () => toggleRelevoControls('ayudante'));

@@ -329,11 +329,15 @@ body {
 }
 .croupier-name { font-weight: bold; cursor: pointer; }
 
-.salida-card {
-    display: flex; align-items: center; gap: 4px;
-    padding: 2px 5px; background-color: var(--hover-bg-color);
-    border-radius: 5px; cursor: pointer; font-size: 0.7rem; font-weight: bold;
+.horario-turno-cards { display: flex; gap: 3px; flex-wrap: wrap; }
+.entrada-card, .salida-card {
+    display: flex; align-items: center; gap: 3px;
+    padding: 2px 5px; border-radius: 5px; cursor: pointer;
+    font-size: 0.68rem; font-weight: bold;
 }
+.entrada-card { background-color: rgba(46,204,113,0.15); color: #27ae60; }
+.salida-card  { background-color: var(--hover-bg-color); }
+.turno-lbl { font-size: 0.6rem; opacity: 0.7; letter-spacing: 0.3px; }
 .croupier-row td:first-child { cursor: grab; }
 
 /* Alternating row colors — easier to follow a row horizontally */

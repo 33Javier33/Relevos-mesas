@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Horario de Relevos</title>
-    <link rel="stylesheet" href="css/shared.css?v=33">
-    <link rel="stylesheet" href="css/horario.css?v=33">
+    <link rel="stylesheet" href="css/shared.css?v=34">
+    <link rel="stylesheet" href="css/horario.css?v=34">
 </head>
 <body>
     <div class="reloj-y-controles-container">
@@ -140,7 +140,20 @@
         </div>
     </div>
 
-    <!-- Modal: Hora de salida -->
+    <!-- Modal: Hora de entrada al turno -->
+    <div id="entrada-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Hora de entrada — <span id="entrada-modal-title"></span></h2>
+            <input type="time" id="input-entrada-time">
+            <div class="modal-footer">
+                <button id="btn-borrar-entrada" class="danger">Borrar</button>
+                <button id="btn-guardar-entrada" class="confirm">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Hora de salida del turno -->
     <div id="salida-modal" class="modal">
         <div class="modal-content">
             <span class="close-btn">&times;</span>
@@ -290,8 +303,8 @@
     <div id="toast-container"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-    <script src="js/shared.js?v=33"></script>
-    <script src="js/horario.js?v=33"></script>
+    <script src="js/shared.js?v=34"></script>
+    <script src="js/horario.js?v=34"></script>
     <script>
         const _cfgBtn = document.getElementById('btn-config');
         const _cfgDrop = document.getElementById('config-dropdown');
