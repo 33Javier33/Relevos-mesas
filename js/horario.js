@@ -1379,6 +1379,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const panel = document.createElement('details');
         panel.className = 'fichas-mesa-panel';
         panel.dataset.mesa = mesa;
+        panel.open = true;
 
         const summary = document.createElement('summary');
         summary.className = 'fichas-mesa-summary';
@@ -1395,6 +1396,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function crearSeccionInventario(datos, panel) {
         const sec = document.createElement('details');
         sec.className = 'fichas-section fichas-inv-details';
+        sec.open = true;
 
         const summ = document.createElement('summary');
         summ.className = 'fichas-inv-summary';
