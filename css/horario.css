@@ -893,35 +893,42 @@ footer {
 .fichas-repo-summary::before { content: '▶'; font-size: 0.7em; transition: transform 0.15s; }
 .fichas-repo-details[open] > .fichas-repo-summary::before { transform: rotate(90deg); }
 .fichas-repo-summary::-webkit-details-marker { display: none; }
-.fichas-repo-form { display: flex; align-items: center; gap: 6px; padding: 4px 6px 8px; flex-wrap: wrap; }
+.fichas-repo-tabla { border-top: none; }
+.fichas-repo-action-bar {
+    display: flex; align-items: center; gap: 8px; padding: 6px 8px 10px; flex-wrap: wrap;
+}
 .fichas-repo-dt {
-    padding: 4px 6px; border: 1px solid var(--border-color); border-radius: 5px;
+    padding: 5px 7px; border: 1px solid var(--border-color); border-radius: 5px;
     background: var(--input-bg); color: var(--text-color); font-size: 0.82em; flex: 0 0 auto;
 }
-.fichas-repo-den {
-    padding: 4px 6px; border: 1px solid var(--border-color); border-radius: 5px;
-    background: var(--input-bg); color: var(--text-color); font-size: 0.88em; flex: 1; min-width: 100px;
-}
-.fichas-repo-cant {
-    width: 80px; padding: 4px 6px; border: 1px solid var(--border-color); border-radius: 5px;
-    background: var(--input-bg); color: var(--text-color); font-size: 0.88em; text-align: center;
-}
 .fichas-repo-add {
-    background: #7c3aed; color: white; border: none; border-radius: 5px;
-    padding: 4px 12px; font-size: 0.85em; font-weight: 700; cursor: pointer;
+    background: #7c3aed; color: white; border: none; border-radius: 6px;
+    padding: 6px 14px; font-size: 0.88em; font-weight: 700; cursor: pointer; flex: 1;
 }
 .fichas-repo-add:hover { background: #6d28d9; }
-.fichas-repo-lista { display: flex; flex-direction: column; gap: 2px; padding: 0 4px 6px; }
-.fichas-repo-empty { font-size: 0.8em; color: var(--text-secondary-color); margin: 0; padding: 2px 4px 4px; }
+.fichas-repo-lista { display: flex; flex-direction: column; gap: 4px; padding: 0 6px 8px; }
+.fichas-repo-empty { font-size: 0.8em; color: var(--text-secondary-color); margin: 0; padding: 4px; }
 .fichas-repo-item {
-    display: flex; align-items: center; gap: 6px; font-size: 0.82em;
-    padding: 3px 6px; border-radius: 4px; background: rgba(124,58,237,0.06);
+    border-radius: 6px; background: rgba(124,58,237,0.06);
+    border: 1px solid rgba(124,58,237,0.15); overflow: hidden;
 }
-.repo-dt  { color: var(--text-secondary-color); min-width: 72px; }
-.repo-den { font-weight: 700; min-width: 72px; }
-.repo-cant { color: #7c3aed; font-weight: 600; }
-.repo-val { margin-left: auto; font-weight: 700; color: #16a34a; }
-.repo-del { background: none; border: none; color: var(--text-secondary-color); cursor: pointer; font-size: 1em; padding: 0 2px; line-height: 1; }
+.repo-item-header {
+    display: flex; align-items: center; gap: 6px; padding: 4px 8px; font-size: 0.83em;
+}
+.repo-dt  { color: var(--text-secondary-color); flex: 0 0 auto; }
+.repo-val { margin-left: auto; font-weight: 700; color: #16a34a; flex: 0 0 auto; }
+.repo-del {
+    background: none; border: none; color: var(--text-secondary-color);
+    cursor: pointer; font-size: 1em; padding: 0 2px; line-height: 1; flex: 0 0 auto;
+}
+.repo-del:hover { color: var(--danger-color); }
+.repo-item-chips {
+    display: flex; flex-wrap: wrap; gap: 4px; padding: 2px 8px 6px;
+}
+.repo-den-chip {
+    background: rgba(124,58,237,0.12); color: #7c3aed;
+    border-radius: 4px; padding: 1px 7px; font-size: 0.8em; font-weight: 700;
+}
 .repo-del:hover { color: var(--danger-color); }
 .fichas-rec-form { display: flex; flex-direction: column; gap: 6px; padding: 4px 2px 8px; }
 .fichas-rec-save-bar {

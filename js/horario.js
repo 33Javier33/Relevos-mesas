@@ -1599,9 +1599,48 @@ document.addEventListener('DOMContentLoaded', () => {
         summ.textContent = '📦 Reposición de fichas';
         sec.appendChild(summ);
 
-        // Form: [fecha/hora] [denominación select] [cantidad] [Agregar]
-        const form = document.createElement('div');
-        form.className = 'fichas-repo-form';
+        // ── Grilla de denominaciones (igual al inventario) ────
+        const repoTabla = document.createElement('div');
+        repoTabla.className = 'fichas-tabla fichas-repo-tabla';
+
+        const cantInputs = {};
+        DENOMINACIONES.forEach(den => {
+            const row = document.createElement('div');
+            row.className = 'fichas-row';
+            row.innerHTML =
+                `<span class="fichas-den">${fmtFichas(den)}</span>` +
+                `<span class="fichas-sep">—</span>` +
+                `<input type="number" class="fichas-cantidad" min="0" placeholder="0">` +
+                `<span class="fichas-sep">—</span>` +
+                `<span class="fichas-total">—</span>`;
+            const input     = row.querySelector('.fichas-cantidad');
+            const totalSpan = row.querySelector('.fichas-total');
+            input.addEventListener('input', () => {
+                const q = Math.max(0, parseInt(input.value) || 0);
+                totalSpan.textContent = q > 0 ? fmtFichas(den * q) : '—';
+                const gt = DENOMINACIONES.reduce((s, d) => {
+                    const v = parseInt(cantInputs[d] && cantInputs[d].value) || 0;
+                    return s + d * v;
+                }, 0);
+                repoTabla.querySelector('.fichas-grand-total').textContent = gt > 0 ? fmtFichas(gt) : '—';
+            });
+            cantInputs[den] = input;
+            repoTabla.appendChild(row);
+        });
+
+        const totalRow = document.createElement('div');
+        totalRow.className = 'fichas-row fichas-total-row';
+        totalRow.innerHTML =
+            `<span></span><span></span>` +
+            `<span class="fichas-lbl-total">TOTAL REPO</span>` +
+            `<span></span>` +
+            `<span class="fichas-grand-total">—</span>`;
+        repoTabla.appendChild(totalRow);
+        sec.appendChild(repoTabla);
+
+        // ── Fecha/hora + botón confirmar ──────────────────────
+        const actionBar = document.createElement('div');
+        actionBar.className = 'fichas-repo-action-bar';
 
         const dtInp = document.createElement('input');
         dtInp.type = 'datetime-local';
@@ -1609,71 +1648,61 @@ document.addEventListener('DOMContentLoaded', () => {
         const nowLocal = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
         dtInp.value = nowLocal;
 
-        const denSel = document.createElement('select');
-        denSel.className = 'fichas-repo-den';
-        DENOMINACIONES.forEach(den => {
-            const opt = document.createElement('option');
-            opt.value = den;
-            opt.textContent = fmtFichas(den);
-            denSel.appendChild(opt);
-        });
+        const confirmarBtn = document.createElement('button');
+        confirmarBtn.className = 'fichas-repo-add';
+        confirmarBtn.textContent = '✅ Confirmar reposición';
 
-        const cantInp = document.createElement('input');
-        cantInp.type = 'number';
-        cantInp.min  = '1';
-        cantInp.className   = 'fichas-repo-cant';
-        cantInp.placeholder = 'Cantidad';
+        actionBar.appendChild(dtInp);
+        actionBar.appendChild(confirmarBtn);
+        sec.appendChild(actionBar);
 
-        const addBtn = document.createElement('button');
-        addBtn.className   = 'fichas-repo-add';
-        addBtn.textContent = '+ Agregar';
-
-        form.appendChild(dtInp);
-        form.appendChild(denSel);
-        form.appendChild(cantInp);
-        form.appendChild(addBtn);
-        sec.appendChild(form);
-
-        // History
+        // ── Historial ─────────────────────────────────────────
         const repoLista = document.createElement('div');
         repoLista.className = 'fichas-repo-lista';
         renderReposicionLista(datos, repoLista, tabla);
         sec.appendChild(repoLista);
 
-        const confirmarRepo = () => {
-            const den  = parseInt(denSel.value);
-            const cant = Math.max(1, parseInt(cantInp.value) || 0);
-            if (!cant) { cantInp.focus(); return; }
+        confirmarBtn.addEventListener('click', () => {
+            // Colectar items con cantidad > 0
+            const items = [];
+            DENOMINACIONES.forEach(den => {
+                const cant = Math.max(0, parseInt(cantInputs[den].value) || 0);
+                if (cant > 0) items.push({ den, cantidad: cant, valor: den * cant });
+            });
+            if (!items.length) return;
 
-            // Sumar al inventario
-            const anterior = parseInt(datos.inventario[String(den)]) || 0;
-            datos.inventario[String(den)] = anterior + cant;
-
-            // Actualizar display del tabla de inventario
-            const idx = DENOMINACIONES.indexOf(den);
-            const rows = tabla.querySelectorAll('.fichas-row:not(.fichas-total-row):not(.fichas-clear-row)');
-            if (rows[idx]) {
-                const inp = rows[idx].querySelector('.fichas-cantidad');
-                const tot = rows[idx].querySelector('.fichas-total');
-                if (inp) inp.value = datos.inventario[String(den)];
-                if (tot) tot.textContent = fmtFichas(den * datos.inventario[String(den)]);
-            }
+            // Sumar al inventario real
+            const invRows = tabla.querySelectorAll('.fichas-row:not(.fichas-total-row):not(.fichas-clear-row)');
+            items.forEach(({ den, cantidad, valor }) => {
+                datos.inventario[String(den)] = (parseInt(datos.inventario[String(den)]) || 0) + cantidad;
+                const idx = DENOMINACIONES.indexOf(den);
+                if (invRows[idx]) {
+                    const inp = invRows[idx].querySelector('.fichas-cantidad');
+                    const tot = invRows[idx].querySelector('.fichas-total');
+                    const q = datos.inventario[String(den)];
+                    if (inp) inp.value = q;
+                    if (tot) tot.textContent = fmtFichas(den * q);
+                }
+            });
             const gtEl = tabla.querySelector('.fichas-grand-total');
             if (gtEl) gtEl.textContent = fmtFichas(calcTotalInventario(datos.inventario));
 
-            // Log
+            // Log único con todos los items
+            const totalRepo = items.reduce((s, i) => s + i.valor, 0);
             const dtVal = dtInp.value ? new Date(dtInp.value).toISOString() : new Date().toISOString();
-            const entry = { id: genId(), dt: dtVal, den, cantidad: cant, valor: den * cant };
+            const entry = { id: genId(), dt: dtVal, items, total: totalRepo };
             datos.reposiciones = datos.reposiciones || [];
             datos.reposiciones.unshift(entry);
             guardarFichasData();
             renderReposicionLista(datos, repoLista, tabla);
-            cantInp.value = '';
-            cantInp.focus();
-        };
 
-        addBtn.addEventListener('click', confirmarRepo);
-        cantInp.addEventListener('keydown', e => { if (e.key === 'Enter') confirmarRepo(); });
+            // Limpiar grilla
+            DENOMINACIONES.forEach(den => {
+                cantInputs[den].value = '';
+                cantInputs[den].closest('.fichas-row').querySelector('.fichas-total').textContent = '—';
+            });
+            repoTabla.querySelector('.fichas-grand-total').textContent = '—';
+        });
 
         return sec;
     }
@@ -1689,25 +1718,45 @@ document.addEventListener('DOMContentLoaded', () => {
             const dt = new Date(r.dt).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
             const item = document.createElement('div');
             item.className = 'fichas-repo-item';
+
+            // Soporte para entrada nueva (items[]) y legado (den/cantidad)
+            let detalleHtml = '';
+            let totalVal = 0;
+            if (r.items && r.items.length) {
+                detalleHtml = r.items.map(i =>
+                    `<span class="repo-den-chip">${fmtFichas(i.den)} ×${i.cantidad}</span>`
+                ).join('');
+                totalVal = r.total || r.items.reduce((s, i) => s + i.valor, 0);
+            } else {
+                detalleHtml = `<span class="repo-den-chip">${fmtFichas(r.den)} ×${r.cantidad}</span>`;
+                totalVal = r.valor || 0;
+            }
+
             item.innerHTML =
-                `<span class="repo-dt">${dt}</span>` +
-                `<span class="repo-den">${fmtFichas(r.den)}</span>` +
-                `<span class="repo-cant">+${r.cantidad} fichas</span>` +
-                `<span class="repo-val">+$${fmtFichas(r.valor)}</span>` +
-                `<button class="repo-del" data-id="${r.id}" title="Eliminar">×</button>`;
+                `<div class="repo-item-header">` +
+                    `<span class="repo-dt">${dt}</span>` +
+                    `<span class="repo-val">+$${fmtFichas(totalVal)}</span>` +
+                    `<button class="repo-del" title="Eliminar">×</button>` +
+                `</div>` +
+                `<div class="repo-item-chips">${detalleHtml}</div>`;
+
             item.querySelector('.repo-del').addEventListener('click', () => {
-                // revert the inventory change
                 datos.reposiciones = datos.reposiciones.filter(x => x.id !== r.id);
-                datos.inventario[String(r.den)] = Math.max(0, (parseInt(datos.inventario[String(r.den)]) || 0) - r.cantidad);
-                const idx = DENOMINACIONES.indexOf(r.den);
-                const rows = tabla.querySelectorAll('.fichas-row:not(.fichas-total-row):not(.fichas-clear-row)');
-                if (rows[idx]) {
-                    const inp = rows[idx].querySelector('.fichas-cantidad');
-                    const tot = rows[idx].querySelector('.fichas-total');
-                    const q = parseInt(datos.inventario[String(r.den)]) || 0;
-                    if (inp) inp.value = q || '';
-                    if (tot) tot.textContent = q > 0 ? fmtFichas(r.den * q) : '—';
-                }
+
+                // Revertir en inventario
+                const itemsToRevert = r.items ? r.items : [{ den: r.den, cantidad: r.cantidad }];
+                const invRows = tabla.querySelectorAll('.fichas-row:not(.fichas-total-row):not(.fichas-clear-row)');
+                itemsToRevert.forEach(({ den, cantidad }) => {
+                    datos.inventario[String(den)] = Math.max(0, (parseInt(datos.inventario[String(den)]) || 0) - cantidad);
+                    const idx = DENOMINACIONES.indexOf(den);
+                    if (invRows[idx]) {
+                        const inp = invRows[idx].querySelector('.fichas-cantidad');
+                        const tot = invRows[idx].querySelector('.fichas-total');
+                        const q = parseInt(datos.inventario[String(den)]) || 0;
+                        if (inp) inp.value = q || '';
+                        if (tot) tot.textContent = q > 0 ? fmtFichas(den * q) : '—';
+                    }
+                });
                 const gtEl = tabla.querySelector('.fichas-grand-total');
                 const gt = calcTotalInventario(datos.inventario);
                 if (gtEl) gtEl.textContent = gt > 0 ? fmtFichas(gt) : '—';
