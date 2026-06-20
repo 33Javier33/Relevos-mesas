@@ -1294,11 +1294,16 @@ document.addEventListener('DOMContentLoaded', () => {
             fichasData = {};
             for (const [mesa, val] of Object.entries(raw || {})) {
                 if (!val || typeof val !== 'object') {
-                    fichasData[mesa] = { inventario: {}, horas: [] };
-                } else if (val.inventario !== undefined || val.horas !== undefined) {
-                    fichasData[mesa] = { inventario: val.inventario || {}, horas: val.horas || [] };
+                    fichasData[mesa] = { inventario: {}, horas: [], snapshots: [], recuentos: [] };
+                } else if (val.inventario !== undefined || val.horas !== undefined || val.recuentos !== undefined) {
+                    fichasData[mesa] = {
+                        inventario: val.inventario || {},
+                        horas:      val.horas      || [],
+                        snapshots:  val.snapshots  || [],
+                        recuentos:  val.recuentos  || []
+                    };
                 } else {
-                    fichasData[mesa] = { inventario: val, horas: [] };
+                    fichasData[mesa] = { inventario: val, horas: [], snapshots: [], recuentos: [] };
                 }
             }
         } catch { fichasData = {}; }
