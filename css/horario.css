@@ -909,6 +909,9 @@ footer {
 .rec-delta-pos { background: rgba(34,197,94,0.18); color: #15803d; }
 .rec-delta-neg { background: rgba(239,68,68,0.15); color: #b91c1c; }
 .rec-delta-base { background: rgba(100,100,100,0.1); color: var(--text-secondary-color); font-size: 0.8em; }
+.rec-retencion { font-size: 0.8em; font-weight: 700; padding: 2px 6px; border-radius: 4px; border: 1px solid; }
+.rec-ret-pos { color: #15803d; border-color: rgba(34,197,94,0.4); background: rgba(34,197,94,0.08); }
+.rec-ret-neg { color: #b91c1c; border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.08); }
 .rec-del { margin-left: auto; background: none; border: none; color: var(--text-secondary-color); cursor: pointer; font-size: 1em; padding: 0 2px; line-height: 1; }
 .rec-del:hover { color: var(--danger-color); }
 .fichas-rec-detail { display: flex; align-items: center; gap: 5px; padding: 3px 8px 5px; font-size: 0.8em; background: rgba(0,0,0,0.03); flex-wrap: wrap; }

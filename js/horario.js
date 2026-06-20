@@ -1509,10 +1509,21 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         recs.forEach((rec, idx) => {
-            const prev  = idx > 0 ? recs[idx - 1] : null;
-            const total = rec.billetes + rec.inventario;
+            const prev      = idx > 0 ? recs[idx - 1] : null;
+            const total     = rec.billetes + rec.inventario;
             const prevTotal = prev ? prev.billetes + prev.inventario : null;
-            const delta = prevTotal !== null ? total - prevTotal : null;
+            const delta     = prevTotal !== null ? total - prevTotal : null;
+
+            // Retención: Δtotal / Δbilletes × 100
+            let retencionHtml = '';
+            if (prev !== null) {
+                const deltaBill = rec.billetes - prev.billetes;
+                if (deltaBill > 0 && delta !== null) {
+                    const pct = Math.round(delta / deltaBill * 100);
+                    const cls = pct >= 0 ? 'rec-ret-pos' : 'rec-ret-neg';
+                    retencionHtml = `<span class="rec-retencion ${cls}">${pct >= 0 ? '+' : ''}${pct}% ret.</span>`;
+                }
+            }
 
             const dtLabel = rec.dt
                 ? new Date(rec.dt).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
@@ -1535,12 +1546,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     `<span class="rec-dt">${dtLabel}</span>` +
                     `<span class="rec-total">$${fmtFichas(total)}</span>` +
                     deltaHtml +
+                    retencionHtml +
                     `<button class="rec-del" title="Eliminar">×</button>` +
                 `</div>` +
                 `<div class="fichas-rec-detail">` +
                     `<span class="rec-d-lbl">Billetes</span><span class="rec-d-val">$${fmtFichas(rec.billetes)}</span>` +
                     `<span class="rec-d-sep">+</span>` +
-                    `<span class="rec-d-lbl">Inventario</span><span class="rec-d-val">$${fmtFichas(rec.inventario)}</span>` +
+                    `<span class="rec-d-lbl">Inventario fichas</span><span class="rec-d-val">$${fmtFichas(rec.inventario)}</span>` +
                 `</div>`;
 
             item.querySelector('.rec-del').addEventListener('click', () => {
