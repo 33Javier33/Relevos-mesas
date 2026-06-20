@@ -1620,12 +1620,55 @@ document.addEventListener('DOMContentLoaded', () => {
         return panel;
     }
 
+    function calcCambiosHasta(datos, hora) {
+        return (datos.horas || [])
+            .filter(h => !hora || !h.hora || h.hora <= hora)
+            .reduce((s, h) => s + (parseInt(h.cambios) || 0), 0);
+    }
+
+    function calcBalanceTotal(inv, datos, hora) {
+        return calcTotalInventario(inv) + calcCambiosHasta(datos, hora);
+    }
+
     function renderBalance(datos, content) {
         const inventario   = calcTotalInventario(datos.inventario);
         const totalCambios = (datos.horas || []).reduce((s, h) => s + (parseInt(h.cambios) || 0), 0);
         const totalDrops   = (datos.horas || []).reduce((s, h) => s + calcDropHora(h), 0);
         const efectivo     = totalCambios - totalDrops;
         const totalCirc    = inventario + totalCambios;
+
+        // Comparison between last two snapshots (or current vs last snapshot)
+        const snaps = [...(datos.snapshots || [])];
+        let deltaHtml = '';
+        if (snaps.length >= 2) {
+            const snapA = snaps[snaps.length - 2];
+            const snapB = snaps[snaps.length - 1];
+            const totalA = calcBalanceTotal(snapA.fichas, datos, snapA.hora);
+            const totalB = calcBalanceTotal(snapB.fichas, datos, snapB.hora);
+            const delta  = totalB - totalA;
+            const sign   = delta >= 0 ? '+' : '';
+            const cls    = delta >= 0 ? 'bal-delta-pos' : 'bal-delta-neg';
+            const arrow  = delta >= 0 ? '▲' : '▼';
+            deltaHtml =
+                `<div class="fichas-bal-delta-row">` +
+                    `<span class="fichas-bal-delta-lbl">${snapA.hora || '—'} → ${snapB.hora || '—'}</span>` +
+                    `<span class="fichas-bal-delta ${cls}">${arrow} ${sign}$${fmtFichas(Math.abs(delta))}</span>` +
+                `</div>`;
+        } else if (snaps.length === 1) {
+            const snap  = snaps[0];
+            const prevT = calcBalanceTotal(snap.fichas, datos, snap.hora);
+            const delta = totalCirc - prevT;
+            if (delta !== 0) {
+                const sign  = delta >= 0 ? '+' : '';
+                const cls   = delta >= 0 ? 'bal-delta-pos' : 'bal-delta-neg';
+                const arrow = delta >= 0 ? '▲' : '▼';
+                deltaHtml =
+                    `<div class="fichas-bal-delta-row">` +
+                        `<span class="fichas-bal-delta-lbl">vs ${snap.hora || '—'}</span>` +
+                        `<span class="fichas-bal-delta ${cls}">${arrow} ${sign}$${fmtFichas(Math.abs(delta))}</span>` +
+                    `</div>`;
+            }
+        }
 
         const fmt = v => v > 0 ? `$${fmtFichas(v)}` : '—';
         content.innerHTML =
@@ -1644,7 +1687,8 @@ document.addEventListener('DOMContentLoaded', () => {
             `<div class="fichas-bal-row fichas-bal-total-row">` +
                 `<span class="fichas-bal-lbl">Total en circulación</span>` +
                 `<span class="fichas-bal-val fichas-bal-total">${fmt(totalCirc)}</span>` +
-            `</div>`;
+            `</div>` +
+            deltaHtml;
     }
 
     function renderSnapshotLista(datos, snapLista, panel) {

@@ -857,3 +857,11 @@ footer {
 }
 .fichas-bal-total-row .fichas-bal-lbl { color: white; font-weight: 700; }
 .fichas-bal-total { color: white; font-size: 1.05em; font-weight: 800; }
+.fichas-bal-delta-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 5px 6px 4px; font-size: 0.85em; border-top: 1px dashed var(--border-color); margin-top: 2px;
+}
+.fichas-bal-delta-lbl { color: var(--text-secondary-color); font-size: 0.9em; }
+.fichas-bal-delta { font-weight: 800; font-size: 1em; padding: 2px 8px; border-radius: 4px; }
+.bal-delta-pos { background: rgba(34,197,94,0.18); color: #15803d; }
+.bal-delta-neg { background: rgba(239,68,68,0.15); color: #b91c1c; }
