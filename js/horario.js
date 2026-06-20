@@ -1388,8 +1388,68 @@ document.addEventListener('DOMContentLoaded', () => {
         panel.appendChild(summary);
 
         panel.appendChild(crearSeccionRecuento(datos, panel));
+        panel.appendChild(crearSeccionInventario(datos, panel));
 
         return panel;
+    }
+
+    function crearSeccionInventario(datos, panel) {
+        const sec = document.createElement('details');
+        sec.className = 'fichas-section fichas-inv-details';
+
+        const summ = document.createElement('summary');
+        summ.className = 'fichas-inv-summary';
+        summ.textContent = '🪙 Inventario de fichas';
+        sec.appendChild(summ);
+
+        const tabla = document.createElement('div');
+        tabla.className = 'fichas-tabla';
+
+        DENOMINACIONES.forEach(den => {
+            const qty = parseInt(datos.inventario[String(den)]) || 0;
+            const row = document.createElement('div');
+            row.className = 'fichas-row';
+            row.innerHTML =
+                `<span class="fichas-den">${fmtFichas(den)}</span>` +
+                `<span class="fichas-sep">—</span>` +
+                `<input type="number" class="fichas-cantidad" min="0" value="${qty || ''}" placeholder="0">` +
+                `<span class="fichas-sep">—</span>` +
+                `<span class="fichas-total">${qty > 0 ? fmtFichas(den * qty) : '—'}</span>`;
+            const input     = row.querySelector('.fichas-cantidad');
+            const totalSpan = row.querySelector('.fichas-total');
+            input.addEventListener('input', () => {
+                const q = Math.max(0, parseInt(input.value) || 0);
+                totalSpan.textContent = q > 0 ? fmtFichas(den * q) : '—';
+                datos.inventario[String(den)] = q;
+                const gt = calcTotalInventario(datos.inventario);
+                tabla.querySelector('.fichas-grand-total').textContent = gt > 0 ? fmtFichas(gt) : '—';
+                guardarFichasData();
+            });
+            tabla.appendChild(row);
+        });
+
+        const gt = calcTotalInventario(datos.inventario);
+        const totalRow = document.createElement('div');
+        totalRow.className = 'fichas-row fichas-total-row';
+        totalRow.innerHTML = `<span></span><span></span><span class="fichas-lbl-total">TOTAL</span><span></span><span class="fichas-grand-total">${gt > 0 ? fmtFichas(gt) : '—'}</span>`;
+        tabla.appendChild(totalRow);
+
+        const clearRow = document.createElement('div');
+        clearRow.className = 'fichas-clear-row';
+        const clearBtn = document.createElement('button');
+        clearBtn.className = 'fichas-clear-btn';
+        clearBtn.textContent = '🗑️ Limpiar';
+        clearBtn.addEventListener('click', () => {
+            datos.inventario = {};
+            tabla.querySelectorAll('.fichas-cantidad').forEach(inp => { inp.value = ''; });
+            tabla.querySelectorAll('.fichas-total').forEach(s => { s.textContent = '—'; });
+            tabla.querySelector('.fichas-grand-total').textContent = '—';
+            guardarFichasData();
+        });
+        clearRow.appendChild(clearBtn);
+        tabla.appendChild(clearRow);
+        sec.appendChild(tabla);
+        return sec;
     }
 
     function crearSeccionRecuento(datos, panel) {

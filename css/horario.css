@@ -868,6 +868,17 @@ footer {
 
 /* ── Recuento ────────────────────────────────────────────── */
 .fichas-recuento-section { border-top: 2px solid #f59e0b; background: rgba(245,158,11,0.04); }
+
+/* ── Inventario colapsable ───────────────────────────────── */
+.fichas-inv-details { border-top: 1px solid var(--border-color); }
+.fichas-inv-summary {
+    cursor: pointer; list-style: none; padding: 7px 10px;
+    font-size: 0.85em; font-weight: 700; color: var(--text-secondary-color);
+    display: flex; align-items: center; gap: 6px; user-select: none;
+}
+.fichas-inv-summary::before { content: '▶'; font-size: 0.7em; transition: transform 0.15s; }
+.fichas-inv-details[open] > .fichas-inv-summary::before { transform: rotate(90deg); }
+.fichas-inv-summary::-webkit-details-marker { display: none; }
 .fichas-rec-form { display: flex; flex-direction: column; gap: 6px; padding: 4px 2px 8px; }
 .fichas-rec-dt { padding: 4px 6px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--input-bg); color: var(--text-color); font-size: 0.85em; width: 100%; box-sizing: border-box; }
 .fichas-rec-inputs { display: flex; gap: 6px; }
