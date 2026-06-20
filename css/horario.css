@@ -665,6 +665,9 @@ footer {
 .fichas-summary-name { font-weight: 700; font-size: 0.93em; flex-shrink: 0; }
 .fichas-summary-chips { font-size: 0.78em; color: var(--text-secondary-color); margin-left: auto; white-space: nowrap; }
 .fichas-summary-net { font-size: 0.78em; font-weight: 700; color: var(--primary-color); white-space: nowrap; }
+.fichas-summary-ret { font-size: 0.78em; font-weight: 800; white-space: nowrap; padding: 1px 6px; border-radius: 4px; margin-left: 4px; }
+.summary-ret-pos { background: rgba(46,204,113,0.15); color: #27ae60; }
+.summary-ret-neg { background: rgba(231,76,60,0.13); color: #e74c3c; }
 
 /* Sections inside panel */
 .fichas-section { border-top: 1px solid var(--border-color); padding: 10px 14px 8px; }

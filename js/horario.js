@@ -1352,14 +1352,35 @@ document.addEventListener('DOMContentLoaded', () => {
         return (datos.horas || []).reduce((s, h) => s + calcEfectivoHora(h), 0);
     }
 
+    function calcRetencionMesa(recs) {
+        if (recs.length < 2) return null;
+        const last = recs[recs.length - 1];
+        const prev = recs[recs.length - 2];
+        const dBill = last.billetes - prev.billetes;
+        const dTot  = (last.billetes + last.inventario) - (prev.billetes + prev.inventario);
+        return dBill > 0 ? Math.round(dTot / dBill * 100) : null;
+    }
+
     function actualizarSummaryPanel(panel) {
         const mesa = panel.dataset.mesa;
         const datos = getMesaData(mesa);
         const recs  = datos.recuentos || [];
         const last  = recs.length ? recs[recs.length - 1] : null;
         const lastTotal = last ? last.billetes + last.inventario : 0;
+        const pct   = calcRetencionMesa(recs);
+
         const chipsEl = panel.querySelector('.fichas-summary-chips');
+        const retEl   = panel.querySelector('.fichas-summary-ret');
         if (chipsEl) chipsEl.textContent = lastTotal > 0 ? `$${fmtFichas(lastTotal)}` : 'Sin recuentos';
+        if (retEl) {
+            if (pct !== null) {
+                retEl.textContent = `${pct >= 0 ? '+' : ''}${pct}%`;
+                retEl.className = `fichas-summary-ret ${pct >= 0 ? 'summary-ret-pos' : 'summary-ret-neg'}`;
+                retEl.style.display = '';
+            } else {
+                retEl.style.display = 'none';
+            }
+        }
     }
 
     function abrirFichasModal() {
@@ -1440,6 +1461,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const recs  = datos.recuentos || [];
         const last  = recs.length ? recs[recs.length - 1] : null;
         const lastTotal = last ? last.billetes + last.inventario : 0;
+        const pct   = calcRetencionMesa(recs);
 
         const panel = document.createElement('details');
         panel.className = 'fichas-mesa-panel';
@@ -1450,7 +1472,8 @@ document.addEventListener('DOMContentLoaded', () => {
         summary.className = 'fichas-mesa-summary';
         summary.innerHTML =
             `<span class="fichas-summary-name">🎰 ${mesa}</span>` +
-            `<span class="fichas-summary-chips">${lastTotal > 0 ? `$${fmtFichas(lastTotal)}` : 'Sin recuentos'}</span>`;
+            `<span class="fichas-summary-chips">${lastTotal > 0 ? `$${fmtFichas(lastTotal)}` : 'Sin recuentos'}</span>` +
+            `<span class="fichas-summary-ret ${pct !== null ? (pct >= 0 ? 'summary-ret-pos' : 'summary-ret-neg') : ''}" style="${pct === null ? 'display:none' : ''}">${pct !== null ? (pct >= 0 ? '+' : '') + pct + '%' : ''}</span>`;
         panel.appendChild(summary);
 
         panel.appendChild(crearSeccionInventario(datos, panel));
