@@ -1355,6 +1355,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const netEl   = panel.querySelector('.fichas-summary-net');
         if (chipsEl) chipsEl.textContent = chips > 0 ? `Chips: $${fmtFichas(chips)}` : 'Sin fichas';
         if (netEl)   netEl.textContent   = efectivo > 0 ? `Efectivo: $${fmtFichas(efectivo)}` : '';
+        const balContent = panel.querySelector('.fichas-balance-content');
+        if (balContent) renderBalance(datos, balContent);
     }
 
     function abrirFichasModal() {
@@ -1604,7 +1606,45 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         panel.appendChild(secCambios);
+
+        // ── Section 3: Balance ─────────────────────────────────
+        const secBalance = document.createElement('div');
+        secBalance.className = 'fichas-section fichas-balance-section';
+        secBalance.innerHTML = '<div class="fichas-section-title-row"><span class="fichas-section-title">📊 Balance</span></div>';
+        const balContent = document.createElement('div');
+        balContent.className = 'fichas-balance-content';
+        secBalance.appendChild(balContent);
+        renderBalance(datos, balContent);
+        panel.appendChild(secBalance);
+
         return panel;
+    }
+
+    function renderBalance(datos, content) {
+        const inventario   = calcTotalInventario(datos.inventario);
+        const totalCambios = (datos.horas || []).reduce((s, h) => s + (parseInt(h.cambios) || 0), 0);
+        const totalDrops   = (datos.horas || []).reduce((s, h) => s + calcDropHora(h), 0);
+        const efectivo     = totalCambios - totalDrops;
+        const totalCirc    = inventario + totalCambios;
+
+        const fmt = v => v > 0 ? `$${fmtFichas(v)}` : '—';
+        content.innerHTML =
+            `<div class="fichas-bal-row">` +
+                `<span class="fichas-bal-lbl">Inventario en mesa</span>` +
+                `<span class="fichas-bal-val">${fmt(inventario)}</span>` +
+            `</div>` +
+            `<div class="fichas-bal-row">` +
+                `<span class="fichas-bal-lbl">Efectivo entrado</span>` +
+                `<span class="fichas-bal-val">${fmt(efectivo)}</span>` +
+            `</div>` +
+            `<div class="fichas-bal-row">` +
+                `<span class="fichas-bal-lbl">Fichas drop</span>` +
+                `<span class="fichas-bal-val fichas-bal-drop">${fmt(totalDrops)}</span>` +
+            `</div>` +
+            `<div class="fichas-bal-row fichas-bal-total-row">` +
+                `<span class="fichas-bal-lbl">Total en circulación</span>` +
+                `<span class="fichas-bal-val fichas-bal-total">${fmt(totalCirc)}</span>` +
+            `</div>`;
     }
 
     function renderSnapshotLista(datos, snapLista, panel) {
