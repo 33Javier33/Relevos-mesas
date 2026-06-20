@@ -880,6 +880,19 @@ footer {
 .fichas-inv-details[open] > .fichas-inv-summary::before { transform: rotate(90deg); }
 .fichas-inv-summary::-webkit-details-marker { display: none; }
 .fichas-rec-form { display: flex; flex-direction: column; gap: 6px; padding: 4px 2px 8px; }
+.fichas-rec-save-bar {
+    display: flex; flex-direction: column; gap: 6px;
+    border-top: 2px dashed var(--border-color); margin-top: 6px; padding: 8px 4px 6px;
+}
+.fichas-rec-bill-label {
+    display: flex; flex-direction: column; gap: 3px;
+    font-size: 0.8em; color: var(--text-secondary-color); font-weight: 700;
+}
+.fichas-rec-bill-label input {
+    padding: 5px 8px; border: 1px solid var(--border-color); border-radius: 5px;
+    background: var(--input-bg); color: var(--text-color); font-size: 1.05em;
+    text-align: right; width: 100%; box-sizing: border-box;
+}
 .fichas-rec-dt { padding: 4px 6px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--input-bg); color: var(--text-color); font-size: 0.85em; width: 100%; box-sizing: border-box; }
 .fichas-rec-inputs { display: flex; gap: 6px; }
 .fichas-rec-label { display: flex; flex-direction: column; gap: 2px; font-size: 0.78em; color: var(--text-secondary-color); font-weight: 600; flex: 1; }
