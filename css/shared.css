@@ -22,6 +22,9 @@
     --warning-color: #f39c12;
     --modal-bg: rgba(0, 0, 0, 0.5);
     --current-time-bg: #d1ecf1;
+    --accent-color: #2980b9;
+    --input-bg: #ffffff;
+    --card-bg: #f8fafc;
 }
 
 body.dark-mode {
@@ -36,6 +39,9 @@ body.dark-mode {
     --hover-bg-color: #2c2c2c;
     --selected-bg-color: #003c5a;
     --current-time-bg: #003c5a;
+    --accent-color: #2980b9;
+    --input-bg: #2a2a2a;
+    --card-bg: #252525;
 }
 
 body {

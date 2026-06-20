@@ -925,17 +925,16 @@ footer {
     border-radius: 10px;
     padding: 10px 14px 12px;
     margin-bottom: 10px;
-    color: white;
 }
 .fichas-resumen-titulo {
-    font-size: 0.82em; font-weight: 700; opacity: 0.85;
-    margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em;
+    font-size: 0.78em; font-weight: 700; color: #d6eaf8;
+    margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em;
 }
 .fichas-resumen-fila {
     display: flex; justify-content: space-between; align-items: baseline;
     padding: 3px 0;
 }
-.fichas-resumen-fila + .fichas-resumen-fila { border-top: 1px solid rgba(255,255,255,0.2); margin-top: 4px; padding-top: 7px; }
-.fichas-resumen-lbl { font-size: 0.85em; opacity: 0.88; }
-.fichas-resumen-val { font-size: 1.2em; font-weight: 800; font-variant-numeric: tabular-nums; }
-.fichas-resumen-circ { font-size: 1.45em; }
+.fichas-resumen-fila + .fichas-resumen-fila { border-top: 1px solid rgba(255,255,255,0.25); margin-top: 5px; padding-top: 8px; }
+.fichas-resumen-lbl { font-size: 0.85em; color: #d6eaf8; font-weight: 500; }
+.fichas-resumen-val { font-size: 1.15em; font-weight: 800; color: #ffffff; font-variant-numeric: tabular-nums; }
+.fichas-resumen-circ { font-size: 1.4em; color: #ffffff; }
