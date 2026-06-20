@@ -1370,9 +1370,46 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!mesas.length) {
             content.innerHTML = '<p style="text-align:center;color:var(--text-secondary-color);padding:24px 0">No hay mesas configuradas. Usá "Mesas del turno" para activarlas.</p>';
         } else {
+            content.appendChild(crearResumenGeneral(mesas));
             mesas.forEach(mesa => content.appendChild(crearPanelFichas(mesa)));
         }
         document.getElementById('fichas-modal').style.display = 'flex';
+    }
+
+    function crearResumenGeneral(mesas) {
+        const div = document.createElement('div');
+        div.className = 'fichas-resumen-general';
+        renderResumenGeneral(mesas, div);
+        return div;
+    }
+
+    function renderResumenGeneral(mesas, div) {
+        let totalInv  = 0;
+        let totalCirc = 0;
+        let mesasCirc = 0;
+
+        mesas.forEach(mesa => {
+            const datos = getMesaData(mesa);
+            totalInv += calcTotalInventario(datos.inventario);
+            const recs = datos.recuentos || [];
+            if (recs.length) {
+                const last = recs[recs.length - 1];
+                totalCirc += last.billetes + last.inventario;
+                mesasCirc++;
+            }
+        });
+
+        div.innerHTML =
+            `<div class="fichas-resumen-titulo">📊 Total General · ${mesas.length} mesas activas</div>` +
+            `<div class="fichas-resumen-fila">` +
+                `<span class="fichas-resumen-lbl">Inventario total de fichas</span>` +
+                `<span class="fichas-resumen-val">${totalInv > 0 ? '$' + fmtFichas(totalInv) : '—'}</span>` +
+            `</div>` +
+            (mesasCirc > 0 ?
+                `<div class="fichas-resumen-fila">` +
+                    `<span class="fichas-resumen-lbl">Total en circulación (${mesasCirc} mesas)</span>` +
+                    `<span class="fichas-resumen-val fichas-resumen-circ">$${fmtFichas(totalCirc)}</span>` +
+                `</div>` : '');
     }
 
     function crearPanelFichas(mesa) {
