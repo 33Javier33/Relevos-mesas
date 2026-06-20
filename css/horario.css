@@ -805,3 +805,36 @@ footer {
 .fichas-qdrop-monto { width: 130px; padding: 3px 6px; text-align: right; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg); color: var(--text-color); font-size: 0.85em; }
 .fichas-qdrop-ok     { background: var(--success-color); color: white; border: none; border-radius: 4px; padding: 3px 7px; font-size: 0.8em; cursor: pointer; }
 .fichas-qdrop-cancel { background: var(--neutral-color); color: white; border: none; border-radius: 4px; padding: 3px 7px; font-size: 0.8em; cursor: pointer; }
+
+/* ── Inventario Snapshots ────────────────────────────────── */
+.fichas-snap-bar { display: flex; align-items: center; gap: 6px; margin: 8px 0 4px; }
+.fichas-snap-hora { width: 78px; padding: 3px 5px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg); color: var(--text-color); font-size: 0.85em; }
+.fichas-snap-btn {
+    background: var(--accent-color); color: white; border: none; border-radius: 5px;
+    padding: 4px 10px; font-size: 0.82em; cursor: pointer; font-weight: 600;
+}
+.fichas-snap-btn:hover { filter: brightness(1.15); }
+.fichas-snap-lista { display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px; }
+.fichas-snap-empty { font-size: 0.8em; color: var(--text-secondary-color); margin: 2px 0 4px; padding: 0; }
+.fichas-snap-item { border: 1px solid var(--border-color); border-radius: 5px; overflow: hidden; }
+.fichas-snap-main {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    padding: 4px 7px; background: var(--card-bg); font-size: 0.83em;
+}
+.snap-hora { font-weight: 700; min-width: 38px; cursor: pointer; text-decoration: underline dotted; }
+.snap-total { font-weight: 600; cursor: pointer; text-decoration: underline dotted; }
+.snap-delta { font-size: 0.88em; padding: 1px 5px; border-radius: 3px; font-weight: 600; }
+.snap-delta-pos { background: rgba(34,197,94,0.18); color: #16a34a; }
+.snap-delta-neg { background: rgba(239,68,68,0.15); color: #dc2626; }
+.snap-detail { font-size: 0.8em; color: var(--text-secondary-color); flex: 1; }
+.snap-del { margin-left: auto; background: none; border: none; color: var(--text-secondary-color); cursor: pointer; font-size: 1em; padding: 0 2px; line-height: 1; }
+.snap-del:hover { color: var(--danger-color); }
+/* denomination breakdown panel */
+.fichas-snap-detail-panel { padding: 4px 8px 6px; background: var(--bg-secondary, rgba(0,0,0,0.04)); }
+.fichas-snap-d-row { display: grid; grid-template-columns: 90px 36px 1fr 48px; gap: 4px; font-size: 0.8em; padding: 1px 0; }
+.snap-d-den { color: var(--text-secondary-color); }
+.snap-d-qty { text-align: center; font-weight: 600; }
+.snap-d-val { color: var(--text-color); }
+.snap-d-delta { text-align: right; font-weight: 700; }
+.snap-d-delta-pos { color: #16a34a; }
+.snap-d-delta-neg { color: #dc2626; }

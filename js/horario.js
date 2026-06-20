@@ -1309,9 +1309,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function getMesaData(mesa) {
-        if (!fichasData[mesa] || typeof fichasData[mesa] !== 'object') fichasData[mesa] = { inventario: {}, horas: [] };
+        if (!fichasData[mesa] || typeof fichasData[mesa] !== 'object') fichasData[mesa] = { inventario: {}, horas: [], snapshots: [] };
         if (!fichasData[mesa].inventario) fichasData[mesa].inventario = {};
         if (!fichasData[mesa].horas) fichasData[mesa].horas = [];
+        if (!fichasData[mesa].snapshots) fichasData[mesa].snapshots = [];
         return fichasData[mesa];
     }
 
@@ -1319,6 +1320,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function calcTotalInventario(inv) {
         return DENOMINACIONES.reduce((s, d) => s + d * (parseInt(inv[String(d)]) || 0), 0);
+    }
+    function calcDiffInventario(invA, invB) {
+        const lineas = [];
+        let totalDelta = 0;
+        for (const den of DENOMINACIONES) {
+            const a = parseInt(invA[String(den)]) || 0;
+            const b = parseInt(invB[String(den)]) || 0;
+            if (a !== b) {
+                const dq = b - a;
+                totalDelta += dq * den;
+                lineas.push({ den, dq, dv: dq * den });
+            }
+        }
+        return { totalDelta, lineas };
     }
     function calcDropHora(h) {
         return (h.drops || []).reduce((s, dr) => s + (parseInt(dr.monto) || 0), 0);
@@ -1431,6 +1446,45 @@ document.addEventListener('DOMContentLoaded', () => {
         clearRow.appendChild(clearBtn);
         tabla.appendChild(clearRow);
         secInv.appendChild(tabla);
+
+        // ── Guardar snapshot del inventario ───────────────────
+        const snapBar = document.createElement('div');
+        snapBar.className = 'fichas-snap-bar';
+        const snapHoraInput = document.createElement('input');
+        snapHoraInput.type  = 'time';
+        snapHoraInput.className = 'fichas-snap-hora';
+        const snapNow = new Date();
+        snapHoraInput.value = `${String(snapNow.getHours()).padStart(2,'0')}:${String(snapNow.getMinutes()).padStart(2,'0')}`;
+        const snapBtn = document.createElement('button');
+        snapBtn.className = 'fichas-snap-btn';
+        snapBtn.textContent = '📸 Guardar inventario';
+        snapBar.appendChild(snapHoraInput);
+        snapBar.appendChild(snapBtn);
+        secInv.appendChild(snapBar);
+
+        const snapLista = document.createElement('div');
+        snapLista.className = 'fichas-snap-lista';
+        renderSnapshotLista(datos, snapLista, panel);
+        secInv.appendChild(snapLista);
+
+        snapBtn.addEventListener('click', () => {
+            const hora = snapHoraInput.value;
+            const fichasCopy = {};
+            DENOMINACIONES.forEach(d => {
+                const q = parseInt(datos.inventario[String(d)]) || 0;
+                if (q > 0) fichasCopy[String(d)] = q;
+            });
+            const snap = { id: genId(), hora, fichas: fichasCopy };
+            datos.snapshots.push(snap);
+            datos.snapshots.sort((a, b) => (a.hora || '').localeCompare(b.hora || ''));
+            guardarFichasData();
+            renderSnapshotLista(datos, snapLista, panel);
+            // auto-advance hora by 1h for next snapshot
+            const [hh, mm] = hora.split(':').map(Number);
+            const next = new Date(2000, 0, 1, hh + 1, mm);
+            snapHoraInput.value = `${String(next.getHours()).padStart(2,'0')}:${String(next.getMinutes()).padStart(2,'0')}`;
+        });
+
         panel.appendChild(secInv);
 
         // ── Section 2: Cambios y Fichas Drop ──────────────────
@@ -1551,6 +1605,90 @@ document.addEventListener('DOMContentLoaded', () => {
 
         panel.appendChild(secCambios);
         return panel;
+    }
+
+    function renderSnapshotLista(datos, snapLista, panel) {
+        snapLista.innerHTML = '';
+        const snaps = datos.snapshots || [];
+        if (!snaps.length) {
+            snapLista.innerHTML = '<p class="fichas-snap-empty">Sin inventarios guardados</p>';
+            return;
+        }
+        snaps.forEach((snap, idx) => {
+            const prev = idx > 0 ? snaps[idx - 1] : null;
+            snapLista.appendChild(crearSnapshotItem(snap, prev, datos, snapLista, panel));
+        });
+    }
+
+    function crearSnapshotItem(snap, prevSnap, datos, snapLista, panel) {
+        const item = document.createElement('div');
+        item.className = 'fichas-snap-item';
+        item.dataset.id = snap.id;
+
+        const total = calcTotalInventario(snap.fichas);
+
+        let diffHtml = '';
+        if (prevSnap) {
+            const diff = calcDiffInventario(prevSnap.fichas, snap.fichas);
+            const sign = diff.totalDelta >= 0 ? '+' : '';
+            const cls  = diff.totalDelta >= 0 ? 'snap-delta-pos' : 'snap-delta-neg';
+            diffHtml += `<span class="snap-delta ${cls}">${sign}$${fmtFichas(Math.abs(diff.totalDelta))} vs ant.</span>`;
+            if (diff.lineas.length > 0) {
+                const detail = diff.lineas.map(l => {
+                    const s = l.dq >= 0 ? '+' : '';
+                    return `${fmtFichas(l.den)}: ${s}${l.dq}`;
+                }).join(' · ');
+                diffHtml += `<span class="snap-detail">${detail}</span>`;
+            }
+        }
+
+        const mainRow = document.createElement('div');
+        mainRow.className = 'fichas-snap-main';
+        mainRow.innerHTML =
+            `<span class="snap-hora">${snap.hora || '—'}</span>` +
+            `<span class="snap-total">$${fmtFichas(total)}</span>` +
+            diffHtml +
+            `<button class="snap-del" title="Eliminar">×</button>`;
+
+        mainRow.querySelector('.snap-del').addEventListener('click', () => {
+            datos.snapshots = datos.snapshots.filter(s => s.id !== snap.id);
+            guardarFichasData();
+            renderSnapshotLista(datos, snapLista, panel);
+        });
+
+        // expand to show full denomination breakdown
+        const detail = document.createElement('div');
+        detail.className = 'fichas-snap-detail-panel';
+        detail.style.display = 'none';
+
+        mainRow.querySelector('.snap-hora').addEventListener('click', () => {
+            detail.style.display = detail.style.display === 'none' ? 'block' : 'none';
+        });
+        mainRow.querySelector('.snap-total').addEventListener('click', () => {
+            detail.style.display = detail.style.display === 'none' ? 'block' : 'none';
+        });
+
+        DENOMINACIONES.forEach(den => {
+            const qty = parseInt(snap.fichas[String(den)]) || 0;
+            if (!qty && !prevSnap) return;
+            const prevQty = prevSnap ? (parseInt(prevSnap.fichas[String(den)]) || 0) : null;
+            const dq = prevQty !== null ? qty - prevQty : null;
+            let rowHtml = `<span class="snap-d-den">${fmtFichas(den)}</span><span class="snap-d-qty">${qty}</span><span class="snap-d-val">${qty > 0 ? '$' + fmtFichas(den * qty) : '—'}</span>`;
+            if (dq !== null && dq !== 0) {
+                const cls = dq > 0 ? 'snap-d-delta-pos' : 'snap-d-delta-neg';
+                rowHtml += `<span class="snap-d-delta ${cls}">${dq > 0 ? '+' : ''}${dq}</span>`;
+            } else {
+                rowHtml += `<span class="snap-d-delta"></span>`;
+            }
+            const dRow = document.createElement('div');
+            dRow.className = 'fichas-snap-d-row';
+            dRow.innerHTML = rowHtml;
+            detail.appendChild(dRow);
+        });
+
+        item.appendChild(mainRow);
+        item.appendChild(detail);
+        return item;
     }
 
     function setupMoneyInput(input) {
