@@ -333,11 +333,40 @@ body {
 .entrada-card, .salida-card {
     display: flex; align-items: center; gap: 3px;
     padding: 2px 5px; border-radius: 5px; cursor: pointer;
-    font-size: 0.68rem; font-weight: bold;
+    font-size: 0.68rem; font-weight: bold; background-color: var(--hover-bg-color); color: var(--text-secondary-color);
 }
-.entrada-card { background-color: rgba(46,204,113,0.15); color: #27ae60; }
-.salida-card  { background-color: var(--hover-bg-color); }
+.entrada-card.has-time { background-color: rgba(46,204,113,0.18); color: #27ae60; }
 .turno-lbl { font-size: 0.6rem; opacity: 0.7; letter-spacing: 0.3px; }
+
+/* Quick-add hora de entrada opcional */
+.quick-add-hora-opt { padding: 8px 0 2px; }
+.quick-add-hora-opt label { font-size: 0.82em; color: var(--text-secondary-color); display: block; margin-bottom: 5px; }
+.quick-add-hora-opt input[type=time] {
+    padding: 5px 8px; border: 1px solid var(--border-color); border-radius: 6px;
+    background: var(--input-bg); color: var(--text-color); font-size: 0.9em;
+}
+
+/* Modal Próximos */
+.proximo-item {
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+    border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 6px;
+    background: var(--bg-color);
+}
+.proximo-item.proximo-soon { border-color: #27ae60; background: rgba(46,204,113,0.07); }
+.proximo-nombre { font-weight: 700; font-size: 0.9em; flex: 1; }
+.proximo-hora { font-size: 0.85em; color: var(--text-secondary-color); }
+.proximo-diff { font-size: 0.78em; font-weight: 700; color: var(--text-secondary-color); min-width: 60px; text-align: right; }
+.proximo-soon .proximo-diff { color: #27ae60; }
+.proximo-add-btn {
+    background: #27ae60; color: white; border: none; border-radius: 5px;
+    padding: 3px 10px; font-size: 0.8em; font-weight: 700; cursor: pointer;
+}
+.proximo-add-btn:hover { background: #219a52; }
+.proximo-del-btn {
+    background: none; border: none; color: var(--text-secondary-color);
+    cursor: pointer; font-size: 1.1rem; padding: 0 2px; line-height: 1;
+}
+.proximo-del-btn:hover { color: var(--danger-color); }
 .croupier-row td:first-child { cursor: grab; }
 
 /* Alternating row colors — easier to follow a row horizontally */

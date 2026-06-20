@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const URL_DEL_SCRIPT_DE_MAESTROS = 'https://script.google.com/macros/s/AKfycbzjaL7OKe1_doagry1eo0w15vXOJy_-oEtWreLTzj1GoQgxyE8cDI7jTgWm7qqThB7M/exec';
     const URL_DEL_SCRIPT_DE_HORARIOS = 'https://script.google.com/macros/s/AKfycbw1kBHYt37_X5K7UdBZlJNTgNT2B2P0t4F6uVrCKK_hDgZ7j09cwSzNx5l9CvHwFCTDQg/exec';
 
-    let croupiersData = [], croupiersEnEspera = [], horarios = [], mesasDeJuego = [], mesasHabilitadas = [], datosRelevos = {}, croupierColors = {}, croupierSalidas = {}, croupierEntradas = {}, horarioColors = {};
+    let croupiersData = [], croupiersEnEspera = [], horarios = [], mesasDeJuego = [], mesasHabilitadas = [], datosRelevos = {}, croupierColors = {}, croupierSalidas = {}, croupierEntradas = {}, croupiersPorLlegar = [], horarioColors = {};
     let fichasData = {};
     const DENOMINACIONES = [1000000, 500000, 200000, 100000, 50000, 20000, 10000, 5000, 1000, 500];
     const fmtFichas = n => n.toLocaleString('es-AR');
@@ -87,6 +87,9 @@ document.addEventListener('DOMContentLoaded', () => {
         inputSalidaTime: document.getElementById('input-salida-time'),
         entradaModalTitle: document.getElementById('entrada-modal-title'),
         inputEntradaTime: document.getElementById('input-entrada-time'),
+        quickAddHoraEntrada: document.getElementById('quick-add-hora-entrada'),
+        proximosModal: document.getElementById('proximos-modal'),
+        proximosLista: document.getElementById('proximos-lista'),
         inputNuevaFecha: document.getElementById('input-nueva-fecha'),
         cronoModalTitle: document.getElementById('crono-modal-title').querySelector('span'),
         cronoModalTimer: document.getElementById('crono-modal-timer'),
@@ -171,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function guardarDatosEnLocalStorage(skipSheetsSync = false) {
         const dataToStore = {
             croupiersEnTabla: croupiersData.map(c => c.nombreCompleto),
-            horarios, datosRelevos, croupierColors, croupierSalidas, croupierEntradas, horarioColors,
+            horarios, datosRelevos, croupierColors, croupierSalidas, croupierEntradas, croupiersPorLlegar, horarioColors,
             cronometroState: cronometroStartTime,
             mesasHabilitadas,
         };
@@ -189,6 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
         croupierColors = datos.croupierColors || {};
         croupierSalidas = datos.croupierSalidas || {};
         croupierEntradas = datos.croupierEntradas || {};
+        croupiersPorLlegar = datos.croupiersPorLlegar || [];
         horarioColors = datos.horarioColors || {};
         horarios = datos.horarios || [];
         cronometroStartTime = datos.cronometroState || {};
@@ -325,6 +329,49 @@ document.addEventListener('DOMContentLoaded', () => {
             if (shouldWarn) isAnyWarning = true;
         });
         DOM.relojDigital.classList.toggle('warning-pulse', isAnyWarning);
+
+        // ── Auto-ingreso de croupiers por llegar (15 min antes) ──
+        const aMovera = croupiersPorLlegar.filter(({ horaEntrada }) => {
+            const [h, m] = horaEntrada.split(':').map(Number);
+            const d = new Date(fechaVisible);
+            d.setHours(h, m, 0, 0);
+            if (h < 6) d.setDate(d.getDate() + 1);
+            return (d - now) / 60000 <= 15;
+        });
+        if (aMovera.length > 0) {
+            aMovera.forEach(({ nombre, horaEntrada }) => {
+                croupiersPorLlegar = croupiersPorLlegar.filter(pl => pl.nombre !== nombre);
+                const obj = croupiersEnEspera.find(c => c.nombreCompleto === nombre);
+                if (obj && !croupiersData.some(c => c.nombreCompleto === nombre)) {
+                    croupiersData.push(obj);
+                    croupierEntradas[nombre] = horaEntrada;
+                }
+            });
+            guardarDatosEnLocalStorage();
+            renderizarHorario();
+            actualizarBadgeProximos();
+        }
+
+        // ── Borrar hora de entrada cuando ya llegó la hora ──
+        let entradaLimpiada = false;
+        croupiersData.forEach(({ nombreCompleto: nombre }) => {
+            const entradaTime = croupierEntradas[nombre];
+            if (!entradaTime) return;
+            const [h, m] = entradaTime.split(':').map(Number);
+            const d = new Date(fechaVisible);
+            d.setHours(h, m, 0, 0);
+            if (h < 6) d.setDate(d.getDate() + 1);
+            if (now >= d) {
+                delete croupierEntradas[nombre];
+                const card = document.querySelector(`[data-croupier-entrada="${nombre}"]`);
+                if (card) {
+                    card.querySelector('.entrada-time').textContent = '--:--';
+                    card.classList.remove('has-time');
+                }
+                entradaLimpiada = true;
+            }
+        });
+        if (entradaLimpiada) guardarDatosEnLocalStorage(true);
     }
 
     function iniciarCronometro(croupier, startTime, esManual = true) {
@@ -468,6 +515,70 @@ document.addEventListener('DOMContentLoaded', () => {
         cerrarModales();
     }
 
+    function actualizarBadgeProximos() {
+        const badge = document.getElementById('proximos-badge');
+        const btn   = document.getElementById('btn-proximos-turno');
+        if (!badge || !btn) return;
+        const n = croupiersPorLlegar.length;
+        badge.textContent = n;
+        badge.style.display = n > 0 ? 'inline' : 'none';
+        btn.style.display = n > 0 ? '' : 'none';
+    }
+
+    function abrirProximosModal() {
+        renderProximosLista();
+        DOM.proximosModal.style.display = 'flex';
+    }
+
+    function renderProximosLista() {
+        const lista = DOM.proximosLista;
+        lista.innerHTML = '';
+        if (!croupiersPorLlegar.length) {
+            lista.innerHTML = '<p style="text-align:center;color:var(--text-secondary-color);padding:20px 0">No hay croupiers programados.</p>';
+            return;
+        }
+        const now = new Date();
+        [...croupiersPorLlegar].sort((a, b) => a.horaEntrada.localeCompare(b.horaEntrada)).forEach(({ nombre, horaEntrada }) => {
+            const [h, m] = horaEntrada.split(':').map(Number);
+            const d = new Date(fechaVisible);
+            d.setHours(h, m, 0, 0);
+            if (h < 6) d.setDate(d.getDate() + 1);
+            const diffMin = Math.round((d - now) / 60000);
+            const diffText = diffMin > 0 ? `en ${diffMin} min` : 'ahora';
+            const soon = diffMin <= 15;
+            const item = document.createElement('div');
+            item.className = 'proximo-item' + (soon ? ' proximo-soon' : '');
+            item.innerHTML =
+                `<span class="proximo-nombre">${generarAlias(nombre)}</span>` +
+                `<span class="proximo-hora">⏰ ${horaEntrada}</span>` +
+                `<span class="proximo-diff">${diffText}</span>` +
+                `<button class="proximo-add-btn" data-nombre="${nombre}" data-hora="${horaEntrada}">Agregar ya</button>` +
+                `<button class="proximo-del-btn" data-nombre="${nombre}" title="Quitar">×</button>`;
+            item.querySelector('.proximo-add-btn').addEventListener('click', () => {
+                const n2 = item.dataset ? nombre : nombre;
+                croupiersPorLlegar = croupiersPorLlegar.filter(pl => pl.nombre !== nombre);
+                const obj = croupiersEnEspera.find(c => c.nombreCompleto === nombre);
+                if (obj && !croupiersData.some(c => c.nombreCompleto === nombre)) {
+                    croupiersData.push(obj);
+                    croupierEntradas[nombre] = horaEntrada;
+                }
+                guardarDatosEnLocalStorage();
+                renderizarHorario();
+                actualizarBadgeProximos();
+                if (!croupiersPorLlegar.length) cerrarModales();
+                else renderProximosLista();
+            });
+            item.querySelector('.proximo-del-btn').addEventListener('click', () => {
+                croupiersPorLlegar = croupiersPorLlegar.filter(pl => pl.nombre !== nombre);
+                guardarDatosEnLocalStorage();
+                actualizarBadgeProximos();
+                if (!croupiersPorLlegar.length) cerrarModales();
+                else renderProximosLista();
+            });
+            lista.appendChild(item);
+        });
+    }
+
     function abrirEntradaModal(croupier) {
         croupierEntradaActivo = croupier;
         DOM.entradaModalTitle.textContent = generarAlias(croupier);
@@ -543,6 +654,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setupEventListeners();
         setupHelpPopovers();
         setInterval(actualizarSistema, 1000);
+        actualizarBadgeProximos();
         iniciarSincronizacionAutomatica();
         cargarNotificacionesSolicitudes();
         setInterval(cargarNotificacionesSolicitudes, 5000);
@@ -662,7 +774,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const tdNombre = document.createElement('td');
             const croupierColor = croupierColors[croupierObj.nombreCompleto];
             if (croupierColor) tdNombre.style.backgroundColor = croupierColor;
-            tdNombre.innerHTML = `<div class="croupier-cell-content"><button class="delete-croupier">×</button><div><input type="checkbox" class="croupier-checkbox"><span class="croupier-name">${generarAlias(croupierObj.nombreCompleto)}</span></div><div class="horario-turno-cards"><div class="entrada-card" data-croupier-entrada="${croupierObj.nombreCompleto}"><span class="turno-lbl">ENT</span><span class="entrada-time">${croupierEntradas[croupierObj.nombreCompleto] || '--:--'}</span></div><div class="salida-card" data-croupier-salida="${croupierObj.nombreCompleto}"><span class="turno-lbl">SAL</span><span class="salida-time">${croupierSalidas[croupierObj.nombreCompleto] || '--:--'}</span></div></div></div>`;
+            const ent = croupierEntradas[croupierObj.nombreCompleto];
+            tdNombre.innerHTML = `<div class="croupier-cell-content"><button class="delete-croupier">×</button><div><input type="checkbox" class="croupier-checkbox"><span class="croupier-name">${generarAlias(croupierObj.nombreCompleto)}</span></div><div class="horario-turno-cards"><div class="entrada-card${ent ? ' has-time' : ''}" data-croupier-entrada="${croupierObj.nombreCompleto}"><span class="turno-lbl">ENT</span><span class="entrada-time">${ent || '--:--'}</span></div><div class="salida-card" data-croupier-salida="${croupierObj.nombreCompleto}"><span class="turno-lbl">SAL</span><span class="salida-time">${croupierSalidas[croupierObj.nombreCompleto] || '--:--'}</span></div></div></div>`;
             tr.appendChild(tdNombre);
             const tdCrono = document.createElement('td');
             tdCrono.className = 'cronometro-cell';
@@ -722,6 +835,7 @@ document.addEventListener('DOMContentLoaded', () => {
             delete croupierColors[nombre];
             delete croupierSalidas[nombre];
             delete croupierEntradas[nombre];
+            croupiersPorLlegar = croupiersPorLlegar.filter(pl => pl.nombre !== nombre);
             detenerCronometro(nombre, true, true);
             guardarDatosEnLocalStorage();
             renderizarHorario();
@@ -746,7 +860,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showModal('Confirmar Acción', '¿Está seguro de que desea eliminar a TODOS los croupiers de la tabla? Esta acción no se puede deshacer.', 'confirm', () => {
             Object.keys(cronometroIntervals).forEach(croupier => { detenerCronometro(croupier, true, false); });
             croupiersData = []; datosRelevos = {}; croupierColors = {};
-            croupierSalidas = {}; croupierEntradas = {}; cronometroStartTime = {};
+            croupierSalidas = {}; croupierEntradas = {}; croupiersPorLlegar = []; cronometroStartTime = {};
             cronometroCurrentStartTime = {}; cronometroIntervals = {};
             guardarDatosEnLocalStorage();
             renderizarHorario();
@@ -1063,7 +1177,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderCroupierListInModal(searchTerm = '') {
         DOM.quickAddCroupierList.innerHTML = '';
-        const available = croupiersEnEspera.filter(c => !croupiersData.some(cd => cd.nombreCompleto === c.nombreCompleto));
+        const available = croupiersEnEspera.filter(c =>
+            !croupiersData.some(cd => cd.nombreCompleto === c.nombreCompleto) &&
+            !croupiersPorLlegar.some(pl => pl.nombre === c.nombreCompleto)
+        );
         const filteredByContract = quickAddCurrentFilter === 'todos' ? available : available.filter(c => c.contrato === quickAddCurrentFilter);
         const filteredBySearch = filteredByContract.filter(c => c.nombreCompleto.toLowerCase().includes(searchTerm.toLowerCase()));
         filteredBySearch.forEach(croupier => {
@@ -1079,15 +1196,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function agregarCroupiersSeleccionadosDelModal() {
         const selected = DOM.quickAddCroupierList.querySelectorAll('input:checked');
+        const horaEntrada = DOM.quickAddHoraEntrada ? DOM.quickAddHoraEntrada.value.trim() : '';
         selected.forEach(cb => {
             const nombre = cb.value;
             const croupierDb = croupiersEnEspera.find(c => c.nombreCompleto === nombre);
-            if (croupierDb && !croupiersData.some(c => c.nombreCompleto === nombre)) {
-                croupiersData.push(croupierDb);
+            if (!croupierDb) return;
+            if (horaEntrada) {
+                // Programar para llegar
+                if (!croupiersPorLlegar.some(pl => pl.nombre === nombre)) {
+                    croupiersPorLlegar.push({ nombre, horaEntrada });
+                }
+            } else {
+                // Agregar directo a la tabla
+                if (!croupiersData.some(c => c.nombreCompleto === nombre)) {
+                    croupiersData.push(croupierDb);
+                }
             }
         });
+        if (DOM.quickAddHoraEntrada) DOM.quickAddHoraEntrada.value = '';
         guardarDatosEnLocalStorage();
         renderizarHorario();
+        actualizarBadgeProximos();
         cerrarModales();
     }
 
@@ -2205,6 +2334,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('btn-borrar-salida').addEventListener('click', borrarSalida);
         document.getElementById('btn-guardar-entrada').addEventListener('click', guardarEntrada);
         document.getElementById('btn-borrar-entrada').addEventListener('click', borrarEntrada);
+        document.getElementById('btn-proximos-turno').addEventListener('click', abrirProximosModal);
         document.getElementById('btn-guardar-nueva-fecha').addEventListener('click', guardarNuevaFecha);
         DOM.opcionRelevo.addEventListener('change', () => toggleRelevoControls('releva'));
         DOM.opcionAyudante.addEventListener('change', () => toggleRelevoControls('ayudante'));
