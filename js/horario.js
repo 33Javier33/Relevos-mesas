@@ -1297,13 +1297,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     fichasData[mesa] = { inventario: {}, horas: [], snapshots: [], recuentos: [] };
                 } else if (val.inventario !== undefined || val.horas !== undefined || val.recuentos !== undefined) {
                     fichasData[mesa] = {
-                        inventario: val.inventario || {},
-                        horas:      val.horas      || [],
-                        snapshots:  val.snapshots  || [],
-                        recuentos:  val.recuentos  || []
+                        inventario:   val.inventario   || {},
+                        horas:        val.horas        || [],
+                        snapshots:    val.snapshots    || [],
+                        recuentos:    val.recuentos    || [],
+                        reposiciones: val.reposiciones || []
                     };
                 } else {
-                    fichasData[mesa] = { inventario: val, horas: [], snapshots: [], recuentos: [] };
+                    fichasData[mesa] = { inventario: val, horas: [], snapshots: [], recuentos: [], reposiciones: [] };
                 }
             }
         } catch { fichasData = {}; }
@@ -1319,6 +1320,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!fichasData[mesa].horas) fichasData[mesa].horas = [];
         if (!fichasData[mesa].snapshots) fichasData[mesa].snapshots = [];
         if (!fichasData[mesa].recuentos) fichasData[mesa].recuentos = [];
+        if (!fichasData[mesa].reposiciones) fichasData[mesa].reposiciones = [];
         return fichasData[mesa];
     }
 
@@ -1579,10 +1581,132 @@ document.addEventListener('DOMContentLoaded', () => {
             recForm.querySelector('.fichas-rec-dt').value = nextDt.toISOString().slice(0, 16);
         });
 
+        // ── Reposición de fichas ──────────────────────────────
+        sec.appendChild(crearSeccionReposicion(datos, panel, tabla));
+
         return sec;
     }
 
     function crearSeccionRecuento(datos, panel) { return crearSeccionInventario(datos, panel); }
+
+    function crearSeccionReposicion(datos, panel, tabla) {
+        const sec = document.createElement('details');
+        sec.className = 'fichas-section fichas-repo-details';
+
+        const summ = document.createElement('summary');
+        summ.className = 'fichas-repo-summary';
+        summ.textContent = '📦 Reposición de fichas';
+        sec.appendChild(summ);
+
+        // Form: [denominación select] [cantidad] [Agregar]
+        const form = document.createElement('div');
+        form.className = 'fichas-repo-form';
+
+        const denSel = document.createElement('select');
+        denSel.className = 'fichas-repo-den';
+        DENOMINACIONES.forEach(den => {
+            const opt = document.createElement('option');
+            opt.value = den;
+            opt.textContent = fmtFichas(den);
+            denSel.appendChild(opt);
+        });
+
+        const cantInp = document.createElement('input');
+        cantInp.type = 'number';
+        cantInp.min  = '1';
+        cantInp.className   = 'fichas-repo-cant';
+        cantInp.placeholder = 'Cantidad';
+
+        const addBtn = document.createElement('button');
+        addBtn.className   = 'fichas-repo-add';
+        addBtn.textContent = '+ Agregar';
+
+        form.appendChild(denSel);
+        form.appendChild(cantInp);
+        form.appendChild(addBtn);
+        sec.appendChild(form);
+
+        // History
+        const repoLista = document.createElement('div');
+        repoLista.className = 'fichas-repo-lista';
+        renderReposicionLista(datos.reposiciones || [], repoLista);
+        sec.appendChild(repoLista);
+
+        const confirmarRepo = () => {
+            const den  = parseInt(denSel.value);
+            const cant = Math.max(1, parseInt(cantInp.value) || 0);
+            if (!cant) { cantInp.focus(); return; }
+
+            // Sumar al inventario
+            const anterior = parseInt(datos.inventario[String(den)]) || 0;
+            datos.inventario[String(den)] = anterior + cant;
+
+            // Actualizar display del tabla de inventario
+            const idx = DENOMINACIONES.indexOf(den);
+            const rows = tabla.querySelectorAll('.fichas-row:not(.fichas-total-row):not(.fichas-clear-row)');
+            if (rows[idx]) {
+                const inp = rows[idx].querySelector('.fichas-cantidad');
+                const tot = rows[idx].querySelector('.fichas-total');
+                if (inp) inp.value = datos.inventario[String(den)];
+                if (tot) tot.textContent = fmtFichas(den * datos.inventario[String(den)]);
+            }
+            const gtEl = tabla.querySelector('.fichas-grand-total');
+            if (gtEl) gtEl.textContent = fmtFichas(calcTotalInventario(datos.inventario));
+
+            // Log
+            const entry = { id: genId(), dt: new Date().toISOString(), den, cantidad: cant, valor: den * cant };
+            datos.reposiciones = datos.reposiciones || [];
+            datos.reposiciones.unshift(entry);
+            guardarFichasData();
+            renderReposicionLista(datos.reposiciones, repoLista);
+            cantInp.value = '';
+            cantInp.focus();
+        };
+
+        addBtn.addEventListener('click', confirmarRepo);
+        cantInp.addEventListener('keydown', e => { if (e.key === 'Enter') confirmarRepo(); });
+
+        return sec;
+    }
+
+    function renderReposicionLista(reposiciones, lista) {
+        lista.innerHTML = '';
+        if (!reposiciones.length) {
+            lista.innerHTML = '<p class="fichas-repo-empty">Sin reposiciones registradas</p>';
+            return;
+        }
+        reposiciones.forEach(r => {
+            const dt = new Date(r.dt).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+            const item = document.createElement('div');
+            item.className = 'fichas-repo-item';
+            item.innerHTML =
+                `<span class="repo-dt">${dt}</span>` +
+                `<span class="repo-den">${fmtFichas(r.den)}</span>` +
+                `<span class="repo-cant">+${r.cantidad} fichas</span>` +
+                `<span class="repo-val">+$${fmtFichas(r.valor)}</span>` +
+                `<button class="repo-del" data-id="${r.id}" title="Eliminar">×</button>`;
+            item.querySelector('.repo-del').addEventListener('click', () => {
+                // revert the inventory change
+                datos.reposiciones = datos.reposiciones.filter(x => x.id !== r.id);
+                datos.inventario[String(r.den)] = Math.max(0, (parseInt(datos.inventario[String(r.den)]) || 0) - r.cantidad);
+                const idx = DENOMINACIONES.indexOf(r.den);
+                const rows = tabla.querySelectorAll('.fichas-row:not(.fichas-total-row):not(.fichas-clear-row)');
+                if (rows[idx]) {
+                    const inp = rows[idx].querySelector('.fichas-cantidad');
+                    const tot = rows[idx].querySelector('.fichas-total');
+                    const q = parseInt(datos.inventario[String(r.den)]) || 0;
+                    if (inp) inp.value = q || '';
+                    if (tot) tot.textContent = q > 0 ? fmtFichas(r.den * q) : '—';
+                }
+                const gtEl = tabla.querySelector('.fichas-grand-total');
+                const gt = calcTotalInventario(datos.inventario);
+                if (gtEl) gtEl.textContent = gt > 0 ? fmtFichas(gt) : '—';
+                guardarFichasData();
+                renderReposicionLista(datos.reposiciones, lista);
+            });
+            lista.appendChild(item);
+        });
+    }
 
     function renderRecuentoLista(datos, lista) {
         lista.innerHTML = '';
