@@ -4,6 +4,10 @@
 document.addEventListener('DOMContentLoaded', () => {
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzjaL7OKe1_doagry1eo0w15vXOJy_-oEtWreLTzj1GoQgxyE8cDI7jTgWm7qqThB7M/exec';
 
+    const SUPABASE_URL = 'https://anzhzdxwakgzabgukgwd.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable__XescSms-zNiWOIBmowJsQ_csdU0tzK';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
     let croupiersEnEspera = [];
     let mesasDeJuego = [];
     let juegosMaestro = ["Poker", "Blackjack", "Ruleta", "Craps", "Mini&PuntoyBanca", "Bug-six", "Caribbean", "Draw", "Hold'em"];
@@ -34,7 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
         editJuegosSelector: document.getElementById('edit-juegos-selector'),
         editDropdownJuegos: document.getElementById('edit-dropdown-juegos'),
         btnSaveEdit: document.getElementById('btn-save-edit'),
-        btnCancelEdit: document.getElementById('btn-cancel-edit')
+        btnCancelEdit: document.getElementById('btn-cancel-edit'),
+        btnMigrarSupabase: document.getElementById('btn-migrar-supabase'),
+        migracionStatus: document.getElementById('migracion-status')
     };
 
     function showLoading(show) {
@@ -304,6 +310,40 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    async function migrarASupabase() {
+        if (!croupiersEnEspera.length && !mesasDeJuego.length) {
+            showModal('Nada para migrar', 'Todavía no hay croupiers ni mesas cargados desde Google Sheets. Esperá a que termine de cargar e intentá de nuevo.', 'info');
+            return;
+        }
+
+        DOM.btnMigrarSupabase.disabled = true;
+        DOM.migracionStatus.textContent = 'Migrando...';
+
+        let croupiersOk = 0, croupiersError = null;
+        if (croupiersEnEspera.length) {
+            const filas = croupiersEnEspera.map(c => ({
+                nombre_completo: c.nombreCompleto,
+                contrato: c.contrato,
+                juegos_que_paga: c.juegosQuePaga || []
+            }));
+            const { error } = await supabaseClient.from('croupiers').upsert(filas, { onConflict: 'nombre_completo' });
+            if (error) croupiersError = error; else croupiersOk = filas.length;
+        }
+
+        let mesasOk = 0, mesasError = null;
+        if (mesasDeJuego.length) {
+            const filas = mesasDeJuego.map((mesa, indice) => ({ id: mesa, orden: indice }));
+            const { error } = await supabaseClient.from('mesas').upsert(filas, { onConflict: 'id' });
+            if (error) mesasError = error; else mesasOk = filas.length;
+        }
+
+        const resumen = `Croupiers migrados: ${croupiersOk}${croupiersError ? ' (falló: ' + croupiersError.message + ')' : ''}. `
+            + `Mesas migradas: ${mesasOk}${mesasError ? ' (falló: ' + mesasError.message + ')' : ''}.`;
+        DOM.migracionStatus.textContent = resumen;
+        showModal(croupiersError || mesasError ? 'Migración con errores' : 'Migración completa', resumen, 'info');
+        DOM.btnMigrarSupabase.disabled = false;
+    }
+
     async function inicializar() {
         const savedTheme = localStorage.getItem('theme') || 'light';
         document.body.classList.toggle('dark-mode', savedTheme === 'dark');
@@ -347,6 +387,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         DOM.btnSaveEdit.onclick = updateCroupierInSheet;
         DOM.btnCancelEdit.onclick = () => { DOM.editCroupierModal.style.display = 'none'; };
+        DOM.btnMigrarSupabase.addEventListener('click', migrarASupabase);
         DOM.btnToggleTheme.addEventListener('click', () => {
             const isDark = document.body.classList.toggle('dark-mode');
             localStorage.setItem('theme', isDark ? 'dark' : 'light');

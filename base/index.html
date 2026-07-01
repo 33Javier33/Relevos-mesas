@@ -58,6 +58,19 @@
             </div>
 
             <div class="control-panel">
+                <h3>☁️ Migración a Supabase</h3>
+                <div class="form-group">
+                    <p style="font-size: 0.9em; color: var(--text-secondary-color);">
+                        Copia los croupiers y las mesas que están cargados arriba (desde Google Sheets) hacia la
+                        base de datos en Supabase. No borra ni modifica nada en Sheets — se puede ejecutar las
+                        veces que haga falta hasta confirmar que todo llegó bien.
+                    </p>
+                    <button id="btn-migrar-supabase" class="success">Migrar a Supabase</button>
+                    <div id="migracion-status" style="font-size: 0.85em; color: var(--text-secondary-color); margin-top: 8px;"></div>
+                </div>
+            </div>
+
+            <div class="control-panel">
                 <h3>Opciones del Sistema</h3>
                 <div class="form-group">
                     <h4>Restaurar Respaldo</h4>
@@ -120,6 +133,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script src="../js/shared.js"></script>
     <script src="../js/base.js"></script>
 </body>
