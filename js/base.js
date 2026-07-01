@@ -2,7 +2,7 @@
 /* Depende de: js/shared.js (showModal, getLocalDateString) */
 
 document.addEventListener('DOMContentLoaded', () => {
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyXY0PfaitLqkVf7MmhCEPvNMoCOaWiPXZ3XtqYMxzuX8z_u5SknaLocFVpVMt_UqaR/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzjaL7OKe1_doagry1eo0w15vXOJy_-oEtWreLTzj1GoQgxyE8cDI7jTgWm7qqThB7M/exec';
 
     let croupiersEnEspera = [];
     let mesasDeJuego = [];
